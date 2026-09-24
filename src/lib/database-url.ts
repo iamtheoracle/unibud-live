@@ -3,9 +3,7 @@
  *
  * `DATABASE_URL` is the canonical application contract. Netlify's managed
  * PostgreSQL integration injects its own variables instead, so those are
- * accepted as fallbacks. This keeps the application database layer provider-
- * neutral while supporting both manually configured and platform-provisioned
- * PostgreSQL connections.
+ * accepted as fallbacks.
  *
  * Server-only: the browser bundle must never import this.
  */
@@ -16,7 +14,6 @@ const CANDIDATES = [
   "NETLIFY_DATABASE_URL_UNPOOLED",
 ] as const;
 
-/** Resolve the connection string, treating empty/whitespace as unset. */
 export function resolveDatabaseUrl(): string | undefined {
   if (typeof process === "undefined") return undefined;
   for (const key of CANDIDATES) {
@@ -26,10 +23,20 @@ export function resolveDatabaseUrl(): string | undefined {
   return undefined;
 }
 
-/** True when any PostgreSQL connection string is configured. */
 export function databaseConfigured(): boolean {
   return Boolean(resolveDatabaseUrl());
 }
 
-/** Human-readable list of the accepted variables, for error messages. */
+/** True on Netlify/Vercel/Lambda. Those runtimes must not open PGlite files. */
+export function isServerlessRuntime(): boolean {
+  if (typeof process === "undefined") return false;
+  return Boolean(
+    process.env.NETLIFY ||
+      process.env.NETLIFY_DEV ||
+      process.env.AWS_LAMBDA_FUNCTION_NAME ||
+      process.env.LAMBDA_TASK_ROOT ||
+      process.env.VERCEL,
+  );
+}
+
 export const DATABASE_URL_VARS = CANDIDATES.join(" or ");

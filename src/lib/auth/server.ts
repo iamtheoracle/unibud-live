@@ -35,7 +35,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { getCookie } from "@tanstack/react-start/server";
 import { randomBytes } from "node:crypto";
 import { Pool } from "pg";
-import { ensureDbReady } from "../db";
+import { ensureDbReady, getPglite } from "../db";
 import { emailAndPasswordEnabled } from "./email-password";
 import { GATE_PROVIDER_ID, gateIdentitySessions } from "./gate-session.server";
 import { GROK_PROVIDERS } from "./providers";
@@ -137,12 +137,9 @@ const grokAuthorizationUrl = `${issuerBase}/api/auth/oauth2/authorize`;
 const grokTokenUrl = `${issuerBase}/api/auth/oauth2/token`;
 const grokUserInfoUrl = `${issuerBase}/api/auth/oauth2/userinfo`;
 
-// Postgres is required. PGlite is not a production/Netlify database.
 const database = databaseUrl
   ? new Pool({ connectionString: databaseUrl })
-  : { dialect: pgliteDialect(() => {
-      throw new Error("A PostgreSQL connection string is required. PGlite is disabled.");
-    }), type: "postgres" as const };
+  : { dialect: pgliteDialect(() => getPglite()), type: "postgres" as const };
 
 /** Session token cookie name — also read by the live-preview popup completion page. */
 export const SESSION_TOKEN_COOKIE = "__Host-grok-auth.session_token";

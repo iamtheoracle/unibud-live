@@ -75,7 +75,13 @@ export default defineConfig({
     grokPwaPlugin(),
     tailwindcss(),
     tanstackStart(),
-    nitro({ preset: "netlify", serverDir: "./server" }),
+    nitro({
+      preset: "netlify",
+      serverDir: "./server",
+      // Keep PGlite out of the Netlify function bundle so production never
+      // opens /var/task/_libs/pglite.data.
+      externals: { external: ["@electric-sql/pglite"] },
+    } as never),
     viteReact(),
   ],
 });

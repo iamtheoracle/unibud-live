@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { DemoCallout } from "@/components/unibud/demo-callout";
 import { EmptyState } from "@/components/unibud/empty";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
+import { VaultGate } from "@/components/unibud/vault-gate";
 import { PEOPLE } from "@/lib/unibud/catalog";
 import { formatNaira, koboFromNairaInput, relativeTime } from "@/lib/unibud/format";
 import {
@@ -44,18 +45,9 @@ function Money() {
   if (isPending) return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
   if (!user) {
     return (
-      <main className="px-4 py-8 md:px-6">
-        <h1 className="text-2xl font-medium">Money</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Student money — send, request, split, withdraw — without looking like a bank.
-        </p>
-        <div className="mt-6">
-          <SignInCard
-            title="Open your demo wallet"
-            body="The ledger is simulated. Sign in so your demo balance and requests stay on your account."
-          />
-        </div>
-      </main>
+      <VaultGate title="Wallet">
+        <div />
+      </VaultGate>
     );
   }
 
@@ -63,6 +55,7 @@ function Money() {
   const active = tab === "requests" || tab === "funding" ? tab : "wallet";
 
   return (
+    <VaultGate title="Wallet">
     <main className="px-4 pb-10 md:px-6">
       <p className="pt-2 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
         Wallet
