@@ -9,7 +9,8 @@ export interface AcceptanceCase {
   name: string;
   request: AgentRequest;
   domain: string;
-  capabilities?: readonly string[];
+  requiredCapabilities?: readonly string[];
+  availableCapabilities?: readonly string[];
   network?: 'online' | 'fluctuating' | 'offline' | 'unknown';
   authorization?: 'authorized' | 'not-authorized' | 'unknown';
   expectedStatus: string;
@@ -34,32 +35,36 @@ export const AGENT_ACCEPTANCE_CASES: readonly AcceptanceCase[] = [
     name: 'academic-research-collaboration',
     request: request('academic-research', 'Explain an academic topic using research', 'Explain this topic and support the explanation with reliable research.'),
     domain: 'academic',
-    capabilities: ['learning'],
-    expectedStatus: 'needs-verification',
+    requiredCapabilities: [],
+    availableCapabilities: ['learning'],
+    expectedStatus: 'partial',
     expectedTargets: ['scholar', 'atlas'],
   },
   {
     name: 'discovery-to-academic-review',
     request: request('discovery-review', 'Browse and discover academic sources', 'Find relevant sources and assess their academic usefulness.'),
     domain: 'discovery',
-    capabilities: ['web-browsing'],
-    expectedStatus: 'needs-verification',
+    requiredCapabilities: [],
+    availableCapabilities: ['web-browsing'],
+    expectedStatus: 'partial',
     expectedTargets: ['orbit', 'scholar'],
   },
   {
     name: 'action-with-authorization',
     request: request('authorized-action', 'Execute an authorized action', 'Complete the requested workflow action.'),
     domain: 'action',
-    capabilities: ['browser-actions'],
+    requiredCapabilities: [],
+    availableCapabilities: ['browser-actions'],
     authorization: 'authorized',
-    expectedStatus: 'needs-verification',
+    expectedStatus: 'partial',
     expectedTargets: ['navigator', 'guardian'],
   },
   {
     name: 'action-without-authorization',
     request: request('blocked-action', 'Execute an action', 'Complete the requested workflow action.'),
     domain: 'action',
-    capabilities: ['browser-actions'],
+    requiredCapabilities: [],
+    availableCapabilities: ['browser-actions'],
     authorization: 'not-authorized',
     expectedStatus: 'blocked',
     expectedTargets: ['navigator', 'guardian'],
@@ -68,7 +73,8 @@ export const AGENT_ACCEPTANCE_CASES: readonly AcceptanceCase[] = [
     name: 'provider-capability-unavailable',
     request: request('missing-capability', 'Browse external information', 'Find the requested information.'),
     domain: 'discovery',
-    capabilities: ['web-browsing'],
+    requiredCapabilities: ['web-browsing'],
+    availableCapabilities: [],
     expectedStatus: 'unavailable',
     expectedTargets: ['orbit', 'scholar'],
   },
@@ -76,6 +82,8 @@ export const AGENT_ACCEPTANCE_CASES: readonly AcceptanceCase[] = [
     name: 'network-timeout',
     request: request('network-timeout', 'Research current information', 'Find the current information.'),
     domain: 'research',
+    requiredCapabilities: [],
+    availableCapabilities: ['research'],
     network: 'fluctuating',
     expectedStatus: 'unavailable',
     expectedTargets: ['oracle', 'atlas', 'guardian'],
@@ -88,9 +96,9 @@ export function runAcceptanceCase(input: AcceptanceCase): AcceptanceResult {
     route: {
       intent: input.request.intent,
       domain: input.domain,
-      requiredCapabilities: input.capabilities ? [...input.capabilities] : [],
+      requiredCapabilities: input.requiredCapabilities ? [...input.requiredCapabilities] : [],
     },
-    availableCapabilities: input.capabilities ? [...input.capabilities] : [],
+    availableCapabilities: input.availableCapabilities ? [...input.availableCapabilities] : [],
     network: input.network,
     authorization: input.authorization,
   });
@@ -127,22 +135,14 @@ export function assertSafetyAndContextBoundaries(): void {
     subject: 'human anatomy',
     requestedAction: 'explain reproductive anatomy for a lecture',
   });
-  if (!anatomy.educational || anatomy.requiresSafetyReview) {
-    throw new Error('Legitimate educational anatomy was incorrectly escalated.');
-  }
+  if (!anatomy.educational || anatomy.requiresSafetyReview) throw new Error('Legitimate educational anatomy was incorrectly escalated.');
 
-  const sexual = assessContentContext({
-    purpose: 'sexual arousal',
-    subject: 'explicit sexual act',
-  });
-  if (!sexual.requiresSafetyReview) {
-    throw new Error('Explicit sexual purpose did not trigger safety review.');
-  }
+  const sexual = assessContentContext({ purpose: 'sexual arousal', subject: 'explicit sexual act' });
+  if (!sexual.requiresSafetyReview) throw new Error('Explicit sexual purpose did not trigger safety review.');
 
   if (canAccessContext({ agent: 'orbit', scope: 'private-content', authorized: true, source: 'atlas' }).allowed) {
     throw new Error('Orbit received unauthorized private-content access.');
   }
-
   if (canAccessContext({ agent: 'scholar', scope: 'memory', authorized: true, source: 'atlas' }).allowed) {
     throw new Error('Scholar received unrestricted memory access.');
   }
