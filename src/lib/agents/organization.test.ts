@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { ORGANIZATION_AGENTS, organizationHealth } from './organization.ts';
 import { validateAgentOrganization } from './implementation.ts';
 import { collaborationAudit, collaboratorsOf } from './collaboration.ts';
-import { activationAudit } from './activation.ts';
+import { activationAudit, buildActivationRegistry } from './activation.ts';
 import { ORGANIZATIONAL_IDENTITY, createColleagueProfile } from './organization-culture.ts';
 import { createAgentMessage, continueConversation } from './communication.ts';
 
@@ -55,6 +55,15 @@ test('every agent is ready for activation at the organization boundary', () => {
   assert.equal(audit.complete, true);
   assert.equal(audit.ready, audit.total);
   assert.deepEqual(audit.blocked, []);
+  const registry = buildActivationRegistry();
+  assert.ok(registry.every((record) =>
+    record.requestContract === 'structured' &&
+    record.responseContract === 'structured' &&
+    record.truthfulExecution &&
+    record.failureHandling &&
+    record.contextBoundary &&
+    record.verificationPath,
+  ));
 });
 
 test('agents belong to one distributed organization with one shared purpose', () => {
@@ -96,4 +105,14 @@ test('colleagues can communicate without becoming user-facing agents', () => {
 
   assert.equal(conversation.messages.length, 2);
   assert.equal(conversation.messages[1].from, 'scholar');
+});
+
+test('internal communication cannot bypass the declared collaboration graph', () => {
+  assert.throws(() => createAgentMessage({
+    from: 'orbit',
+    to: 'payment_service',
+    mode: 'consult',
+    subject: 'Invalid route',
+    context: 'This pair is not declared as collaborators.',
+  }), /collaboration graph/i);
 });
