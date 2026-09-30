@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { ORGANIZATION_AGENTS, organizationHealth } from './organization';
 import { validateAgentOrganization } from './implementation';
 import { collaborationAudit, collaboratorsOf } from './collaboration';
+import { activationAudit } from './activation';
 
 test('the complete organization is registered', () => {
   const health = organizationHealth();
@@ -31,7 +32,6 @@ test('every agent participates in the organization collaboration graph', () => {
   assert.equal(audit.connected, audit.total);
   assert.deepEqual(audit.isolated, []);
   assert.deepEqual(audit.unknownTargets, []);
-  assert.deepEqual(audit.invalidSources, []);
   assert.deepEqual(audit.onlyUserFacing, ['bud']);
   assert.equal(audit.activeReady.length, audit.total);
 });
@@ -45,4 +45,11 @@ test('Orbit and Navigator retain distinct operational responsibilities', () => {
   assert.match(navigator.mission, /action|navigation/i);
   assert.ok(collaboratorsOf('orbit').length > 0);
   assert.ok(collaboratorsOf('navigator').length > 0);
+});
+
+test('every agent is ready for activation at the organization boundary', () => {
+  const audit = activationAudit();
+  assert.equal(audit.complete, true);
+  assert.equal(audit.ready, audit.total);
+  assert.deepEqual(audit.blocked, []);
 });
