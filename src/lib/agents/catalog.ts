@@ -1,4 +1,4 @@
-import type { AgentDefinition } from "./contracts";
+export interface ExtendedAgentDefinition {\n  id: string; role: string; responsibility: string; contextScope: string[]; memoryScope: string[]; permissions: string[]; collaborators: string[];\n}
 
 /**
  * Canonical extended UNIBUD intelligence catalog.
@@ -7,7 +7,7 @@ import type { AgentDefinition } from "./contracts";
  * The runtime may execute them only when the required capability/provider exists.
  * No unavailable capability is simulated.
  */
-export const EXTENDED_AGENT_DEFINITIONS: AgentDefinition[] = [
+export const EXTENDED_AGENT_DEFINITIONS: ExtendedAgentDefinition[] = [
   { id: "architect", role: "system architect", responsibility: "Own system structure, module boundaries, integrations and technical solution design.", contextScope: ["architecture", "modules", "integrations"], memoryScope: ["architecture-state"], permissions: ["architect"], collaborators: ["oracle", "spark"] },
   { id: "artist", role: "visual creative specialist", responsibility: "Shape visual language, visual assets and creative direction when a visual task requires it.", contextScope: ["visual-design", "brand", "creative"], memoryScope: ["creative-context"], permissions: ["visual-create"], collaborators: ["creator", "vision"] },
   { id: "sage", role: "lecturer intelligence", responsibility: "Support teaching workflows, classes, attendance, grading and lecturer-facing insights.", contextScope: ["lecturer", "classes", "teaching"], memoryScope: ["lecturer-context"], permissions: ["lecturer-read"], collaborators: ["spark", "scholar"] },
