@@ -75,7 +75,7 @@ export const AGENT_ACCEPTANCE_CASES: readonly AcceptanceCase[] = [
     domain: 'discovery',
     requiredCapabilities: ['web-browsing'],
     availableCapabilities: [],
-    expectedStatus: 'unavailable',
+    expectedStatus: 'partial',
     expectedTargets: ['orbit', 'scholar'],
   },
   {
