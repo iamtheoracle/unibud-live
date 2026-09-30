@@ -1,4 +1,4 @@
-import type { AgentId } from '../core/contracts';
+import type { AgentId } from '../core/contracts.ts';
 
 export type SpecialistAgentId =
   | 'sage' | 'nova' | 'nexus' | 'sentinel' | 'quad' | 'study' | 'campus'
