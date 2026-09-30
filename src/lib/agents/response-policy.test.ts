@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BUD_RESPONSE_POLICY, assertNoRoleplay, buildBudPresentationContract, collectAuthorizedPersonalizationSignals } from './response-policy.ts';
+import { BUD_RESPONSE_POLICY, BUD_SUPPORT_LANGUAGE, assertNoRoleplay, assertBudUserFacingText, buildBudPresentationContract, collectAuthorizedPersonalizationSignals } from './response-policy.ts';
 
 test('Bud and Spark own the simplification boundary', () => {
   assert.equal(BUD_RESPONSE_POLICY.userFacingAgent, 'bud');
@@ -40,4 +40,12 @@ test('Bud presentation keeps collaborators internal', () => {
   const contract = buildBudPresentationContract('Explain this topic.', { userProvidedPreferences: ['short explanations'] }, ['spark', 'scholar']);
   assert.equal(contract.agentsRemainInternal, true);
   assert.deepEqual(contract.collaboratingAgents, ['spark', 'scholar']);
+});
+
+test('Bud user-facing text hides internal organization and does not call itself AI', () => {
+  assert.doesNotThrow(() => assertBudUserFacingText('I checked that for you. Here is the next step.'));
+  assert.throws(() => assertBudUserFacingText('Spark found the answer.'));
+  assert.throws(() => assertBudUserFacingText('As an AI, I can help.'));
+  assert.equal(BUD_SUPPORT_LANGUAGE.neverExposeAgentNames, true);
+  assert.equal(BUD_SUPPORT_LANGUAGE.neverCallSelfAI, true);
 });
