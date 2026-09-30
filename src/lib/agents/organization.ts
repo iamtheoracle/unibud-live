@@ -1,7 +1,7 @@
-import { CORE_AGENTS } from './core/definitions';
-import { CORE_DUTIES } from './core/duties';
-import { CORE_RELATIONSHIPS } from './core/relationships';
-import { SPECIALIST_AGENTS, type OrganizationAgentId, type SpecialistDefinition } from './specialists/definitions';
+import { CORE_AGENTS } from './core/definitions.ts';
+import { CORE_DUTIES } from './core/duties.ts';
+import { CORE_RELATIONSHIPS } from './core/relationships.ts';
+import { SPECIALIST_AGENTS, type OrganizationAgentId, type SpecialistDefinition } from './specialists/definitions.ts';
 
 export interface OrganizationAgent {
   id: OrganizationAgentId;
