@@ -1,4 +1,4 @@
-import type { AgentId } from './contracts';
+import type { AgentId } from './contracts.ts';
 
 export interface AgentRelationship {
   from: AgentId;
