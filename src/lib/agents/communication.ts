@@ -1,5 +1,5 @@
-import type { OrganizationAgentId } from './specialists/definitions';
-import { ORGANIZATIONAL_COMMUNICATION, type CommunicationMode } from './organization-culture';
+import type { OrganizationAgentId } from './specialists/definitions.ts';
+import { ORGANIZATIONAL_COMMUNICATION, type CommunicationMode } from './organization-culture.ts';
 
 export interface AgentMessage {
   from: OrganizationAgentId;
