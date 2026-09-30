@@ -3,6 +3,7 @@ import { ORGANIZATION_AGENTS, organizationHealth } from './organization.ts';
 import { ORGANIZATION_LIFECYCLE } from '../spark/orchestration/lifecycle.ts';
 import { collaboratorsOf, collaborationAudit } from './collaboration.ts';
 import { BUD_RESPONSE_POLICY } from './response-policy.ts';
+import { executeAgent } from './runtime.ts';
 
 export interface AgentImplementation {
   id: string;
@@ -12,6 +13,7 @@ export interface AgentImplementation {
   communicationContract: true;
   noRoleplayBoundary: true;
   collaborationReady: boolean;
+  runtimeRegistered: boolean;
 }
 
 export const AGENT_IMPLEMENTATIONS: readonly AgentImplementation[] =
@@ -23,6 +25,7 @@ export const AGENT_IMPLEMENTATIONS: readonly AgentImplementation[] =
     communicationContract: true,
     noRoleplayBoundary: true,
     collaborationReady: collaboratorsOf(agent.id).length > 0,
+    runtimeRegistered: typeof executeAgent === 'function',
   }));
 
 export function validateAgentOrganization(): {
@@ -42,7 +45,8 @@ export function validateAgentOrganization(): {
       !AGENT_IMPLEMENTATIONS.some((implementation) => implementation.id === agent.id) ||
       !AGENT_IMPLEMENTATIONS.find((implementation) => implementation.id === agent.id)?.communicationContract ||
       !AGENT_IMPLEMENTATIONS.find((implementation) => implementation.id === agent.id)?.noRoleplayBoundary ||
-      !AGENT_IMPLEMENTATIONS.find((implementation) => implementation.id === agent.id)?.collaborationReady,
+      !AGENT_IMPLEMENTATIONS.find((implementation) => implementation.id === agent.id)?.collaborationReady ||
+      !AGENT_IMPLEMENTATIONS.find((implementation) => implementation.id === agent.id)?.runtimeRegistered,
     )
     .map((agent) => agent.id);
 
