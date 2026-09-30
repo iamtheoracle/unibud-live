@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useLoaderData } from "@tanstack/react-router";
+import { createFileRoute, Link, useLoaderData, useNavigate } from "@tanstack/react-router";
 import { BadgeCheck, Bookmark, Heart, MessageCircle, MoreHorizontal, Play, Share2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/unibud/person";
@@ -22,6 +22,34 @@ export const Route = createFileRoute("/_app/")({ component: Square });
 
 function Square() {
   const catalog = useLoaderData({ from: "/_app" });
+  const nav = useNavigate();
+  const { user, isPending } = useCurrentUserState();
+  const onboardingDone = useCampusStore((s) => s.onboardingDone);
+
+  useEffect(() => {
+    if (isPending) return;
+    let guest = false;
+    try {
+      guest = sessionStorage.getItem("unibud-guest-browse") === "1";
+    } catch {
+      guest = false;
+    }
+    if (!user && !guest) {
+      void nav({ to: "/welcome" });
+      return;
+    }
+    if (user && !onboardingDone) void nav({ to: "/welcome" });
+  }, [user, isPending, onboardingDone, nav]);
+
+  let guestBrowse = false;
+  try {
+    guestBrowse = sessionStorage.getItem("unibud-guest-browse") === "1";
+  } catch {
+    guestBrowse = false;
+  }
+  if (isPending || (!user && !guestBrowse) || (user && !onboardingDone)) {
+    return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
+  }
   const [lane, setLane] = useState<SquareLane>("on-stream");
   const [peekStart, setPeekStart] = useState<string | undefined>();
   const [shown, setShown] = useState(10);

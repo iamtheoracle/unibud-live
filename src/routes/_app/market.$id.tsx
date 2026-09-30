@@ -9,6 +9,7 @@ import { ListingCard } from "@/components/unibud/listing-card";
 import { Avatar, PersonMeta } from "@/components/unibud/person";
 import { PhotoPlate } from "@/components/unibud/photo-plate";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
+import { VaultGate } from "@/components/unibud/vault-gate";
 import { uniById } from "@/lib/unibud/catalog";
 import { formatNaira } from "@/lib/unibud/format";
 import { getListing, toggleSave } from "@/lib/unibud/server";
@@ -117,6 +118,7 @@ function ListingPage() {
   }
 
   return (
+    <VaultGate title="Marketplace">
     <main className="px-4 pb-10 md:px-6">
       <PhotoPlate
         src={listing.image}
@@ -203,5 +205,6 @@ function ListingPage() {
         </section>
       ) : null}
     </main>
+    </VaultGate>
   );
 }

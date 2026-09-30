@@ -30,44 +30,45 @@ function AudioPage() {
     );
   }
 
-  const person = personByHandle(audio.creatorHandle ?? "");
-  const uses = localPosts.filter((p) => p.audioId === audio.audioId || audio.usedBy.includes(p.id));
-  const on = saved.includes(audio.audioId);
+  const item = audio;
+  const person = personByHandle(item.creatorHandle ?? "");
+  const uses = localPosts.filter((p) => p.audioId === item.audioId || item.usedBy.includes(p.id));
+  const on = saved.includes(item.audioId);
 
   function useIt() {
-    if (audio.status === "removed" || audio.status === "restricted") {
+    if (item.status === "removed" || item.status === "restricted") {
       toast.message("This audio isn’t available.");
       return;
     }
     const studio = useStudioStore.getState();
     studio.snapshot();
     studio.addMix({
-      id: `oa-${audio.audioId}`,
+      id: `oa-${item.audioId}`,
       kind: "catalogue",
-      name: audio.title,
-      src: audio.src,
+      name: item.title,
+      src: item.src,
       volume: 0.85,
       mute: false,
       fadeIn: 0,
       fadeOut: 0,
-      artistName: person?.name ?? audio.creatorHandle,
-      trackId: audio.audioId,
+      artistName: person?.name ?? item.creatorHandle,
+      trackId: item.audioId,
     });
     studio.setMusicRef({
       providerId: "unibud-original",
-      trackId: audio.audioId,
-      audioId: audio.audioId,
-      title: audio.title,
-      artistName: person?.name ?? audio.creatorHandle,
+      trackId: item.audioId,
+      audioId: item.audioId,
+      title: item.title,
+      artistName: person?.name ?? item.creatorHandle,
       startMs: 0,
-      durationMs: audio.durationMs,
+      durationMs: item.durationMs,
       entitlement: "free",
       sourceType: "ORIGINAL_AUDIO",
-      creatorHandle: audio.creatorHandle,
+      creatorHandle: item.creatorHandle,
     });
     studio.setView("camera");
     setComposeOpen(true);
-    toast.message(`Using “${audio.title}” — still ${person?.name ?? audio.creatorHandle}’s original.`);
+    toast.message(`Using “${item.title}” — still ${person?.name ?? item.creatorHandle}’s original.`);
   }
 
   return (

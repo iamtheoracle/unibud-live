@@ -109,6 +109,7 @@ export function VaultGate({
   }
 
   async function registerKey() {
+    if (!user) return;
     setBusy(true);
     setError(null);
     try {

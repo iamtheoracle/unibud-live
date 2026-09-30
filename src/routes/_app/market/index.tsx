@@ -2,6 +2,7 @@ import { createFileRoute, Link, useLoaderData } from "@tanstack/react-router";
 import { CATEGORIES } from "@/lib/unibud/catalog";
 import type { ListingCategory } from "@/lib/unibud/types";
 import { ListingCard } from "@/components/listing-card";
+import { VaultGate } from "@/components/unibud/vault-gate";
 import { cn } from "@/lib/utils";
 
 type Search = { cat?: ListingCategory | "all" };
@@ -20,6 +21,7 @@ function Market() {
     cat === "all" ? catalog.listings : catalog.listings.filter((l) => l.category === cat);
 
   return (
+    <VaultGate title="Marketplace">
     <div className="space-y-6 pb-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -55,6 +57,7 @@ function Market() {
         </div>
       )}
     </div>
+    </VaultGate>
   );
 }
 

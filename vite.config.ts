@@ -1,4 +1,6 @@
 import { defineConfig } from "vite";
+import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -9,9 +11,32 @@ import { grokPwaPlugin } from "./scripts/grok-pwa-plugin.mjs";
 import { appEnvPlugin } from "./scripts/app-env-plugin.mjs";
 
 /**
- * Live-preview OAuth popup. Production uses the Netlify/TanStack runtime and
- * does not depend on the preview database bootstrap.
+ * PGlite's JS looks for unhashed pglite.data / wasm next to the module.
+ * Nitro hashes client copies; copy the originals into the function _libs folder
+ * so a stray import cannot throw ENOENT on Netlify.
  */
+function copyPgliteAssets() {
+  return {
+    name: "copy-pglite-assets",
+    apply: "build" as const,
+    closeBundle() {
+      const srcDir = join(process.cwd(), "node_modules/@electric-sql/pglite/dist");
+      const files = ["pglite.data", "pglite.wasm", "initdb.wasm"];
+      const dests = [
+        join(process.cwd(), ".netlify/functions-internal/server/_libs"),
+        join(process.cwd(), ".output/server/_libs"),
+      ];
+      for (const dest of dests) {
+        mkdirSync(dest, { recursive: true });
+        for (const file of files) {
+          const from = join(srcDir, file);
+          if (existsSync(from)) copyFileSync(from, join(dest, file));
+        }
+      }
+    },
+  };
+}
+
 function authPopupPlugin() {
   return {
     name: "app-builder:auth-popup",
@@ -78,10 +103,9 @@ export default defineConfig({
     nitro({
       preset: "netlify",
       serverDir: "./server",
-      // Keep PGlite out of the Netlify function bundle so production never
-      // opens /var/task/_libs/pglite.data.
       externals: { external: ["@electric-sql/pglite"] },
     } as never),
+    copyPgliteAssets(),
     viteReact(),
   ],
 });

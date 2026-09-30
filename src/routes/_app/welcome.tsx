@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Wordmark } from "@/components/brand/logo";
 import { useCampusStore, type LifeStage } from "@/lib/unibud/campus-store";
 import { upsertMyProfile } from "@/lib/unibud/server";
 import { useAuthReady } from "@/components/unibud/sign-in-gate";
@@ -19,7 +20,7 @@ const ROOM_HINTS: Record<string, { to: string; id: string; label: string }[]> = 
 
 function Welcome() {
   const nav = useNavigate();
-  const { user } = useAuthReady();
+  const { user, isPending } = useAuthReady();
   const setOnboardingDone = useCampusStore((s) => s.setOnboardingDone);
   const setInterests = useCampusStore((s) => s.setInterests);
   const setAcademicInterests = useCampusStore((s) => s.setAcademicInterests);
@@ -31,8 +32,8 @@ function Welcome() {
   const [academic, setAcademic] = useState<string[]>([]);
 
   useEffect(() => {
-    if (onboardingDone) void nav({ to: "/" });
-  }, [onboardingDone, nav]);
+    if (user && onboardingDone) void nav({ to: "/" });
+  }, [user, onboardingDone, nav]);
 
   function finish() {
     setInterests(social);
@@ -44,6 +45,47 @@ function Welcome() {
   }
 
   const hints = social.flatMap((id) => ROOM_HINTS[id] ?? []);
+
+  if (isPending) {
+    return <div className="m-6 h-64 animate-pulse rounded-3xl bg-secondary" />;
+  }
+
+  if (!user) {
+    return (
+      <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6">
+        <Wordmark size="sm" className="mb-10 max-w-[9rem]" />
+        <p className="kicker">Welcome</p>
+        <h1 className="mt-3 font-display text-4xl font-medium">The UNIBUD world.</h1>
+        <p className="mt-3 text-sm text-muted-foreground">
+          People, ideas, culture, and learning. Sign in to keep your wallet, chats, and semester with you.
+        </p>
+        <div className="mt-8 space-y-3">
+          <Link to="/login" search={{ mode: "up" }}>
+            <Button className="w-full">Create account</Button>
+          </Link>
+          <Link to="/login">
+            <Button variant="outline" className="w-full">
+              Sign in
+            </Button>
+          </Link>
+        </div>
+        <button
+          type="button"
+          className="mt-6 text-sm text-muted-foreground"
+          onClick={() => {
+            try {
+              sessionStorage.setItem("unibud-guest-browse", "1");
+            } catch {
+              /* ignore */
+            }
+            void nav({ to: "/" });
+          }}
+        >
+          Look around first
+        </button>
+      </main>
+    );
+  }
 
   return (
     <main className="safe-bottom px-5 pt-10">

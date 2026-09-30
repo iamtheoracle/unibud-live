@@ -8,6 +8,7 @@ import type { ListingCategory } from "@/lib/unibud/types";
 import { useCatalog } from "@/lib/unibud/queries";
 import { cn } from "@/lib/utils";
 import { BudNudge } from "@/components/unibud/bud-nudge";
+import { VaultGate } from "@/components/unibud/vault-gate";
 
 type Search = { cat?: ListingCategory | "all" };
 
@@ -36,6 +37,7 @@ function Market() {
   }, [listings, cat, q]);
 
   return (
+    <VaultGate title="Marketplace">
     <main className="px-4 pb-8 md:px-6">
       <div className="flex items-end justify-between gap-3 pt-2">
         <div>
@@ -85,6 +87,7 @@ function Market() {
       )}
       {sellOpen ? <SellSheet onClose={() => setSellOpen(false)} /> : null}
     </main>
+    </VaultGate>
   );
 }
 

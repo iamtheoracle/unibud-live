@@ -6,6 +6,7 @@ import { createListing } from "@/lib/unibud/server";
 import { koboFromNairaInput } from "@/lib/unibud/format";
 import type { ListingCategory, ListingKind } from "@/lib/unibud/types";
 import { RequireAuth } from "@/components/require-auth";
+import { VaultGate } from "@/components/unibud/vault-gate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,9 +16,11 @@ export const Route = createFileRoute("/_app/sell")({ component: SellPage });
 
 function SellPage() {
   return (
-    <RequireAuth>
-      <SellForm />
-    </RequireAuth>
+    <VaultGate title="Marketplace">
+      <RequireAuth>
+        <SellForm />
+      </RequireAuth>
+    </VaultGate>
   );
 }
 

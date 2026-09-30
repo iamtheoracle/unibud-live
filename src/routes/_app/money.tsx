@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { DemoCallout } from "@/components/unibud/demo-callout";
 import { EmptyState } from "@/components/unibud/empty";
-import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
+import { useAuthReady } from "@/components/unibud/sign-in-gate";
 import { VaultGate } from "@/components/unibud/vault-gate";
 import { PEOPLE } from "@/lib/unibud/catalog";
 import { formatNaira, koboFromNairaInput, relativeTime } from "@/lib/unibud/format";
@@ -114,6 +114,7 @@ function Money() {
         />
       ) : null}
     </main>
+    </VaultGate>
   );
 }
 

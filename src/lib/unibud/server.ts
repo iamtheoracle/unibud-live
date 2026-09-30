@@ -15,32 +15,50 @@ import {
 } from "./map";
 import type { ListingCategory, ListingKind, StudentProfile } from "./types";
 import { canTeach, type CampusRole } from "./roles";
+import { COMMUNITIES, DISCOVERY, LISTINGS, PEOPLE, POSTS, UNIVERSITIES } from "./catalog";
+
+function emptyCatalog() {
+  return {
+    universities: UNIVERSITIES,
+    people: PEOPLE,
+    listings: LISTINGS,
+    communities: COMMUNITIES,
+    posts: POSTS,
+    discovery: DISCOVERY,
+    replies: [] as ReturnType<typeof mapPostReply>[],
+  };
+}
 
 export const getCampusCatalog = createServerFn({ method: "GET" }).handler(
   async () => {
-    await ensureCatalogSeed();
-    const sql = await getSql();
-    const universities = (await sql`select * from universities order by name`).map(mapUni);
-    const people = (await sql`select * from directory_people order by name`).map(mapPerson);
-    const listings = (
-      await sql`select * from listings order by created_at desc`
-    ).map(mapListing);
-    const communities = (await sql`select * from communities order by members desc`).map(
-      mapCommunity,
-    );
-    const posts = (
-      await sql`select * from posts order by created_at desc limit 80`
-    ).map(mapPost);
-    const discovery = (await sql`select * from discovery_items`).map(mapDiscovery);
-    let replies: ReturnType<typeof mapPostReply>[] = [];
     try {
-      replies = (await sql`select * from post_replies order by created_at asc limit 800`).map((r) =>
-        mapPostReply(r as Parameters<typeof mapPostReply>[0]),
+      await ensureCatalogSeed();
+      const sql = await getSql();
+      const universities = (await sql`select * from universities order by name`).map(mapUni);
+      const people = (await sql`select * from directory_people order by name`).map(mapPerson);
+      const listings = (
+        await sql`select * from listings order by created_at desc`
+      ).map(mapListing);
+      const communities = (await sql`select * from communities order by members desc`).map(
+        mapCommunity,
       );
-    } catch {
-      replies = [];
+      const posts = (
+        await sql`select * from posts order by created_at desc limit 80`
+      ).map(mapPost);
+      const discovery = (await sql`select * from discovery_items`).map(mapDiscovery);
+      let replies: ReturnType<typeof mapPostReply>[] = [];
+      try {
+        replies = (await sql`select * from post_replies order by created_at asc limit 800`).map((r) =>
+          mapPostReply(r as Parameters<typeof mapPostReply>[0]),
+        );
+      } catch {
+        replies = [];
+      }
+      return { universities, people, listings, communities, posts, discovery, replies };
+    } catch (error) {
+      console.error("[catalog] database unavailable, using local catalog", error);
+      return emptyCatalog();
     }
-    return { universities, people, listings, communities, posts, discovery, replies };
   },
 );
 

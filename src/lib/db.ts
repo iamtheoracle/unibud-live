@@ -13,11 +13,11 @@ const serverless = isServerlessRuntime();
 export const dbSource: DbSource = databaseUrl ? "postgres" : "pglite";
 
 export interface Sql {
-  <T = Record<string, unknown>>(
+  <T = any>(
     strings: TemplateStringsArray,
     ...values: unknown[]
   ): Promise<T[]>;
-  query<T = Record<string, unknown>>(text: string, params?: unknown[]): Promise<T[]>;
+  query<T = any>(text: string, params?: unknown[]): Promise<T[]>;
 }
 
 const globalRef = globalThis as typeof globalThis & {

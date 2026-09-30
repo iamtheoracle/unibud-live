@@ -7,7 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Wordmark } from "@/components/brand/logo";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 
-export const Route = createFileRoute("/login")({ component: Login });
+export const Route = createFileRoute("/login")({
+  validateSearch: (s: Record<string, unknown>): { mode?: "in" | "up" } => ({
+    mode: s.mode === "up" ? "up" : s.mode === "in" ? "in" : undefined,
+  }),
+  component: Login,
+});
 
 function ProviderMark({ id }: { id: string }) {
   if (id.includes("google")) {
@@ -54,7 +59,8 @@ function ProviderMark({ id }: { id: string }) {
 
 function Login() {
   const router = useRouter();
-  const [mode, setMode] = useState<"in" | "up">("in");
+  const search = Route.useSearch();
+  const [mode, setMode] = useState<"in" | "up">(search.mode ?? "in");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
