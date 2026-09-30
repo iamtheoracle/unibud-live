@@ -47,7 +47,7 @@ export interface AgentResponse {
   status: 'completed' | 'partial' | 'blocked' | 'unavailable' | 'failed';
   output?: unknown;
   evidence?: unknown[];
-  next?: AgentId[];
+  next?: OrganizationAgentId[];
   reason?: string;
   traceId: string;
 }
