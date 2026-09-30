@@ -1,5 +1,6 @@
-import type { AgentId } from './core/contracts';
 import { CORE_AGENTS } from './core/definitions';
+import { CORE_DUTIES } from './core/duties';
+import { CORE_RELATIONSHIPS } from './core/relationships';
 import { SPECIALIST_AGENTS, type OrganizationAgentId, type SpecialistDefinition } from './specialists/definitions';
 
 export interface OrganizationAgent {
@@ -17,36 +18,44 @@ export interface OrganizationAgent {
   userFacing: boolean;
 }
 
-const core = CORE_AGENTS.map((agent) => ({
-  ...agent,
-  category: 'core' as const,
-  mission: agent.role,
-  duties: [] as string[],
-  mustKnowBeforeRouting: [] as string[],
-  mustNotAssume: agent.boundaries,
-  collaborators: [] as OrganizationAgentId[],
-  boundaries: agent.boundaries,
-}));
+const dutyById = new Map(CORE_DUTIES.map((duty) => [duty.id, duty]));
+const collaboratorById = new Map<OrganizationAgentId, OrganizationAgentId[]>();
+for (const relationship of CORE_RELATIONSHIPS) {
+  const current = collaboratorById.get(relationship.from) ?? [];
+  if (!current.includes(relationship.to)) current.push(relationship.to);
+  collaboratorById.set(relationship.from, current);
+}
 
-const specialist = SPECIALIST_AGENTS.map((agent: SpecialistDefinition) => ({
+const core: OrganizationAgent[] = CORE_AGENTS.map((agent) => {
+  const duty = dutyById.get(agent.id);
+  return {
+    ...agent,
+    category: 'core',
+    mission: duty?.mission ?? agent.role,
+    duties: [...(duty?.duties ?? [])],
+    mustKnowBeforeRouting: [...(duty?.mustKnowBeforeRouting ?? [])],
+    mustNotAssume: [...(duty?.mustNotAssume ?? [])],
+    boundaries: [...agent.boundaries],
+    collaborators: [...(collaboratorById.get(agent.id) ?? [])],
+  };
+});
+
+const specialist: OrganizationAgent[] = SPECIALIST_AGENTS.map((agent: SpecialistDefinition) => ({
   id: agent.id,
   name: agent.name,
-  category: 'specialist' as const,
+  category: 'specialist',
   role: agent.role,
   mission: agent.mission,
-  duties: agent.duties,
-  mustKnowBeforeRouting: agent.mustKnowBeforeRouting,
-  mustNotAssume: agent.mustNotAssume,
-  capabilities: agent.capabilities,
-  boundaries: agent.mustNotAssume,
-  collaborators: agent.collaborators,
+  duties: [...agent.duties],
+  mustKnowBeforeRouting: [...agent.mustKnowBeforeRouting],
+  mustNotAssume: [...agent.mustNotAssume],
+  capabilities: [...agent.capabilities],
+  boundaries: [...agent.mustNotAssume],
+  collaborators: [...agent.collaborators],
   userFacing: false,
 }));
 
-export const ORGANIZATION_AGENTS: readonly OrganizationAgent[] = [
-  ...core.map((agent) => ({ ...agent, capabilities: agent.capabilities })),
-  ...specialist,
-];
+export const ORGANIZATION_AGENTS: readonly OrganizationAgent[] = [...core, ...specialist];
 
 const byId = new Map<OrganizationAgentId, OrganizationAgent>(
   ORGANIZATION_AGENTS.map((agent) => [agent.id, agent]),
@@ -58,4 +67,17 @@ export function getOrganizationAgent(id: OrganizationAgentId): OrganizationAgent
 
 export function hasOrganizationAgent(id: string): id is OrganizationAgentId {
   return byId.has(id as OrganizationAgentId);
+}
+
+export function organizationHealth(): { total: number; core: number; specialists: number; userFacing: number; complete: boolean } {
+  const complete = ORGANIZATION_AGENTS.every((agent) =>
+    Boolean(agent.mission && agent.duties.length && agent.capabilities.length && agent.boundaries.length)
+  );
+  return {
+    total: ORGANIZATION_AGENTS.length,
+    core: core.length,
+    specialists: specialist.length,
+    userFacing: ORGANIZATION_AGENTS.filter((agent) => agent.userFacing).length,
+    complete,
+  };
 }
