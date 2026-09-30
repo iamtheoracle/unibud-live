@@ -16,6 +16,8 @@ export type AgentId =
   | 'voice'
   | 'navigator';
 
+import type { OrganizationAgentId } from '../specialists/definitions.ts';
+
 export type AgentHook =
   | 'receive'
   | 'understand'
@@ -30,8 +32,8 @@ export type AgentHook =
 
 export interface AgentRequest {
   id: string;
-  source: AgentId | 'user' | 'system';
-  target: AgentId;
+  source: OrganizationAgentId | 'user' | 'system';
+  target: OrganizationAgentId;
   intent: string;
   input: unknown;
   context?: Record<string, unknown>;
@@ -41,7 +43,7 @@ export interface AgentRequest {
 
 export interface AgentResponse {
   requestId: string;
-  agent: AgentId;
+  agent: OrganizationAgentId;
   status: 'completed' | 'partial' | 'blocked' | 'unavailable' | 'failed';
   output?: unknown;
   evidence?: unknown[];
