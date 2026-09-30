@@ -50,7 +50,7 @@ const specialist: OrganizationAgent[] = SPECIALIST_AGENTS.map((agent: Specialist
   mustKnowBeforeRouting: [...agent.mustKnowBeforeRouting],
   mustNotAssume: [...agent.mustNotAssume],
   capabilities: [...agent.capabilities],
-  boundaries: [...agent.mustNotAssume],
+  boundaries: [...agent.boundaries],
   collaborators: [...agent.collaborators],
   userFacing: false,
 }));
@@ -71,7 +71,15 @@ export function hasOrganizationAgent(id: string): id is OrganizationAgentId {
 
 export function organizationHealth(): { total: number; core: number; specialists: number; userFacing: number; complete: boolean } {
   const complete = ORGANIZATION_AGENTS.every((agent) =>
-    Boolean(agent.mission && agent.duties.length && agent.capabilities.length && agent.boundaries.length)
+    Boolean(
+      agent.mission &&
+      agent.duties.length &&
+      agent.mustKnowBeforeRouting.length &&
+      agent.mustNotAssume.length &&
+      agent.capabilities.length &&
+      agent.boundaries.length &&
+      agent.collaborators.length,
+    ),
   );
   return {
     total: ORGANIZATION_AGENTS.length,
