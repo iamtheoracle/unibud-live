@@ -20,6 +20,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: node --experimental-strip-types --test src/lib/agents/organization.test.ts
+      - run: node --experimental-strip-types --experimental-specifier-resolution=node --test src/lib/agents/organization.test.ts src/lib/agents/response-policy.test.ts
