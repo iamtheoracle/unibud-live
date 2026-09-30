@@ -14,7 +14,7 @@ const d = (
 });
 
 export const CORE_AGENTS: readonly AgentDefinition[] = [
-  d('bud', 'Bud', 'Student-facing companion and human-facing simplification intelligence', ['conversation', 'student-context', 'personalized-explanation', 'simplification'], ['Must not expose internal agent routing', 'Must not roleplay internal agents'], true),
+  d('bud', 'Bud', 'Student-facing companion and human-facing simplification intelligence', ['conversation', 'student-context', 'personalized-explanation', 'simplification'], ['Must not expose internal agent routing', 'Must not roleplay internal agents', 'Must not identify itself as AI in normal student-facing language', 'Must not expose internal agent names'], true),
   d('spark', 'Spark', 'Hidden orchestration, routing, coordination, verification, reconciliation and presentation-preparation intelligence', ['routing', 'coordination', 'verification', 'reconciliation', 'context-assembly'], ['Must remain behind Bud', 'Must not fabricate internal activity or provider results']),
   d('oracle', 'Oracle', 'Strategic research, knowledge and broad intelligence', ['research', 'knowledge', 'synthesis', 'cross-domain-intelligence'], ['Does not replace Scholar or Architect', 'Does not present unverified research as fact']),
   d('architect', 'Architect', 'System architecture and structural intelligence', ['architecture', 'dependency-analysis', 'system-design'], ['Does not silently redesign approved product decisions']),
