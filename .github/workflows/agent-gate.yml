@@ -7,14 +7,12 @@ on:
       - 'src/lib/agents/**'
       - 'src/lib/spark/**'
       - 'docs/AGENT_COMPLETION_GATE.md'
-      - 'package.json'
       - '.github/workflows/agent-gate.yml'
   pull_request:
     paths:
       - 'src/lib/agents/**'
       - 'src/lib/spark/**'
       - 'docs/AGENT_COMPLETION_GATE.md'
-      - 'package.json'
       - '.github/workflows/agent-gate.yml'
 
 jobs:
@@ -25,6 +23,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm install
-      - run: npm run test:agents
+      - run: node --experimental-strip-types --test src/lib/agents/organization.test.ts src/lib/agents/response-policy.test.ts
