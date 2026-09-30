@@ -1,7 +1,7 @@
-import { ORGANIZATION_AGENTS, type OrganizationAgent } from './organization';
-import { collaborationAudit, collaboratorsOf } from './collaboration';
-import { validateAgentOrganization } from './implementation';
-import type { OrganizationAgentId } from './specialists/definitions';
+import { ORGANIZATION_AGENTS, type OrganizationAgent } from './organization.ts';
+import { collaborationAudit, collaboratorsOf } from './collaboration.ts';
+import { validateAgentOrganization } from './implementation.ts';
+import type { OrganizationAgentId } from './specialists/definitions.ts';
 
 export type AgentActivationState = 'ready' | 'blocked';
 
