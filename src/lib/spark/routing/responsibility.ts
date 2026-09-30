@@ -78,6 +78,7 @@ const primaryRoutes: Record<string, OrganizationAgentId> = {
 };
 
 const verificationPartners: Partial<Record<OrganizationAgentId, OrganizationAgentId[]>> = {
+  orbit: ['scholar'],
   oracle: ['atlas', 'guardian'],
   scholar: ['atlas'],
   navigator: ['guardian'],
