@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BUD_RESPONSE_POLICY, assertNoRoleplay, buildBudPresentationContract, collectAuthorizedPersonalizationSignals } from './response-policy';
+import { BUD_RESPONSE_POLICY, assertNoRoleplay, buildBudPresentationContract, collectAuthorizedPersonalizationSignals } from './response-policy.ts';
 
 test('Bud and Spark own the simplification boundary', () => {
   assert.equal(BUD_RESPONSE_POLICY.userFacingAgent, 'bud');
