@@ -23,6 +23,7 @@ export interface SpecialistDefinition {
   mustKnowBeforeRouting: string[];
   mustNotAssume: string[];
   capabilities: string[];
+  boundaries: string[];
   collaborators: OrganizationAgentId[];
 }
 
@@ -37,7 +38,8 @@ const s = (
   capabilities: string[],
   collaborators: OrganizationAgentId[],
 ): SpecialistDefinition => ({
-  id, name, role, mission, duties, mustKnowBeforeRouting, mustNotAssume, capabilities, collaborators,
+  id, name, role, mission, duties, mustKnowBeforeRouting, mustNotAssume,
+  capabilities, boundaries: [...mustNotAssume], collaborators,
 });
 
 export const SPECIALIST_AGENTS: readonly SpecialistDefinition[] = [
@@ -55,7 +57,7 @@ export const SPECIALIST_AGENTS: readonly SpecialistDefinition[] = [
     ['mobility','scholarships','careers','cross-institution discovery','global context'],
     ['geography only as request context','source freshness and verification requirements'],
     ['must not fabricate opportunities or eligibility','must not substitute for verified source data'],
-    ['global-discovery'],['oracle','browser','pulse']),
+    ['global-discovery'],['oracle','orbit','pulse']),
   s('sentinel','Sentinel','Security intelligence','Coordinate security, fraud, moderation, compliance and audit protections.',
     ['security review','fraud signals','compliance coordination','audit protection'],
     ['authorization state','risk context','required policy boundary'],
@@ -65,7 +67,7 @@ export const SPECIALIST_AGENTS: readonly SpecialistDefinition[] = [
     ['feed context','communities','clubs','discussions','collaboration','events'],
     ['social context','visibility and permission context'],
     ['must not fabricate social activity or engagement','must not expose private content'],
-    ['social-intelligence'],['community','pulse','browser','events_service']),
+    ['social-intelligence'],['community','pulse','orbit','events_service']),
   s('study','Study','Learning specialist','Coordinate concrete learning workflows.',
     ['notes','flashcards','quizzes','assignments','revision','GPA learning workflows'],
     ['course context','learning objective','assessment context'],
@@ -85,12 +87,12 @@ export const SPECIALIST_AGENTS: readonly SpecialistDefinition[] = [
     ['books','journals','papers','citations','references','library resources'],
     ['research question','source requirements','citation requirements'],
     ['must not invent citations or publications','must distinguish discovered sources from verified sources'],
-    ['research-discovery'],['scholar','oracle','browser','library_service']),
+    ['research-discovery'],['scholar','oracle','orbit','library_service']),
   s('search','Search','Unified search specialist','Locate permitted platform information across domains.',
     ['people','courses','notes','files','communities','events','platform content'],
     ['query intent','permission scope','search domain'],
     ['must not expose unauthorized records','must not imply a result exists without evidence'],
-    ['platform-search'],['browser','oracle','navigator']),
+    ['platform-search'],['orbit','oracle','navigator']),
 
   s('academic_service','Academic Service','Academic service','Execute academic data operations when a real data source exists.',
     ['courses','grades','assignments','examinations','timetables'],
@@ -101,7 +103,7 @@ export const SPECIALIST_AGENTS: readonly SpecialistDefinition[] = [
     ['requirements','processes','timelines','application state'],
     ['institution and programme','source and freshness'],
     ['must not invent requirements or application status','must not impersonate admissions staff'],
-    ['admissions-data'],['atlas','nova','browser']),
+    ['admissions-data'],['atlas','nova','orbit']),
   s('exam_service','Exam Service','Examination service','Support examination and assessment workflows.',
     ['exam schedules','revision operations','quizzes','flashcards'],
     ['course','assessment type','institution rules'],
@@ -141,7 +143,7 @@ export const SPECIALIST_AGENTS: readonly SpecialistDefinition[] = [
     ['scholarships','eligibility inputs','deadlines','applications'],
     ['source','country or eligibility jurisdiction','freshness'],
     ['must not fabricate opportunities or deadlines','must not guarantee eligibility'],
-    ['scholarship-discovery'],['nexus','browser','atlas']),
+    ['scholarship-discovery'],['nexus','orbit','atlas']),
   s('career_service','Career Service','Career service','Execute career workflow operations using connected services.',
     ['CV','portfolio','applications','job matching','interview workflows'],
     ['user authorization','connected opportunity source'],
@@ -166,17 +168,17 @@ export const SPECIALIST_AGENTS: readonly SpecialistDefinition[] = [
     ['hostels','accommodation','housing information'],
     ['location as user/request context','source freshness'],
     ['must not fabricate availability or prices','must not expose private housing records'],
-    ['housing-information'],['nova','browser']),
+    ['housing-information'],['nova','orbit']),
   s('transport_service','Transport Service','Transport service','Provide campus transport route and schedule operations.',
     ['routes','schedules','commute assistance'],
     ['location as routing context','transport source'],
     ['must not fabricate live transport status','must not assume a route or provider exists'],
-    ['transport-information'],['nova','navigator','browser']),
+    ['transport-information'],['nova','navigator','orbit']),
   s('events_service','Events Service','Events service','Manage real event discovery and event-calendar operations.',
     ['events','workshops','celebrations','activity calendars'],
     ['event source','visibility','date/time context'],
     ['must not fabricate events or attendance','must not imply an event is confirmed without evidence'],
-    ['event-discovery'],['quad','orbit','browser']),
+    ['event-discovery'],['quad','orbit']),
   s('moderation_service','Moderation Service','Moderation service','Review content and community-policy enforcement workflows.',
     ['content review','reports','policy actions'],
     ['policy version','content scope','authorization'],
