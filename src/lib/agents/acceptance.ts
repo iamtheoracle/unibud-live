@@ -32,6 +32,22 @@ function request(id: string, intent: string, input: string, target: Organization
 
 export const AGENT_ACCEPTANCE_CASES: readonly AcceptanceCase[] = [
   {
+    name: 'missing-user-input',
+    request: request('missing-input', 'Explain an academic topic', ''),
+    domain: 'academic',
+    requiredCapabilities: [],
+    availableCapabilities: ['learning'],
+    expectedStatus: 'partial',
+    expectedTargets: ['scholar', 'atlas'],
+  },
+  {
+    name: 'unknown-responsibility',
+    request: request('unknown-route', 'Do something outside the registered organization', 'Proceed with this request.'),
+    domain: 'unregistered-domain',
+    expectedStatus: 'unavailable',
+    expectedTargets: [],
+  },
+  {
     name: 'academic-research-collaboration',
     request: request('academic-research', 'Explain an academic topic using research', 'Explain this topic and support the explanation with reliable research.'),
     domain: 'academic',
