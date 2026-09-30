@@ -4,6 +4,8 @@ import { ORGANIZATION_AGENTS, organizationHealth } from './organization';
 import { validateAgentOrganization } from './implementation';
 import { collaborationAudit, collaboratorsOf } from './collaboration';
 import { activationAudit } from './activation';
+import { ORGANIZATIONAL_IDENTITY, createColleagueProfile } from './organization-culture';
+import { createAgentMessage, continueConversation } from './communication';
 
 test('the complete organization is registered', () => {
   const health = organizationHealth();
@@ -32,6 +34,7 @@ test('every agent participates in the organization collaboration graph', () => {
   assert.equal(audit.connected, audit.total);
   assert.deepEqual(audit.isolated, []);
   assert.deepEqual(audit.unknownTargets, []);
+  assert.deepEqual(audit.invalidSources, []);
   assert.deepEqual(audit.onlyUserFacing, ['bud']);
   assert.equal(audit.activeReady.length, audit.total);
 });
@@ -52,4 +55,45 @@ test('every agent is ready for activation at the organization boundary', () => {
   assert.equal(audit.complete, true);
   assert.equal(audit.ready, audit.total);
   assert.deepEqual(audit.blocked, []);
+});
+
+test('agents belong to one distributed organization with one shared purpose', () => {
+  assert.equal(ORGANIZATIONAL_IDENTITY.agentsAreColleagues, true);
+  assert.equal(ORGANIZATIONAL_IDENTITY.userIsPrincipal, true);
+  assert.equal(ORGANIZATIONAL_IDENTITY.presence, 'global');
+
+  const orbit = createColleagueProfile('orbit');
+  const navigator = createColleagueProfile('navigator');
+  assert.equal(orbit.sharedPurpose, navigator.sharedPurpose);
+  assert.equal(orbit.mayConsult, true);
+  assert.equal(orbit.mayChallenge, true);
+  assert.equal(orbit.mayDisagree, true);
+});
+
+test('colleagues can communicate without becoming user-facing agents', () => {
+  const first = createAgentMessage({
+    from: 'orbit',
+    to: 'scholar',
+    mode: 'consult',
+    subject: 'Discovery context',
+    context: 'A discovered source may contain academic information.',
+    request: 'Review the academic relevance.',
+  });
+
+  const second = createAgentMessage({
+    from: 'scholar',
+    to: 'orbit',
+    mode: 'report',
+    subject: 'Academic relevance',
+    context: 'The source should be evaluated for academic relevance before presentation.',
+    evidence: ['source-review-required'],
+  });
+
+  const conversation = continueConversation(
+    { messages: [first], sharedGoal: first.sharedGoal, resolved: false },
+    second,
+  );
+
+  assert.equal(conversation.messages.length, 2);
+  assert.equal(conversation.messages[1].from, 'scholar');
 });
