@@ -1,15 +1,15 @@
 import {
   ORGANIZATION_AGENTS,
   type OrganizationAgent,
-} from './organization';
+} from './organization.ts';
 import {
   CORE_RELATIONSHIPS,
   type AgentRelationship,
-} from './core/relationships';
+} from './core/relationships.ts';
 import {
   SPECIALIST_AGENTS,
   type OrganizationAgentId,
-} from './specialists/definitions';
+} from './specialists/definitions.ts';
 
 export interface CollaborationEdge {
   from: OrganizationAgentId;
