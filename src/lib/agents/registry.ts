@@ -1,5 +1,6 @@
 import type { AgentDefinition, AgentId } from "./contracts";
 import { emptyBrowsingResult, type BrowsingProvider } from "@/lib/world/browsing";
+import { EXTENDED_AGENT_DEFINITIONS } from "./catalog";
 
 const browserProvider: BrowsingProvider = {
   async discover(request) {
@@ -38,12 +39,16 @@ const definitions: AgentDefinition[] = [
   } },
 ];
 
-const byId = new Map(definitions.map((definition) => [definition.id, definition]));
+// The core runtime agents above are the live execution spine. The extended catalog
+// adds the remaining domain and platform capability roles without inventing handlers.
+const allDefinitions: AgentDefinition[] = [...definitions, ...EXTENDED_AGENT_DEFINITIONS];
+
+const byId = new Map(allDefinitions.map((definition) => [definition.id, definition]));
 
 export function getAgentDefinition(id: AgentId): AgentDefinition {
   return byId.get(id)!;
 }
 
 export function listAgentDefinitions(): AgentDefinition[] {
-  return [...definitions];
+  return [...allDefinitions];
 }
