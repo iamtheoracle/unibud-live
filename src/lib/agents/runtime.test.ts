@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { executeAgent, toBudMessage } from './runtime.ts';
+import { executeAgent, toBudMessage, buildAgentWorkPlan } from './runtime.ts';
 import { ORGANIZATION_AGENTS } from './organization.ts';
 
 const request = (target: any, input: unknown = 'Help with this', extra: any = {}) => ({ id: 'r1', source: 'spark', target, intent: 'support', input, traceId: 't1', ...extra });
@@ -41,4 +41,13 @@ test('authorization failure is explicit and routes to Guardian', () => {
 test('Bud remains the only user-facing presentation boundary', () => {
   const nonBud = ORGANIZATION_AGENTS.filter((agent) => agent.id !== 'bud');
   assert.ok(nonBud.every((agent) => agent.userFacing === false));
+});
+test('every registered role produces a concrete work plan from its mission and duties', () => {
+  for (const agent of ORGANIZATION_AGENTS) {
+    const plan = buildAgentWorkPlan(agent.id, 'support the student request', agent.capabilities);
+    assert.equal(plan.agent, agent.id);
+    assert.ok(plan.selectedDuties.length > 0, agent.id);
+    assert.ok(plan.requiredKnowledge.length > 0, agent.id);
+    assert.ok(plan.stopConditions.length > 0, agent.id);
+  }
 });
