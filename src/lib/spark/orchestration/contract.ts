@@ -62,13 +62,15 @@ export function reconcileResponses(
     conflicts.push('Multiple agent responses differ; Spark must resolve the discrepancy before return.');
   }
 
+  const needsUserInput = responses.some((response) => response.reason === 'missing-user-input');
+
   return {
     requestId,
     responses,
-    verified: conflicts.length === 0,
+    verified: conflicts.length === 0 && !needsUserInput,
     conflicts,
     evidence,
-    finalStatus: conflicts.length === 0 ? 'completed' : 'partial',
+    finalStatus: conflicts.length === 0 && !needsUserInput ? 'completed' : 'partial',
   };
 }
 
