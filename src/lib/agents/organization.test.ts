@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ORGANIZATION_AGENTS, organizationHealth } from './organization';
-import { validateAgentOrganization } from './implementation';
-import { collaborationAudit, collaboratorsOf } from './collaboration';
-import { activationAudit } from './activation';
-import { ORGANIZATIONAL_IDENTITY, createColleagueProfile } from './organization-culture';
-import { createAgentMessage, continueConversation } from './communication';
+import { ORGANIZATION_AGENTS, organizationHealth } from './organization.ts';
+import { validateAgentOrganization } from './implementation.ts';
+import { collaborationAudit, collaboratorsOf } from './collaboration.ts';
+import { activationAudit } from './activation.ts';
+import { ORGANIZATIONAL_IDENTITY, createColleagueProfile } from './organization-culture.ts';
+import { createAgentMessage, continueConversation } from './communication.ts';
 
 test('the complete organization is registered', () => {
   const health = organizationHealth();
