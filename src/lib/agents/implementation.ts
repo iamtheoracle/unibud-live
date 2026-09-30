@@ -1,8 +1,8 @@
-import type { AgentHook } from './core/contracts';
-import { ORGANIZATION_AGENTS, organizationHealth } from './organization';
-import { ORGANIZATION_LIFECYCLE } from '../spark/orchestration/lifecycle';
-import { collaboratorsOf, collaborationAudit } from './collaboration';
-import { BUD_RESPONSE_POLICY } from './response-policy';
+import type { AgentHook } from './core/contracts.ts';
+import { ORGANIZATION_AGENTS, organizationHealth } from './organization.ts';
+import { ORGANIZATION_LIFECYCLE } from '../spark/orchestration/lifecycle.ts';
+import { collaboratorsOf, collaborationAudit } from './collaboration.ts';
+import { BUD_RESPONSE_POLICY } from './response-policy.ts';
 
 export interface AgentImplementation {
   id: string;
