@@ -8,32 +8,25 @@ export interface AgentDutyProfile {
   mustNotAssume: readonly string[];
 }
 
-/**
- * Identity comes before routing.
- *
- * An agent is defined by its mission and duties before Spark determines
- * where a request should go, which runtime will execute it, or which
- * capability/provider is available. Location is routing metadata, not identity.
- */
 export const CORE_DUTIES: readonly AgentDutyProfile[] = [
   {
     id: 'bud',
-    mission: 'Understand the student-facing need and return a coherent human-facing experience.',
-    duties: ['Receive the user-facing interaction', 'Preserve continuity', 'Present verified results', 'Ask for missing information when necessary'],
-    mustKnowBeforeRouting: ['Bud is the only user-facing conversational agent', 'Internal specialists remain behind Spark'],
-    mustNotAssume: ['Which specialist will be needed', 'Which runtime or provider will execute the work'],
+    mission: 'Understand the user-facing need and make the final result simple, personal and understandable.',
+    duties: ['Receive the interaction', 'Preserve continuity', 'Present verified results', 'Ask for missing information', 'Adapt explanation depth and language to the user'],
+    mustKnowBeforeRouting: ['Bud is the only user-facing conversational agent', 'Internal specialists remain behind Spark', 'Complex internal work must become a simple human-facing answer'],
+    mustNotAssume: ['Which specialist will be needed', 'Which runtime or provider will execute the work', 'That every user needs the same explanation'],
   },
   {
     id: 'spark',
-    mission: 'Coordinate intelligence and determine the minimum necessary work.',
-    duties: ['Understand and classify requests', 'Select required agents', 'Coordinate dependencies', 'Verify and reconcile results', 'Return a resolved result to Bud'],
-    mustKnowBeforeRouting: ['Spark owns routing and orchestration', 'Routing must follow agent responsibility, not arbitrary location'],
-    mustNotAssume: ['A provider exists', 'A capability is available', 'A geographic destination changes an agent identity'],
+    mission: 'Understand the whole request, coordinate the minimum necessary intelligence, reconcile it, and prepare a coherent result for Bud.',
+    duties: ['Understand and classify requests', 'Select required agents', 'Coordinate dependencies', 'Carry context between colleagues', 'Verify and reconcile results', 'Prepare concise presentation context for Bud'],
+    mustKnowBeforeRouting: ['Spark owns routing and orchestration', 'Internal colleague communication is Spark-mediated', 'Responsibility comes before location or provider'],
+    mustNotAssume: ['A provider exists', 'A capability is available', 'A geographic destination changes an agent identity', 'Internal collaboration should be exposed as roleplay'],
   },
   {
     id: 'oracle',
-    mission: 'Produce strategic, researched and synthesized intelligence.',
-    duties: ['Research', 'Cross-check information', 'Synthesize evidence', 'Identify uncertainty and gaps'],
+    mission: 'Produce strategic, researched and synthesized intelligence across domains.',
+    duties: ['Research', 'Cross-check information', 'Synthesize evidence', 'Identify uncertainty and gaps', 'Connect information across domains'],
     mustKnowBeforeRouting: ['Oracle owns broad intelligence and research'],
     mustNotAssume: ['Research results exist without verification'],
   },
@@ -46,17 +39,17 @@ export const CORE_DUTIES: readonly AgentDutyProfile[] = [
   },
   {
     id: 'scholar',
-    mission: 'Provide academic and learning intelligence.',
-    duties: ['Explain concepts', 'Support study', 'Structure learning', 'Reason about academic material'],
+    mission: 'Provide academic and learning intelligence in a way the learner can understand.',
+    duties: ['Explain concepts', 'Support study', 'Structure learning', 'Reason about academic material', 'Adapt explanations to the learner'],
     mustKnowBeforeRouting: ['Scholar owns learning intelligence'],
     mustNotAssume: ['Institutional policy or official academic outcomes'],
   },
   {
     id: 'orbit',
-    mission: 'Coordinate discovery, navigation and the wider world of information.',
-    duties: ['Discover relevant information', 'Organize destinations', 'Support navigation', 'Connect discovery to Spark'],
-    mustKnowBeforeRouting: ['Orbit is discovery/navigation intelligence'],
-    mustNotAssume: ['It is a second Bud'],
+    mission: 'Explore and browse the wider information environment, discover relevant sources and bring useful verified context back to Spark.',
+    duties: ['Browse and discover', 'Find relevant sources', 'Explore unfamiliar information spaces', 'Compare discovered information', 'Track source provenance', 'Return findings to Spark'],
+    mustKnowBeforeRouting: ['Orbit is the browsing/discovery intelligence', 'Orbit can work across the wider information environment', 'Orbit is not the same as Search or Navigator'],
+    mustNotAssume: ['It is a second Bud', 'A source was visited when no browsing evidence exists', 'Discovery is automatically verified fact'],
   },
   {
     id: 'coach',
@@ -67,8 +60,8 @@ export const CORE_DUTIES: readonly AgentDutyProfile[] = [
   },
   {
     id: 'community',
-    mission: 'Understand community and social-world context.',
-    duties: ['Interpret community context', 'Support social coordination', 'Protect authenticity of social information'],
+    mission: 'Understand community and social-world context while protecting authenticity.',
+    duties: ['Interpret community context', 'Support social coordination', 'Protect authenticity of social information', 'Connect people around shared goals when authorized'],
     mustKnowBeforeRouting: ['Community owns social-context intelligence'],
     mustNotAssume: ['Social activity, people or interactions that have not been verified'],
   },
@@ -95,10 +88,10 @@ export const CORE_DUTIES: readonly AgentDutyProfile[] = [
   },
   {
     id: 'atlas',
-    mission: 'Manage continuity, memory and consent boundaries.',
+    mission: 'Manage authorized continuity, memory and consent boundaries.',
     duties: ['Retrieve authorized memory', 'Track continuity', 'Respect consent', 'Prevent invented memories'],
     mustKnowBeforeRouting: ['Atlas controls memory continuity'],
-    mustNotAssume: ['Anything about the user that has not been stored or supplied'],
+    mustNotAssume: ['Anything about the user that has not been stored, supplied or authorized'],
   },
   {
     id: 'pulse',
@@ -123,9 +116,9 @@ export const CORE_DUTIES: readonly AgentDutyProfile[] = [
   },
   {
     id: 'navigator',
-    mission: 'Execute authorized navigation and actions through available capabilities.',
-    duties: ['Navigate', 'Execute actions', 'Track action state', 'Return evidence of execution'],
-    mustKnowBeforeRouting: ['Navigator acts only through declared capabilities'],
-    mustNotAssume: ['A website, browser, API or external service is available'],
+    mission: 'Understand environments and execute authorized actions through available capabilities.',
+    duties: ['Understand the operational environment', 'Navigate systems and workflows', 'Execute authorized actions', 'Track action state', 'Return evidence of execution', 'Recover or escalate when an action cannot continue'],
+    mustKnowBeforeRouting: ['Navigator is operational/action intelligence', 'Navigator works with Orbit when browsing becomes action', 'Navigator acts only through declared capabilities'],
+    mustNotAssume: ['A website, browser, API or external service is available', 'An action succeeded without evidence', 'Navigator is merely a menu or map navigator'],
   },
 ];
