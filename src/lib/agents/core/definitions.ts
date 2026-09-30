@@ -1,4 +1,4 @@
-import type { AgentDefinition, AgentId } from './contracts';
+import type { AgentDefinition, AgentId } from './contracts.ts';
 
 const d = (
   id: AgentId,
