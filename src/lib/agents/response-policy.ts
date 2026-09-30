@@ -1,4 +1,4 @@
-import type { OrganizationAgentId } from './specialists/definitions';
+import type { OrganizationAgentId } from './specialists/definitions.ts';
 
 export interface UserContext {
   explicitProfile?: Record<string, unknown>;
