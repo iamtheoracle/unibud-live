@@ -44,7 +44,7 @@ test('Orbit and Navigator retain distinct operational responsibilities', () => {
   const navigator = ORGANIZATION_AGENTS.find((agent) => agent.id === 'navigator');
   assert.ok(orbit);
   assert.ok(navigator);
-  assert.match(orbit.mission, /discovery|navigation/i);
+  assert.match(orbit.mission, /discovery|browse/i);
   assert.match(navigator.mission, /action|navigation/i);
   assert.ok(collaboratorsOf('orbit').length > 0);
   assert.ok(collaboratorsOf('navigator').length > 0);
