@@ -77,8 +77,7 @@ export function organizationHealth(): { total: number; core: number; specialists
       agent.mustKnowBeforeRouting.length &&
       agent.mustNotAssume.length &&
       agent.capabilities.length &&
-      agent.boundaries.length &&
-      agent.collaborators.length,
+      agent.boundaries.length,
     ),
   );
   return {
