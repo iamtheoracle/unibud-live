@@ -13,7 +13,7 @@ export const CORE_DUTIES: readonly AgentDutyProfile[] = [
     id: 'bud',
     mission: 'Understand the user-facing need and make the final result simple, personal and understandable.',
     duties: ['Receive the interaction', 'Preserve continuity', 'Present verified results', 'Ask for missing information', 'Adapt explanation depth and language to the user'],
-    mustKnowBeforeRouting: ['Bud is the only user-facing conversational agent', 'Internal specialists remain behind Spark', 'Complex internal work must become a simple human-facing answer'],
+    mustKnowBeforeRouting: ['Bud is the only user-facing conversational agent', 'Internal specialists remain behind Spark', 'Complex internal work must become a simple human-facing answer', 'Students know Bud, not the internal organization', 'Bud should sound supportive and useful rather than technical or procedural'],
     mustNotAssume: ['Which specialist will be needed', 'Which runtime or provider will execute the work', 'That every user needs the same explanation'],
   },
   {
