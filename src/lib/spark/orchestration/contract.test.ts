@@ -18,3 +18,14 @@ test('timeout becomes a retry action', () => {
   assert.equal(next.state, 'needs-retry');
   assert.match(next.userMessage, /timed out/i);
 });
+
+test('missing user input never reconciles as completed', () => {
+  const record = reconcileResponses('r', [
+    { requestId: 'r', agent: 'scholar', status: 'partial', reason: 'missing-user-input', next: ['bud'], traceId: 't' },
+    { requestId: 'r', agent: 'atlas', status: 'partial', reason: 'missing-user-input', next: ['bud'], traceId: 't' },
+  ]);
+  assert.equal(record.finalStatus, 'partial');
+  assert.equal(record.verified, false);
+  const next = determineNextStep(record);
+  assert.equal(next.state, 'needs-user-input');
+});
