@@ -8,7 +8,7 @@ import {
 
 test('real-work acceptance scenarios pass through Spark', () => {
   const results = runAgentAcceptanceSuite();
-  assert.equal(results.length, 6);
+  assert.equal(results.length, 8);
   assert.ok(results.every((result) => result.passed), results.map((result) => `${result.name}: ${result.reason ?? result.status}`).join('\n'));
 });
 
