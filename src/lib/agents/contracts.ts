@@ -1,21 +1,17 @@
 /** Stable contracts for UNIBUD's internal living agent system. */
 
 export type AgentId =
-  | "bud"
-  | "oracle"
-  | "scholar"
-  | "orbit"
-  | "coach"
-  | "community"
-  | "vision"
-  | "creator"
-  | "atlas"
-  | "pulse"
-  | "guardian"
-  | "voice"
-  | "navigator"
-  | "spark"
-  | "browser";
+  | "bud" | "spark" | "oracle" | "scholar" | "orbit" | "coach" | "community"
+  | "vision" | "creator" | "atlas" | "pulse" | "guardian" | "voice" | "navigator" | "browser"
+  | "architect" | "artist" | "sage" | "nova" | "nexus" | "sentinel"
+  | "quad" | "study" | "campus" | "career" | "library" | "search"
+  | "academic_service" | "admissions_service" | "exam_service" | "lecturer_service"
+  | "live_class_service" | "institution_service" | "wellness_service" | "community_service"
+  | "personalization_service" | "scholarship_service" | "career_service" | "research_service"
+  | "library_service" | "marketplace_service" | "housing_service" | "transport_service"
+  | "events_service" | "moderation_service" | "security_service" | "analytics_service"
+  | "integration_service" | "notification_service" | "outreach_service" | "payment_service"
+  | "communication_service";
 
 export type AgentActivityState = "idle" | "queued" | "working" | "waiting" | "completed" | "failed";
 
