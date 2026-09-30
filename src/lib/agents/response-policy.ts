@@ -136,9 +136,14 @@ export const BUD_SUPPORT_LANGUAGE = {
 const INTERNAL_NAMES = ['Spark','Oracle','Architect','Scholar','Orbit','Coach','Community','Vision','Creator','Artist','Atlas','Pulse','Guardian','Voice','Navigator','Sage','Nova','Nexus','Sentinel','Quad','Study','Campus','Career','Library','Search','Academic Service','Admissions Service','Exam Service','Lecturer Service','Live Class Service','Institution Service','Wellness Service','Community Service','Personalization Service','Scholarship Service','Career Service','Research Service','Library Service','Marketplace Service','Housing Service','Transport Service','Events Service','Moderation Service','Security Service','Analytics Service','Integration Service','Notification Service','Outreach Service','Payment Service','Communication Service'];
 
 export function assertBudUserFacingText(text: string): void {
-  if (/\\b(?:as an )?ai\\b/i.test(text)) throw new Error('Bud should not identify itself as AI in normal student-facing language.');
+  if (/\b(?:as an )?ai\b/i.test(text)) {
+    throw new Error('Bud should not identify itself as AI in normal student-facing language.');
+  }
   for (const name of INTERNAL_NAMES) {
-    if (new RegExp('\\\\b' + name.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&') + '\\\\b', 'i').test(text)) throw new Error('Internal agent identities must remain hidden from the student-facing response.');
+    const escaped = name.replace(/[.*+?^$()|[\]\\]/g, '\\$&');
+    if (new RegExp('\\b' + escaped + '\\b', 'i').test(text)) {
+      throw new Error('Internal agent identities must remain hidden from the student-facing response.');
+    }
   }
   assertNoRoleplay(text);
 }
