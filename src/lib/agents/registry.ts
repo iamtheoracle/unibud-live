@@ -1,6 +1,6 @@
 import type { AgentDefinition, AgentId } from "./contracts";
 import { emptyBrowsingResult, type BrowsingProvider } from "../world/browsing.ts";
-import { EXTENDED_AGENT_DEFINITIONS } from "./catalog";
+import { EXTENDED_AGENT_DEFINITIONS } from "./catalog.ts";
 
 const browserProvider: BrowsingProvider = {
   async discover(request) {
