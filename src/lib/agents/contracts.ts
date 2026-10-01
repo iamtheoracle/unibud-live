@@ -2,7 +2,7 @@
 
 export type AgentId =
   | "bud" | "spark" | "oracle" | "scholar" | "orbit" | "coach" | "community"
-  | "vision" | "creator" | "atlas" | "pulse" | "guardian" | "voice" | "navigator" | "browser"
+  | "vision" | "creator" | "atlas" | "pulse" | "guardian" | "voice" | "navigator"
   | "architect" | "artist" | "sage" | "nova" | "nexus" | "sentinel"
   | "quad" | "study" | "campus" | "career" | "library" | "search"
   | "academic_service" | "admissions_service" | "exam_service" | "lecturer_service"
