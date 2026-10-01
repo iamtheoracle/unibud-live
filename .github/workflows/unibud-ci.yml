@@ -1,4 +1,5 @@
 name: UNIBUD CI
+# Full application verification gate
 
 on:
   push:
