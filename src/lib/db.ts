@@ -1,7 +1,7 @@
 import { pendingMigrations } from "../../scripts/migration-plan.mjs";
 import { DATABASE_URL_VARS, isServerlessRuntime, resolveDatabaseUrl } from "./database-url";
 
-export type DbSource = "postgres" | "pglite";
+export type DbSource = "postgres" | "pglite" | "unconfigured";
 
 const databaseUrl = resolveDatabaseUrl();
 const serverless = isServerlessRuntime();
@@ -11,7 +11,7 @@ const usePglite = typeof process !== "undefined" && process.env.USE_PGLITE === "
  * Postgres when a connection string is set (Netlify/production).
  * Embedded PGlite only for local/preview — never on a serverless filesystem.
  */
-export const dbSource: DbSource = databaseUrl ? "postgres" : "pglite";
+export const dbSource: DbSource = databaseUrl ? "postgres" : usePglite && !serverless ? "pglite" : "unconfigured";
 
 export interface Sql {
   <T = any>(
@@ -74,6 +74,9 @@ async function createPgliteSql(): Promise<Sql> {
       `PGlite cannot run on Netlify/Lambda. Set ${DATABASE_URL_VARS} for PostgreSQL.`,
     );
   }
+  if (!usePglite) {
+    throw new Error("PGlite is disabled by default. Set USE_PGLITE=true for local development.");
+  }
   globalRef.__pgliteInstance__ ??= (async () => {
     const { PGlite } = await import("@electric-sql/pglite");
     const pg = new PGlite({
@@ -129,7 +132,15 @@ async function createSql(): Promise<Sql> {
     throw new Error("@/lib/db is server-only.");
   }
   if (databaseUrl) return createPostgresSql();
-  return createPgliteSql();
+  if (serverless) {
+    throw new Error(
+      `PGlite cannot run on Netlify/Lambda. Set ${DATABASE_URL_VARS} for PostgreSQL.`,
+    );
+  }
+  if (usePglite) return createPgliteSql();
+  throw new Error(
+    `Database is not configured. Set ${DATABASE_URL_VARS} for PostgreSQL or USE_PGLITE=true for local development.`,
+  );
 }
 
 export function getSql(): Promise<Sql> {
@@ -153,6 +164,7 @@ export async function getPglite(): Promise<import("@electric-sql/pglite").PGlite
 export function ensureDbReady(): Promise<void> {
   if (databaseUrl) return Promise.resolve();
   if (serverless) return Promise.resolve();
+  if (!usePglite) return Promise.resolve();
   return getSql().then(() => undefined);
 }
 
