@@ -11,6 +11,7 @@ import { communicationInstruction } from "./communication";
 import { inferSparkDomain, sparkSystemNotes } from "./spark";
 import { executeThroughSpark } from "@/lib/spark/runtime";
 import type { AgentRequest } from "@/lib/agents/core/contracts.ts";
+import { assertBudUserFacingText } from "@/lib/agents/response-policy.ts";
 
 const SYSTEM = `You are Bud. You are the student's study buddy and companion inside UNIBUD. You are part of a real internal system, but never expose internal agents, routing, providers, or notes.
 
@@ -196,7 +197,15 @@ async function runAsk(
   ], { maxTokens: 500, signal: controller.signal });
   clearTimeout(timer);
 
-  const reply = result.ok ? result.text : result.error;
+  let reply = result.ok ? result.text : result.error;
+  if (result.ok) {
+    try {
+      assertBudUserFacingText(reply);
+    } catch {
+      reply = "I couldn’t safely prepare that reply. Try again and I’ll keep it clear.";
+      result = { ok: false, error: reply, providerId: result.providerId };
+    }
+  }
   try {
     await sql`insert into bud_messages (id, user_id, role, content, conversation_id) values (${crypto.randomUUID()}, ${userId}, ${"assistant"}, ${reply}, ${conversationId})`;
   } catch {
