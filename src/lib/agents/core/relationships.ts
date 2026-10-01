@@ -1,8 +1,8 @@
-import type { AgentId } from './contracts.ts';
+import type { OrganizationAgentId } from '../specialists/definitions.ts';
 
 export interface AgentRelationship {
-  from: AgentId;
-  to: AgentId;
+  from: OrganizationAgentId;
+  to: OrganizationAgentId;
   reason: string;
   mode: 'route' | 'delegate' | 'verify' | 'handoff' | 'review';
 }
