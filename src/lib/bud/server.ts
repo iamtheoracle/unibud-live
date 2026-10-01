@@ -185,7 +185,7 @@ async function runAsk(
   const provider = getAIProvider();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 22_000);
-  const result = await provider.complete([
+  let result = await provider.complete([
     { role: "system", content: SYSTEM },
     { role: "system", content: contextLine },
     { role: "system", content: brief },
