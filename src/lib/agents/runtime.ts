@@ -1,4 +1,8 @@
 import type { OrganizationAgentId } from './specialists/definitions.ts';
+import { getAgentDefinition } from './registry';
+import type { AgentInput as LegacyAgentInput, AgentId as LegacyAgentId, AgentActivityState, AgentOutput as LegacyAgentOutput } from './contracts';
+import type { ActivitySink } from './activity';
+import { activityEvent } from './activity';
 import { getOrganizationAgent } from './organization.ts';
 import type { AgentRequest, AgentResponse } from './core/contracts.ts';
 
@@ -253,4 +257,49 @@ export function toBudMessage(result: AgentExecutionResult): string {
   if (result.outcome === 'needs-input') return result.message;
   if (result.outcome === 'unavailable') return (result.message + ' ' + (result.nextActions[0] ?? '')).trim();
   return result.message;
+}
+
+
+/** Compatibility bridge for the existing Bud server while the application migrates to Spark's organization runtime. */
+export type SpecialistExecution = {
+  agentId: LegacyAgentId;
+  status: AgentActivityState;
+  output?: LegacyAgentOutput;
+  error?: string;
+};
+
+export async function executeSpecialists(
+  specialistIds: readonly LegacyAgentId[],
+  input: LegacyAgentInput,
+  sink: ActivitySink,
+): Promise<SpecialistExecution[]> {
+  const results: SpecialistExecution[] = [];
+  for (const agentId of specialistIds) {
+    await sink(activityEvent(input.requestId, input.userId, agentId, 'queued', 'queued'));
+    const definition = getAgentDefinition(agentId);
+    if (!definition?.handler) {
+      const error = 'No executable provider-backed handler is registered for this responsibility.';
+      await sink(activityEvent(input.requestId, input.userId, agentId, 'waiting', 'waiting', error));
+      results.push({ agentId, status: 'waiting', error });
+      continue;
+    }
+    await sink(activityEvent(input.requestId, input.userId, agentId, 'working', 'started'));
+    try {
+      const output = await definition.handler(input, {
+        requestId: input.requestId,
+        now: new Date().toISOString(),
+        userId: input.userId,
+        prompt: input.prompt,
+        context: input.context ?? {},
+      });
+      const status: AgentActivityState = output.ok ? 'completed' : 'failed';
+      await sink(activityEvent(input.requestId, input.userId, agentId, status, output.ok ? 'completed' : 'failed', output.error ?? output.summary));
+      results.push({ agentId, status, output, error: output.error });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Specialist execution failed.';
+      await sink(activityEvent(input.requestId, input.userId, agentId, 'failed', 'failed', message));
+      results.push({ agentId, status: 'failed', error: message });
+    }
+  }
+  return results;
 }
