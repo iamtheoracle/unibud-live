@@ -15,21 +15,21 @@ const MODE_ROUTE: Record<BudMode, SpecialistId[]> = {
 
 export function inferSparkDomain(prompt: string): string {
   const p = prompt.toLowerCase();
-  if (/\\b(harass|threat|unsafe|scam|bully|self-harm|abuse|danger)\\b/.test(p)) return "security";
-  if (/\\b(where in unibud|how do i find|take me to|which tab|open |go to |show my )\\b/.test(p)) return "action";
-  if (/\\b(remember|last time|we were|progress|where did we)\\b/.test(p)) return "memory";
-  if (/\\b(trending|what.?s happening|gist right now|discover|browse|scroll|show me something new|what.?s new)\\b/.test(p)) return "discovery";
-  if (/\\b(web|search online|look up|find online|source|article|news|current)\\b/.test(p)) return "research";
-  if (/\\b(diagram|visual|picture this|draw|show me how it looks|image)\\b/.test(p)) return "visual_understanding";
-  if (/\\b(reel|clip|create|shoot|edit|post this|design)\\b/.test(p)) return "content_creation";
-  if (/\\b(podcast|listen|audio|voice note|read (it|this) (out|aloud))\\b/.test(p)) return "speech";
-  if (/\\b(community|group chat|class group|gist|study group|club)\\b/.test(p)) return "community";
-  if (/\\b(scholarship|grant|funding opportunity)\\b/.test(p)) return "scholarships";
-  if (/\\b(job|career|internship|cv|resume|interview)\\b/.test(p)) return "career";
-  if (/\\b(event|workshop|concert|calendar)\\b/.test(p)) return "events";
-  if (/\\b(research|paper|journal|citation|source)\\b/.test(p)) return "research";
-  if (/\\b(campus|faculty|department|timetable|attendance|result)\\b/.test(p)) return "campus";
-  if (/\\b(plan|schedule|routine|goal|deadline)\\b/.test(p)) return "planning";
+  if (/\b(harass|threat|unsafe|scam|bully|self-harm|abuse|danger)\b/.test(p)) return "security";
+  if (/\b(where in unibud|how do i find|take me to|which tab|open |go to |show my )\b/.test(p)) return "action";
+  if (/\b(remember|last time|we were|progress|where did we)\b/.test(p)) return "memory";
+  if (/\b(trending|what.?s happening|gist right now|discover|browse|scroll|show me something new|what.?s new)\b/.test(p)) return "discovery";
+  if (/\b(web|search online|look up|find online|source|article|news|current)\b/.test(p)) return "research";
+  if (/\b(diagram|visual|picture this|draw|show me how it looks|image)\b/.test(p)) return "visual_understanding";
+  if (/\b(reel|clip|create|shoot|edit|post this|design)\b/.test(p)) return "content_creation";
+  if (/\b(podcast|listen|audio|voice note|read (it|this) (out|aloud))\b/.test(p)) return "speech";
+  if (/\b(community|group chat|class group|gist|study group|club)\b/.test(p)) return "community";
+  if (/\b(scholarship|grant|funding opportunity)\b/.test(p)) return "scholarships";
+  if (/\b(job|career|internship|cv|resume|interview)\b/.test(p)) return "career";
+  if (/\b(event|workshop|concert|calendar)\b/.test(p)) return "events";
+  if (/\b(research|paper|journal|citation|source)\b/.test(p)) return "research";
+  if (/\b(campus|faculty|department|timetable|attendance|result)\b/.test(p)) return "campus";
+  if (/\b(plan|schedule|routine|goal|deadline)\b/.test(p)) return "planning";
   return "academic";
 }
 
