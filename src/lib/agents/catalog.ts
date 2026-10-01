@@ -1,4 +1,6 @@
-export interface ExtendedAgentDefinition {\n  id: string; role: string; responsibility: string; contextScope: string[]; memoryScope: string[]; permissions: string[]; collaborators: string[];\n}
+export interface ExtendedAgentDefinition {
+  id: string; role: string; responsibility: string; contextScope: string[]; memoryScope: string[]; permissions: string[]; collaborators: string[];
+}
 
 /**
  * Canonical extended UNIBUD intelligence catalog.
