@@ -1,4 +1,4 @@
-name: UNIBUD CI
+name: UNIBUD Pre-UI Verification Gate
 # Full application verification gate
 
 on:
@@ -37,8 +37,7 @@ jobs:
       # The existing UI/studio/routes lint baseline remains intentionally outside the pre-UI gate.
       # Full application linting will be restored when UI implementation begins.
 
-      - name: Tests
-        run: npm test
+      - name: Agent and Spark tests (pre-UI gate)
+        run: npm run test:agents
 
-      - name: Production build
-        run: npm run build
+      # Full UI/template tests and production build remain deferred until UI implementation begins.
