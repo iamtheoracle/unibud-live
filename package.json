@@ -16,7 +16,7 @@
     "preview:stop": "node scripts/preview.mjs stop",
     "typecheck": "tsc --noEmit",
     "check:auth": "node scripts/check-auth-invariant.mjs",
-    "test:agents": "node --experimental-strip-types --test src/lib/agents/organization.test.ts src/lib/agents/acceptance.test.ts src/lib/agents/activation.test.ts src/lib/agents/response-policy.test.ts src/lib/agents/runtime.test.ts src/lib/agents/content-context.test.ts src/lib/agents/context-access.test.ts src/lib/spark/runtime.test.ts src/lib/spark/orchestration/contract.test.ts",
+    "test:agents": "node --experimental-strip-types --test src/lib/agents/organization.test.ts src/lib/agents/acceptance.test.ts src/lib/agents/activation.test.ts src/lib/agents/response-policy.test.ts src/lib/agents/runtime.test.ts src/lib/agents/content-context.test.ts src/lib/agents/context-access.test.ts src/lib/bud/provider.test.ts src/lib/bud/spark-boundary.test.ts src/lib/spark/runtime.test.ts src/lib/spark/orchestration/contract.test.ts",
     "test": "npm run test:agents && node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/auth/gate-identity.test.ts",
     "lint": "eslint .",
     "format": "prettier --write ."
