@@ -25,7 +25,7 @@ const freeProvider: AIProvider = {
   kind: "free",
   capabilities: [],
   async complete() {
-    return { ok: true, text: FREE_REPLY, providerId: "free" };
+    return { ok: false, error: FREE_REPLY, providerId: "free" };
   },
 };
 
