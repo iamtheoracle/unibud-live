@@ -180,7 +180,6 @@ async function runAsk(
   const oracleLine = oracle ? `Verified internal context: ${oracle.summary}` : null;
   const sparkNotes = sparkSystemNotes(prompt).join("\n");
   const communication = communicationInstruction(prompt);
-  const executionLine = executionNotes.length ? `Real completed internal work:\n${executionNotes.join("\n")}` : "No specialist capability completed work for this request.";
 
   const provider = getAIProvider();
   const controller = new AbortController();
