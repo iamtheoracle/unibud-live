@@ -1,7 +1,7 @@
 import type { AgentId } from './contracts';
 
 export interface ExtendedAgentDefinition {
-  id: string; role: string; responsibility: string; contextScope: string[]; memoryScope: string[]; permissions: string[]; collaborators: AgentId[];
+  id: AgentId; role: string; responsibility: string; contextScope: string[]; memoryScope: string[]; permissions: string[]; collaborators: AgentId[];
 }
 
 /**
