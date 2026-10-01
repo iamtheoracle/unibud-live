@@ -1,5 +1,5 @@
-import type { AgentId } from '../core/contracts.ts';
-import type { OrganizationAgentId } from '../specialists/definitions.ts';
+import type { AgentId } from '../../agents/core/contracts.ts';
+import type { OrganizationAgentId } from '../../agents/specialists/definitions.ts';
 
 /**
  * Routing is responsibility-first.
