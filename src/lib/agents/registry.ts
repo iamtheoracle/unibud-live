@@ -1,5 +1,5 @@
 import type { AgentDefinition, AgentId } from "./contracts";
-import { emptyBrowsingResult, type BrowsingProvider } from "@/lib/world/browsing";
+import { emptyBrowsingResult, type BrowsingProvider } from "../world/browsing.ts";
 import { EXTENDED_AGENT_DEFINITIONS } from "./catalog";
 
 const browserProvider: BrowsingProvider = {
