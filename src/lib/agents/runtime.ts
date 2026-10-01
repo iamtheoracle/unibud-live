@@ -1,7 +1,7 @@
 import type { OrganizationAgentId } from './specialists/definitions.ts';
-import { getAgentDefinition } from './registry';
+import { getAgentDefinition } from './registry.ts';
 import type { AgentInput as LegacyAgentInput, AgentId as LegacyAgentId, AgentActivityState, AgentOutput as LegacyAgentOutput } from './contracts';
-import type { ActivitySink } from './activity';
+import type { ActivitySink } from './activity.ts';
 import { activityEvent } from './activity';
 import { getOrganizationAgent } from './organization.ts';
 import type { AgentRequest, AgentResponse } from './core/contracts.ts';
