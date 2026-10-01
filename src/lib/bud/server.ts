@@ -8,10 +8,9 @@ import { getAIProvider } from "./provider";
 import { buildBudBrief, type AtlasSnap } from "./brief";
 import { advanceMilestone, parseMilestone } from "./milestones";
 import { communicationInstruction } from "./communication";
-import { routeSpecialists, sparkSystemNotes } from "./spark";
-import { createActivitySink } from "@/lib/agents/activity";
-import { executeSpecialists } from "@/lib/agents/runtime";
-import type { AgentInput } from "@/lib/agents/contracts";
+import { inferSparkDomain, sparkSystemNotes } from "./spark";
+import { executeThroughSpark } from "@/lib/spark/runtime";
+import type { AgentRequest } from "@/lib/agents/core/contracts.ts";
 
 const SYSTEM = `You are Bud. You are the student's study buddy and companion inside UNIBUD. You are part of a real internal system, but never expose internal agents, routing, providers, or notes.
 
@@ -137,18 +136,6 @@ async function runAsk(
   else await sql`update bud_conversations set updated_at = now() where id = ${conversationId} and user_id = ${userId}`;
 
   const requestId = crypto.randomUUID();
-  const sink = createActivitySink(sql);
-  const specialistIds = routeSpecialists(prompt);
-  const agentInput: AgentInput = {
-    requestId,
-    userId,
-    prompt,
-    context: { fromPath: extra?.fromPath, media: extra?.media, atlas: extra?.atlas },
-  };
-  const executions = await executeSpecialists(specialistIds, agentInput, sink);
-  const executionNotes = executions
-    .filter((execution) => execution.status === "completed" && execution.output?.summary)
-    .map((execution) => `${execution.agentId}: ${execution.output?.summary}`);
 
   const history = (await sql`select role, content from bud_messages where user_id = ${userId} and conversation_id = ${conversationId} order by created_at desc limit 12`).reverse().map((r) => ({ role: r.role as "user" | "assistant", content: String(r.content) }));
   const profileRows = await sql`select * from student_profiles where user_id = ${userId} limit 1`;
@@ -161,6 +148,23 @@ async function runAsk(
   } catch { enrolledCodes = []; }
   const profile = profileRows[0] ? mapProfile(profileRows[0] as Parameters<typeof mapProfile>[0]) : null;
   const contextLine = formatStudentContext(profile, courses, enrolledCodes, prompt);
+  const sparkRequest: AgentRequest = {
+    id: requestId,
+    source: "user",
+    target: "spark",
+    intent: prompt,
+    input: prompt,
+    context: { fromPath: extra?.fromPath, media: extra?.media, atlas: extra?.atlas },
+    traceId: requestId,
+  };
+  const sparkExecution = executeThroughSpark({
+    request: sparkRequest,
+    route: { intent: prompt, domain: inferSparkDomain(prompt) },
+    authorizedContext: { userId },
+    availableCapabilities: [],
+    authorization: "unknown",
+  });
+  const executionLine = `Spark orchestration result: ${sparkExecution.budMessage}`;
 
   let milestoneJson: string | null = null;
   try {
