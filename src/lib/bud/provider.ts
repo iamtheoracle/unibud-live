@@ -51,7 +51,7 @@ function xaiProvider(apiKey: string): AIProvider {
         if (!text) return { ok: false, error: "Bud received an empty reply. Try again.", providerId: "xai" };
         return { ok: true, text, providerId: "xai" };
       } catch (err) {
-        if (err instanceof Error && err.name === "AbortError") return { ok: false, error: "Bud stopped that reply.", providerId: "xai" };
+        if (err instanceof Error && err.name === "AbortError") return { ok: false, error: "The request timed out before Bud could finish the reply. Try again when the connection is stable.", providerId: "xai" };
         return { ok: false, error: "Looks like the connection dropped. Check your network and try again.", providerId: "xai" };
       }
     },
