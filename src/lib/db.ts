@@ -5,6 +5,7 @@ export type DbSource = "postgres" | "pglite";
 
 const databaseUrl = resolveDatabaseUrl();
 const serverless = isServerlessRuntime();
+const usePglite = typeof process !== "undefined" && process.env.USE_PGLITE === "true";
 
 /**
  * Postgres when a connection string is set (Netlify/production).
@@ -140,7 +141,7 @@ export function getSql(): Promise<Sql> {
 }
 
 export async function getPglite(): Promise<import("@electric-sql/pglite").PGlite> {
-  if (databaseUrl || serverless) {
+  if (databaseUrl || serverless || !usePglite) {
     throw new Error("PGlite is only for local preview. Production uses PostgreSQL.");
   }
   await getSql();
@@ -156,7 +157,7 @@ export function ensureDbReady(): Promise<void> {
 }
 
 const globalBoot = globalThis as typeof globalThis & { __pgBootstrapPromise__?: Promise<void> };
-if (typeof window === "undefined" && !databaseUrl && !serverless) {
+if (typeof window === "undefined" && !databaseUrl && !serverless && usePglite) {
   globalBoot.__pgBootstrapPromise__ ??= ensureDbReady().catch((err) => {
     globalBoot.__pgBootstrapPromise__ = undefined;
     console.error("[db] PGLite bootstrap failed:", err);
