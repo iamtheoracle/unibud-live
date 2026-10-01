@@ -1,5 +1,5 @@
-import type { AgentHook, AgentRequest, AgentResponse } from '../core/contracts.ts';
-import type { OrganizationAgentId } from '../specialists/definitions.ts';
+import type { AgentHook, AgentRequest, AgentResponse } from '../../agents/core/contracts.ts';
+import type { OrganizationAgentId } from '../../agents/specialists/definitions.ts';
 
 export interface ExecutionEnvelope {
   request: AgentRequest;
