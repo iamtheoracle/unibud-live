@@ -8,9 +8,11 @@ services:
     ports:
       - "3000:8080"
     environment:
-      # Vite >= 6.1 appends this to its allowedHosts list so the preview proxy's
-      # external hostname is accepted without hardcoding a specific value.
-      __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: ${BASE44_PUBLIC_HOST_SUFFIX}
+      # Vite >= 6.1 appends this to its allowedHosts list. The platform sets it
+      # to the sandbox domain wildcard; pass it through bare (not overridden).
+      - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS
+      # Enable in-process PGlite for local development (no external Postgres needed).
+      - USE_PGLITE=true
     command:
       - sh
       - -ec
