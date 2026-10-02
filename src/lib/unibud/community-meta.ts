@@ -14,40 +14,7 @@ export const COMMUNITY_META: Record<
     governorHandle?: string;
     announcements?: CommunityAnnouncement[];
   }
-> = {
-  "csc301-class": {
-    chatId: "room-csc301",
-    governorHandle: "amaka",
-    announcements: [
-      {
-        id: "a1",
-        title: "Live session on Board",
-        body: "Dr. Okoro is live. Joining now can count as attendance. The recording will not.",
-        by: "Amaka · Class Governor",
-        createdAt: new Date(Date.now() - 20 * 60_000).toISOString(),
-      },
-    ],
-  },
-  "night-study": {
-    chatId: "room-night",
-  },
-  "unilag-campus": {
-    chatId: "room-unilag",
-    moderatorHandles: ["chinedu"],
-  },
-  "unn-eng": {
-    moderatorHandles: ["chinedu"],
-  },
-  afrobeats: {
-    chatId: "room-sound",
-  },
-  "five-aside": {
-    chatId: "room-pitch",
-  },
-  "the-gist": {
-    chatId: "room-gist",
-  },
-};
+> = {};
 
 export function communityKindCopy(kind: string) {
   switch (kind) {

@@ -15,16 +15,16 @@ import {
 } from "./map";
 import type { ListingCategory, ListingKind, StudentProfile } from "./types";
 import { canTeach, type CampusRole } from "./roles";
-import { COMMUNITIES, DISCOVERY, LISTINGS, PEOPLE, POSTS, UNIVERSITIES } from "./catalog";
+import { UNIVERSITIES } from "./catalog";
 
 function emptyCatalog() {
   return {
     universities: UNIVERSITIES,
-    people: PEOPLE,
-    listings: LISTINGS,
-    communities: COMMUNITIES,
-    posts: POSTS,
-    discovery: DISCOVERY,
+    people: [],
+    listings: [],
+    communities: [],
+    posts: [],
+    discovery: [],
     replies: [] as ReturnType<typeof mapPostReply>[],
   };
 }

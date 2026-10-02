@@ -9,6 +9,7 @@ import { useCatalog } from "@/lib/unibud/queries";
 import { cn } from "@/lib/utils";
 import { BudNudge } from "@/components/unibud/bud-nudge";
 import { VaultGate } from "@/components/unibud/vault-gate";
+import { EmptyState } from "@/components/unibud/empty";
 
 type Search = { cat?: ListingCategory | "all" };
 
@@ -78,11 +79,15 @@ function Market() {
             <div key={i} className="aspect-4/3 animate-pulse rounded-2xl bg-secondary" />
           ))}
         </div>
-      ) : (
+      ) : filtered.length ? (
         <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3">
           {filtered.map((l) => (
             <ListingCard key={l.id} listing={l} />
           ))}
+        </div>
+      ) : (
+        <div className="mt-5">
+          <EmptyState title="No listings yet" body="Listings from students will appear here." />
         </div>
       )}
       {sellOpen ? <SellSheet onClose={() => setSellOpen(false)} /> : null}

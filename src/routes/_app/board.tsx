@@ -75,52 +75,56 @@ function Board() {
         </Link>
       ) : null}
 
-      <ul className="mt-6 space-y-3">
-        {sessions.map((s) => {
-          const present = liveAttendance[s.id] === "present";
-          const inRoom = livePresence[s.id] === "in";
-          const watched = Boolean(recordingWatched[s.id]);
-          return (
-            <li key={s.id} className="rounded-2xl bg-card p-4 ring-1 ring-border">
-              <p className="text-[11px] font-semibold tracking-wide text-bud uppercase">{s.status}</p>
-              <h2 className="mt-1 font-medium">{s.title}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {s.course} · {s.lecturer} · {s.department}
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                {s.topic} · {relativeTime(s.startsAt)} · {s.durationMin} min
-              </p>
-              <p className="mt-3 text-xs">
-                Your attendance:{" "}
-                <span className={cn(present ? "text-success" : "text-muted-foreground")}>
-                  {present ? (inRoom ? "Present" : "Left early") : "Not attended"}
-                </span>
-                {watched ? " · Recording played (does not change attendance)" : null}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Link to="/board/$id" params={{ id: boardIdFor(s.course) }} className="grid h-9 place-items-center rounded-full bg-secondary px-3 text-sm">
-                  Open Board
-                </Link>
-                {s.status === "live" && !inRoom ? (
-                  <Button size="sm" onClick={() => (present ? rejoinLive(s.id) : markLivePresent(s.id))}>
-                    {present ? "Rejoin live" : "Join live"}
-                  </Button>
-                ) : null}
-                {s.status === "live" && inRoom ? (
-                  <Button size="sm" variant="outline" onClick={() => leaveLive(s.id)}>
-                    Leave
-                  </Button>
-                ) : null}
-                {s.status === "available" ? (
-                  <Button size="sm" variant="outline" onClick={() => markRecordingWatched(s.id)}>
-                    Play recording
-                  </Button>
-                ) : null}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+      {sessions.length ? (
+        <ul className="mt-6 space-y-3">
+          {sessions.map((s) => {
+            const present = liveAttendance[s.id] === "present";
+            const inRoom = livePresence[s.id] === "in";
+            const watched = Boolean(recordingWatched[s.id]);
+            return (
+              <li key={s.id} className="rounded-2xl bg-card p-4 ring-1 ring-border">
+                <p className="text-[11px] font-semibold tracking-wide text-bud uppercase">{s.status}</p>
+                <h2 className="mt-1 font-medium">{s.title}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {s.course} · {s.lecturer} · {s.department}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {s.topic} · {relativeTime(s.startsAt)} · {s.durationMin} min
+                </p>
+                <p className="mt-3 text-xs">
+                  Your attendance:{" "}
+                  <span className={cn(present ? "text-success" : "text-muted-foreground")}>
+                    {present ? (inRoom ? "Present" : "Left early") : "Not attended"}
+                  </span>
+                  {watched ? " · Recording played (does not change attendance)" : null}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link to="/board/$id" params={{ id: boardIdFor(s.course) }} className="grid h-9 place-items-center rounded-full bg-secondary px-3 text-sm">
+                    Open Board
+                  </Link>
+                  {s.status === "live" && !inRoom ? (
+                    <Button size="sm" onClick={() => (present ? rejoinLive(s.id) : markLivePresent(s.id))}>
+                      {present ? "Rejoin live" : "Join live"}
+                    </Button>
+                  ) : null}
+                  {s.status === "live" && inRoom ? (
+                    <Button size="sm" variant="outline" onClick={() => leaveLive(s.id)}>
+                      Leave
+                    </Button>
+                  ) : null}
+                  {s.status === "available" ? (
+                    <Button size="sm" variant="outline" onClick={() => markRecordingWatched(s.id)}>
+                      Play recording
+                    </Button>
+                  ) : null}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="mt-6 text-sm text-muted-foreground">No live or scheduled sessions yet.</p>
+      )}
     </main>
   );
 }

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { EDUCATIONAL_NEWS } from "@/lib/unibud/news-data";
 import { relativeTime } from "@/lib/unibud/format";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/unibud/empty";
 
 export const Route = createFileRoute("/_app/news")({ component: News });
 
@@ -34,21 +35,27 @@ function News() {
           </button>
         ))}
       </div>
-      <ul className="mt-5 space-y-3">
-        {items.map((n) => (
-          <li key={n.id} className="rounded-2xl bg-card p-4 ring-1 ring-border">
-            <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase">
-              <span className="text-bud">{n.category}</span>
-              {n.importance === "high" ? <span className="text-destructive">Important</span> : null}
-            </div>
-            <h2 className="mt-1 font-medium">{n.title}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{n.body}</p>
-            <p className="mt-3 text-xs text-muted-foreground">
-              {n.source} · {n.institution} · {n.audience} · {relativeTime(n.date)}
-            </p>
-          </li>
-        ))}
-      </ul>
+      {items.length ? (
+        <ul className="mt-5 space-y-3">
+          {items.map((n) => (
+            <li key={n.id} className="rounded-2xl bg-card p-4 ring-1 ring-border">
+              <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase">
+                <span className="text-bud">{n.category}</span>
+                {n.importance === "high" ? <span className="text-destructive">Important</span> : null}
+              </div>
+              <h2 className="mt-1 font-medium">{n.title}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">{n.body}</p>
+              <p className="mt-3 text-xs text-muted-foreground">
+                {n.source} · {n.institution} · {n.audience} · {relativeTime(n.date)}
+              </p>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="mt-5">
+          <EmptyState title="No news yet" body="Official campus and academic notices will appear here." />
+        </div>
+      )}
     </main>
   );
 }

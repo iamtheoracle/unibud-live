@@ -92,23 +92,31 @@ function Tutor() {
         </div>
       )}
       <h2 className="mt-8 text-sm font-medium">Your sessions</h2>
-      <ul className="mt-2 space-y-2">
-        {BOARD_SESSIONS.filter((s) => s.lecturerHandle === "okoro").map((s) => (
-          <li key={s.id} className="rounded-xl bg-secondary px-4 py-3 text-sm">
-            {s.title}
-            <span className="ml-2 text-xs text-muted-foreground">{s.status}</span>
-          </li>
-        ))}
-      </ul>
+      {BOARD_SESSIONS.filter((s) => s.lecturerHandle === "okoro").length ? (
+        <ul className="mt-2 space-y-2">
+          {BOARD_SESSIONS.filter((s) => s.lecturerHandle === "okoro").map((s) => (
+            <li key={s.id} className="rounded-xl bg-secondary px-4 py-3 text-sm">
+              {s.title}
+              <span className="ml-2 text-xs text-muted-foreground">{s.status}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-sm text-muted-foreground">No sessions yet.</p>
+      )}
       <h2 className="mt-8 text-sm font-medium">Educational podcasts</h2>
-      <ul className="mt-2 space-y-2">
-        {EDU_PODCASTS.filter((p) => p.lecturerHandle === "okoro").map((p) => (
-          <li key={p.id} className="rounded-xl bg-secondary px-4 py-3 text-sm">
-            {p.title}
-            <span className="ml-2 text-xs text-muted-foreground">{p.course}</span>
-          </li>
-        ))}
-      </ul>
+      {EDU_PODCASTS.filter((p) => p.lecturerHandle === "okoro").length ? (
+        <ul className="mt-2 space-y-2">
+          {EDU_PODCASTS.filter((p) => p.lecturerHandle === "okoro").map((p) => (
+            <li key={p.id} className="rounded-xl bg-secondary px-4 py-3 text-sm">
+              {p.title}
+              <span className="ml-2 text-xs text-muted-foreground">{p.course}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-sm text-muted-foreground">No podcasts yet.</p>
+      )}
     </main>
   );
 }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Avatar } from "@/components/unibud/person";
 import { EmptyState } from "@/components/unibud/empty";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
-import { PEOPLE, personByHandle } from "@/lib/unibud/catalog";
+import { personByHandle } from "@/lib/unibud/catalog";
 import { relativeTime } from "@/lib/unibud/format";
 import { listConversations, openConversation } from "@/lib/social/server";
 import { CAMPUS_ROOMS, type RoomKind } from "@/lib/unibud/chat-rooms";
@@ -103,26 +103,8 @@ function ChatList() {
             })}
           </div>
           {!convos.data?.length ? (
-            <EmptyState title="No threads yet" body="Message someone from Connect, or start a chat below." />
+            <EmptyState title="No threads yet" body="Message someone from their profile or a listing." />
           ) : null}
-          <h2 className="mt-8 text-sm font-medium">Suggested</h2>
-          <ul className="mt-2">
-            {PEOPLE.filter((p) => p.role !== "lecturer").slice(0, 6).map((p) => (
-              <li key={p.handle}>
-                <button
-                  type="button"
-                  onClick={() => void start(p.handle)}
-                  className="flex w-full items-center gap-3 py-3 text-left"
-                >
-                  <Avatar name={p.name} />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">{p.name}</p>
-                    <p className="text-xs text-muted-foreground">@{p.handle}</p>
-                  </div>
-                </button>
-              </li>
-            ))}
-          </ul>
         </>
       ) : (
         <ul className="mt-5 space-y-2">

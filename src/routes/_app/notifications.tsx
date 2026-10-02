@@ -4,6 +4,7 @@ import { useState } from "react";
 import { relativeTime } from "@/lib/unibud/format";
 import { useCampusStore, type HumanNote } from "@/lib/unibud/campus-store";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/unibud/empty";
 
 export const Route = createFileRoute("/_app/notifications")({ component: Notifications });
 
@@ -58,18 +59,26 @@ function Notifications() {
           </button>
         ))}
       </div>
-      {fresh.length ? <h2 className="mt-6 text-sm font-medium">New</h2> : null}
-      <ul>
-        {fresh.map((n) => (
-          <NoteRow key={n.id} note={n} onOpen={() => markRead(n.id)} />
-        ))}
-      </ul>
-      {earlier.length ? <h2 className="mt-6 text-sm font-medium">Earlier</h2> : null}
-      <ul>
-        {earlier.map((n) => (
-          <NoteRow key={n.id} note={n} onOpen={() => markRead(n.id)} />
-        ))}
-      </ul>
+      {notes.length === 0 ? (
+        <div className="mt-6">
+          <EmptyState title="No notifications yet" body="Activity from across UNIBUD will show up here." />
+        </div>
+      ) : (
+        <>
+          {fresh.length ? <h2 className="mt-6 text-sm font-medium">New</h2> : null}
+          <ul>
+            {fresh.map((n) => (
+              <NoteRow key={n.id} note={n} onOpen={() => markRead(n.id)} />
+            ))}
+          </ul>
+          {earlier.length ? <h2 className="mt-6 text-sm font-medium">Earlier</h2> : null}
+          <ul>
+            {earlier.map((n) => (
+              <NoteRow key={n.id} note={n} onOpen={() => markRead(n.id)} />
+            ))}
+          </ul>
+        </>
+      )}
     </main>
   );
 }

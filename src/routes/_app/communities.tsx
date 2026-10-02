@@ -13,6 +13,7 @@ import { useCampusStore } from "@/lib/unibud/campus-store";
 import { communityKindLabel } from "@/lib/unibud/community-meta";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/unibud/empty";
 
 export const Route = createFileRoute("/_app/communities")({ component: Communities });
 
@@ -162,51 +163,36 @@ function CommunitiesList() {
         </button>
       </div>
 
-      <Link
-        to="/communities/$id"
-        params={{ id: data?.communities[0]?.id ?? "unilag-campus" }}
-        className="relative mt-5 block overflow-hidden rounded-3xl"
-      >
-        <img src="/covers/campus-night.jpg" alt="" className="h-56 w-full object-cover" />
-        <div className="absolute inset-0 bg-ink/45" />
-        <div className="absolute inset-0 flex flex-col justify-end p-5 text-paper">
-          <span className="self-start rounded-full bg-paper/15 px-3 py-1 text-[10px] font-semibold tracking-widest uppercase">
-            Community spotlight
-          </span>
-          <h2 className="mt-3 font-display text-3xl text-paper">Make something worth sharing.</h2>
-          <p className="mt-2 text-sm text-paper/80">
-            Campus Entrepreneurs brings student ideas, feedback and collaboration into one room.
-          </p>
-          <span className="mt-4 inline-flex h-10 w-fit items-center rounded-full bg-paper px-4 text-sm font-medium text-ink">
-            Visit community
-          </span>
+      {shown.length ? (
+        <ul className="mt-5 space-y-3 pb-8">
+          {shown.map((c) => (
+            <li key={c.id}>
+              <Link
+                to="/communities/$id"
+                params={{ id: c.id }}
+                className="flex overflow-hidden rounded-2xl bg-card ring-1 ring-border"
+              >
+                {c.cover ? (
+                  <img src={c.cover} alt="" className="h-24 w-24 shrink-0 object-cover" />
+                ) : (
+                  <div className="h-24 w-24 shrink-0 bg-secondary" />
+                )}
+                <div className="p-3">
+                  <p className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
+                    {communityKindLabel(c.kind)}
+                  </p>
+                  <h2 className="font-display text-lg">{c.name}</h2>
+                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{c.description}</p>
+                </div>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="mt-5 pb-8">
+          <EmptyState title="No communities yet" body="Create a study group or join one when students start sharing." />
         </div>
-      </Link>
-
-      <ul className="mt-5 space-y-3 pb-8">
-        {shown.map((c) => (
-          <li key={c.id}>
-            <Link
-              to="/communities/$id"
-              params={{ id: c.id }}
-              className="flex overflow-hidden rounded-2xl bg-card ring-1 ring-border"
-            >
-              {c.cover ? (
-                <img src={c.cover} alt="" className="h-24 w-24 shrink-0 object-cover" />
-              ) : (
-                <div className="h-24 w-24 shrink-0 bg-secondary" />
-              )}
-              <div className="p-3">
-                <p className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
-                  {communityKindLabel(c.kind)}
-                </p>
-                <h2 className="font-display text-lg">{c.name}</h2>
-                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{c.description}</p>
-              </div>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      )}
     </main>
   );
 }

@@ -131,6 +131,9 @@ function SearchPage() {
         </section>
       ) : (
         <div className="mt-6 space-y-6">
+          {Object.values(hits).every((arr) => !arr.length) ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">No results yet.</p>
+          ) : null}
           {(filter === "all" || filter === "people") && hits.people.length ? (
             <Block title="People">
               {hits.people.map((p) => (

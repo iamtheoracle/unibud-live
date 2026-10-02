@@ -7,13 +7,7 @@ import { BUD_MEDIA } from "./bud-media";
 import { REVENUE_POLICY } from "@/lib/music/monetization";
 
 async function ensureBudSeed() {
-  const sql = await getSql();
-  for (const m of BUD_MEDIA) {
-    const existing = await sql`select id from bud_media where id = ${m.id} limit 1`;
-    if (existing[0]) continue;
-    await sql`insert into bud_media (id, owner_id, kind, title, course, duration_min, status, visibility)
-      values (${m.id}, ${"unibud-academic"}, ${m.kind}, ${m.title}, ${m.course ?? null}, ${m.durationMin}, ${"awaiting_file"}, ${"class"})`;
-  }
+  // No-op: fake Bud academic media is not seeded. Real media is uploaded by lecturers.
 }
 
 export const uploadMedia = createServerFn({ method: "POST" })

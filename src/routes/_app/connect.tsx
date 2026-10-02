@@ -111,18 +111,9 @@ function Connect() {
           <p className="kicker text-bud">People you may never have met</p>
           <h2 className="mt-3 font-display text-3xl text-paper">Same interests beat same postcode.</h2>
           <p className="mt-3 text-sm text-paper/70">
-            Robotics in Nairobi. Physics in Johannesburg. Language exchange. Builders, players, and
-            people who like the same strange things you like.
+            Builders, players, and people who like the same strange things you like.
           </p>
         </section>
-      ) : null}
-
-      {tab === "discover" ? (
-        <div className="mt-5 grid gap-3">
-          <Lane title="Builders far from you" handles={["aisha_nbo", "chinedu", "adaeze"]} />
-          <Lane title="Sky, games, language" handles={["jonas_wits", "yuki_lang", "ibrahim"]} />
-          <Lane title="Creators" handles={PEOPLE.filter((p) => p.tags?.includes("creator")).map((p) => p.handle)} />
-        </div>
       ) : null}
 
       <ul className="mt-5 space-y-3">
@@ -180,28 +171,4 @@ function Connect() {
   );
 }
 
-function Lane({ title, handles }: { title: string; handles: string[] }) {
-  const people = handles.map((h) => PEOPLE.find((p) => p.handle === h)).filter(Boolean);
-  if (!people.length) return null;
-  return (
-    <section className="rounded-2xl bg-card p-4 ring-1 ring-border">
-      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{title}</p>
-      <ul className="mt-3 space-y-3">
-        {people.map((p) => (
-          <li key={p!.handle} className="flex items-center gap-3">
-            <Link to="/u/$handle" params={{ handle: p!.handle }}>
-              <Avatar name={p!.name} />
-            </Link>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{p!.name}</p>
-              <p className="truncate text-[11px] text-muted-foreground">
-                @{p!.handle} · {p!.bio}
-              </p>
-            </div>
-            <RelationActions handle={p!.handle} />
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
+
