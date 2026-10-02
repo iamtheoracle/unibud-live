@@ -1,0 +1,23 @@
+services:
+  app:
+    image: node:22
+    working_dir: /workspace
+    restart: on-failure
+    ports:
+      - "3000:8080"
+    volumes:
+      - .:/workspace
+      - app_node_modules:/workspace/node_modules
+    environment:
+      - USE_PGLITE=true
+      - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS
+    command: ["sh", "-ec", "npm ci --no-audit --no-fund && exec npm run dev"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 5
+
+volumes:
+  app_node_modules:
