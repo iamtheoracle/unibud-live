@@ -1,0 +1,28 @@
+{
+  "previewPort": 3000,
+  "healthPath": "/",
+  "startCommand": "docker compose -f docker-compose.base44.yml up -d",
+  "secrets": [
+    {
+      "name": "BETTER_AUTH_SECRET",
+      "description": "Signing secret for Better Auth sessions. Generate with: openssl rand -hex 32",
+      "requiredAtBoot": true,
+      "generatedForDevelopment": true
+    },
+    {
+      "name": "XAI_API_KEY",
+      "description": "xAI API key for Bud AI responses. Without it, Bud shows a 'not connected' message (fail-closed). Get from https://console.x.ai",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "GROK_AUTH_CLIENT_ID",
+      "description": "OAuth client ID for the Grok auth broker federated sign-in. Without it, falls back to the shared preview client.",
+      "requiredAtBoot": false
+    },
+    {
+      "name": "GROK_AUTH_CLIENT_SECRET",
+      "description": "OAuth client secret for the Grok auth broker. Without it, falls back to the shared preview client.",
+      "requiredAtBoot": false
+    }
+  ]
+}
