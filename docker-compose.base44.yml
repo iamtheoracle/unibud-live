@@ -1,0 +1,31 @@
+services:
+  app:
+    image: node:22-slim
+    working_dir: /app
+    volumes:
+      - .:/app
+      - npm_cache:/root/.npm
+    ports:
+      - "3000:8080"
+    environment:
+      # Bare — platform sets this so Vite accepts the preview's external hostname
+      - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS
+    env_file:
+      - ./.env.base44-defaults
+      - /run/base44/app.env
+    command:
+      - sh
+      - -ec
+      - |
+        npm ci --prefer-offline
+        exec npm run dev
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080',r=>{process.exit(r.statusCode<500?0:1)}).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 90s
+    restart: on-failure
+
+volumes:
+  npm_cache:
