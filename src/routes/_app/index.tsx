@@ -337,7 +337,7 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
   const originals = useCampusStore((s) => s.originalAudios ?? []);
   const commentLikes = useCampusStore((s) => s.commentLikes ?? {});
   const toggleCommentLike = useCampusStore((s) => s.toggleCommentLike);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(replies.length > 0);
   const [menu, setMenu] = useState(false);
   const [reply, setReply] = useState("");
   const [parent, setParent] = useState<string | undefined>();
@@ -457,6 +457,7 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
           <div className="mt-3 flex items-center gap-4 text-muted-foreground">
             <button
               type="button"
+              aria-label={liked ? "Unlike" : "Like"}
               onClick={() => {
                 toggleLike(key);
                 if (user) void togglePostLike({ data: key }).catch(() => {});
@@ -464,15 +465,16 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
               className={cn("inline-flex h-9 items-center gap-1.5 text-sm", liked && "text-bud")}
             >
               <Heart className={cn("size-4", liked && "fill-bud")} />
-              {count || ""}
+              {count}
             </button>
             <button
               type="button"
+              aria-label={open ? "Hide comments" : "Show comments"}
               onClick={() => setOpen((v) => !v)}
               className="inline-flex h-9 items-center gap-1.5 text-sm"
             >
               <MessageCircle className="size-4" />
-              {replies.length || ""}
+              {replies.length}
             </button>
             <button
               type="button"
@@ -499,7 +501,7 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
               <Bookmark className={cn("size-4", saved && "fill-ink")} />
             </button>
           </div>
-          {open ? (
+          {open && replies.length > 0 ? (
             <div className="mt-3 space-y-2">
               {replies.map((r) => {
                 const parentBody = r.parentId ? replies.find((x) => x.id === r.parentId)?.body : null;
@@ -536,43 +538,45 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
                   </div>
                 );
               })}
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!reply.trim()) return;
-                  addPostReply(key, {
-                    id: `pr-${Date.now()}`,
-                    authorHandle: "you",
-                    body: reply.trim(),
-                    parentId: parent,
-                    createdAt: new Date().toISOString(),
-                  });
-                  if (user) {
-                    void addSquareReply({
-                      data: { postId: key, body: reply.trim(), parentId: parent },
-                    }).catch(() => {});
-                  }
-                  setReply("");
-                  setParent(undefined);
-                }}
-              >
-                {parent ? (
-                  <p className="mb-1 text-[11px] text-muted-foreground">
-                    Replying to a reply ·{" "}
-                    <button type="button" onClick={() => setParent(undefined)}>
-                      cancel
-                    </button>
-                  </p>
-                ) : null}
-                <input
-                  value={reply}
-                  onChange={(e) => setReply(e.target.value)}
-                  placeholder="Reply to this post"
-                  className="h-10 w-full rounded-full bg-secondary px-4 text-sm outline-none"
-                />
-              </form>
             </div>
           ) : null}
+          <form
+            className="mt-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!reply.trim()) return;
+              addPostReply(key, {
+                id: `pr-${Date.now()}`,
+                authorHandle: "you",
+                body: reply.trim(),
+                parentId: parent,
+                createdAt: new Date().toISOString(),
+              });
+              if (user) {
+                void addSquareReply({
+                  data: { postId: key, body: reply.trim(), parentId: parent },
+                }).catch(() => {});
+              }
+              setReply("");
+              setParent(undefined);
+              setOpen(true);
+            }}
+          >
+            {parent ? (
+              <p className="mb-1 text-[11px] text-muted-foreground">
+                Replying to a reply ·{" "}
+                <button type="button" onClick={() => setParent(undefined)}>
+                  cancel
+                </button>
+              </p>
+            ) : null}
+            <input
+              value={reply}
+              onChange={(e) => setReply(e.target.value)}
+              placeholder="Write a comment…"
+              className="h-10 w-full rounded-full bg-secondary px-4 text-sm outline-none"
+            />
+          </form>
         </div>
       </div>
     </article>
