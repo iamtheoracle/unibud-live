@@ -1,31 +1,27 @@
 # Netlify build configuration for UNIBUD (TanStack Start + Nitro).
-# Nitro emits the static client into dist/ and the SSR handler into
-# .netlify/functions-internal/. Netlify serves the handler automatically.
 #
-# REQUIRED production env vars (set in Netlify UI / secrets — never commit):
-#   DATABASE_URL or NETLIFY_DB_URL  — PostgreSQL (PGlite is NOT used on Netlify)
-#   BETTER_AUTH_SECRET             — session signing
-#   BETTER_AUTH_URL                — public site URL (https://…)
+# REQUIRED production env vars (set in Netlify UI — never commit):
+#   DATABASE_URL or NETLIFY_DB_URL
+#   BETTER_AUTH_SECRET / BETTER_AUTH_URL (when auth is enabled)
 # Optional AI (server-only):
 #   OPENAI_API_KEY / XAI_API_KEY
 #
-# PGlite is development-only. Server code refuses to open PGlite when
-# NETLIFY / AWS_LAMBDA_FUNCTION_NAME is set.
+# PGlite is development-only and is refused when NETLIFY is set.
 
 [build]
-  command = "npm install && node scripts/with-app-env.mjs vite build"
+  command = "npm install --legacy-peer-deps && npx vite build"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
-  NPM_FLAGS = "--legacy-peer-deps"
+  VITE_AUTH_ENABLED = "false"
 
 [context.production]
-  command = "npm install && node scripts/with-app-env.mjs vite build"
+  command = "npm install --legacy-peer-deps && npx vite build"
   publish = "dist"
-  environment = { NODE_VERSION = "22", NODE_ENV = "production" }
+  environment = { NODE_VERSION = "22", NODE_ENV = "production", VITE_AUTH_ENABLED = "false" }
 
 [context.deploy-preview]
-  command = "npm install && node scripts/with-app-env.mjs vite build"
+  command = "npm install --legacy-peer-deps && npx vite build"
   publish = "dist"
-  environment = { NODE_VERSION = "22", NODE_ENV = "production" }
+  environment = { NODE_VERSION = "22", NODE_ENV = "production", VITE_AUTH_ENABLED = "false" }
