@@ -84,9 +84,6 @@ export function AppShell() {
               </Link>
             </div>
           </div>
-          {hideTabs || squareView === "peek" ? null : (
-            <PrimaryNav className="mx-auto mt-2 max-w-3xl" />
-          )}
         </header>
       )}
 
@@ -96,12 +93,23 @@ export function AppShell() {
           hideTabs || squareView === "peek"
             ? ""
             : showPrimary
-              ? "pt-[calc(7.25rem+env(safe-area-inset-top))]"
+              ? "pt-[calc(3rem+env(safe-area-inset-top))] pb-[calc(4.25rem+env(safe-area-inset-bottom))]"
               : "pt-[calc(3rem+env(safe-area-inset-top))]",
         )}
       >
         <Outlet />
       </div>
+
+      {showPrimary ? (
+        <div
+          className={cn(
+            "fixed inset-x-0 bottom-0 z-30 border-t border-border/60 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm transition-transform duration-200",
+            hidden ? "translate-y-full" : "translate-y-0",
+          )}
+        >
+          <PrimaryNav className="mx-auto max-w-3xl" />
+        </div>
+      ) : null}
 
       <AskBudFab menuOpen={drawer.open || hidden || composeOpen || dropOpen} />
       {dropOpen ? <DropSheet onClose={() => setDropOpen(false)} /> : null}
