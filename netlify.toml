@@ -1,12 +1,6 @@
-# Netlify build configuration for UNIBUD (TanStack Start + Nitro).
-#
-# REQUIRED production env vars (set in Netlify UI — never commit):
-#   DATABASE_URL or NETLIFY_DB_URL
-#   BETTER_AUTH_SECRET / BETTER_AUTH_URL (when auth is enabled)
-# Optional AI (server-only):
-#   OPENAI_API_KEY / XAI_API_KEY
-#
-# PGlite is development-only and is refused when NETLIFY is set.
+# Netlify build for UNIBUD (TanStack Start + Nitro).
+# PGlite is development-only; production needs DATABASE_URL when auth/DB is enabled.
+# Optional: OPENAI_API_KEY or XAI_API_KEY for Bud (server-only).
 
 [build]
   command = "npm install --legacy-peer-deps && npx vite build"
