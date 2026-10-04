@@ -58,8 +58,56 @@ function xaiProvider(apiKey: string): AIProvider {
   };
 }
 
+function openaiProvider(apiKey: string): AIProvider {
+  return {
+    id: "openai",
+    kind: "remote",
+    capabilities: ["text", "vision"],
+    async complete(messages, opts) {
+      try {
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+          signal: opts?.signal,
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            max_tokens: opts?.maxTokens ?? 700,
+            messages,
+          }),
+        });
+        if (!res.ok) {
+          const error =
+            res.status >= 500
+              ? "Bud couldn’t reach the model. Try again in a moment."
+              : "Bud couldn’t reply just now. Try again.";
+          return { ok: false, error, providerId: "openai" };
+        }
+        const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+        const text = body.choices?.[0]?.message?.content;
+        if (!text) return { ok: false, error: "Bud received an empty reply. Try again.", providerId: "openai" };
+        return { ok: true, text, providerId: "openai" };
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+          return {
+            ok: false,
+            error: "The request timed out before Bud could finish the reply. Try again when the connection is stable.",
+            providerId: "openai",
+          };
+        }
+        return {
+          ok: false,
+          error: "Looks like the connection dropped. Check your network and try again.",
+          providerId: "openai",
+        };
+      }
+    },
+  };
+}
+
 export function getAIProvider(): AIProvider {
-  const key = typeof process !== "undefined" ? process.env.XAI_API_KEY : undefined;
-  if (key && key.trim()) return xaiProvider(key.trim());
+  const xai = typeof process !== "undefined" ? process.env.XAI_API_KEY : undefined;
+  if (xai && xai.trim()) return xaiProvider(xai.trim());
+  const openai = typeof process !== "undefined" ? process.env.OPENAI_API_KEY : undefined;
+  if (openai && openai.trim()) return openaiProvider(openai.trim());
   return freeProvider;
 }
