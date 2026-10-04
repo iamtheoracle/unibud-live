@@ -1,6 +1,17 @@
 # Netlify build configuration for UNIBUD (TanStack Start + Nitro).
 # Nitro emits the static client into dist/ and the SSR handler into
 # .netlify/functions-internal/. Netlify serves the handler automatically.
+#
+# REQUIRED production env vars (set in Netlify UI / secrets — never commit):
+#   DATABASE_URL or NETLIFY_DB_URL  — PostgreSQL (PGlite is NOT used on Netlify)
+#   BETTER_AUTH_SECRET             — session signing
+#   BETTER_AUTH_URL                — public site URL (https://…)
+#   VITE_AUTH_ENABLED=true         — enable real auth in production
+# Optional AI:
+#   BUD / provider keys as documented in .env.example
+#
+# PGlite is development-only. Server code refuses to open PGlite when
+# NETLIFY / AWS_LAMBDA_FUNCTION_NAME is set.
 
 [build]
   command = "npm run build"
@@ -9,14 +20,11 @@
 [build.environment]
   NODE_VERSION = "22"
 
-# Keep production explicit so the main branch is the deployable app.
 [context.production]
   command = "npm run build"
   publish = "dist"
   environment = { NODE_VERSION = "22", NODE_ENV = "production" }
 
-# PR previews use the same production build/runtime shape. Secrets are still
-# supplied by Netlify and are never committed to this repository.
 [context.deploy-preview]
   command = "npm run build"
   publish = "dist"
