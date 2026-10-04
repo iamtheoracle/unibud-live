@@ -6,26 +6,26 @@
 #   DATABASE_URL or NETLIFY_DB_URL  — PostgreSQL (PGlite is NOT used on Netlify)
 #   BETTER_AUTH_SECRET             — session signing
 #   BETTER_AUTH_URL                — public site URL (https://…)
-#   VITE_AUTH_ENABLED=true         — enable real auth in production
-# Optional AI:
-#   BUD / provider keys as documented in .env.example
+# Optional AI (server-only):
+#   OPENAI_API_KEY / XAI_API_KEY
 #
 # PGlite is development-only. Server code refuses to open PGlite when
 # NETLIFY / AWS_LAMBDA_FUNCTION_NAME is set.
 
 [build]
-  command = "npm run build"
+  command = "npm install && node scripts/with-app-env.mjs vite build"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
+  NPM_FLAGS = "--legacy-peer-deps"
 
 [context.production]
-  command = "npm run build"
+  command = "npm install && node scripts/with-app-env.mjs vite build"
   publish = "dist"
   environment = { NODE_VERSION = "22", NODE_ENV = "production" }
 
 [context.deploy-preview]
-  command = "npm run build"
+  command = "npm install && node scripts/with-app-env.mjs vite build"
   publish = "dist"
   environment = { NODE_VERSION = "22", NODE_ENV = "production" }
