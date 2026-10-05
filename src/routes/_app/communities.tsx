@@ -3,7 +3,6 @@ import { Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { COMMUNITIES } from "@/lib/unibud/catalog";
 import { useCatalog } from "@/lib/unibud/queries";
 import { myCommunities } from "@/lib/social/server";
 import { useQuery } from "@tanstack/react-query";
@@ -26,11 +25,8 @@ function Communities() {
 
 function CommunitiesList() {
   const { data } = useCatalog();
-  const catalogRooms = data?.communities ?? [];
-  const allRooms = [
-    ...COMMUNITIES.filter((c) => !catalogRooms.some((x) => x.id === c.id)),
-    ...catalogRooms,
-  ];
+  // Reality First: only communities from the catalog API / DB — no fixture merge.
+  const allRooms = data?.communities ?? [];
   const { user } = useAuthReady();
   const role = useCampusStore((s) => s.role ?? "student");
   const [tab, setTab] = useState<"discover" | "mine">("discover");
@@ -56,156 +52,127 @@ function CommunitiesList() {
 
   return (
     <main className="safe-bottom px-5 pt-6">
-      <p className="kicker">Find your people</p>
-      <h1 className="mt-1 font-display text-4xl">Communities</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Structured shared spaces. Class groups are academic cohorts. Study groups are student-run.
-        Chat lives in Chat — a community is not a thread.
-      </p>
-      <div className="relative mt-5">
-        <Search className="pointer-events-none absolute top-3.5 left-4 size-4 text-muted-foreground" />
-        <Input
-          className="pl-10"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search communities"
-        />
+      <p className="kicker">Find your rooms</p>
+      <div className="mt-1 flex items-end justify-between gap-3">
+        <h1 className="font-display text-4xl">Quad</h1>
+        <Button
+          size="sm"
+          variant="outline"
+          className="shrink-0"
+          onClick={() => setCreating((v) => !v)}
+        >
+          <Plus className="size-4" />
+          New
+        </Button>
       </div>
-      <Button className="mt-4 w-full" onClick={() => setCreating((v) => !v)}>
-        <Plus className="size-4" />
-        Create
-      </Button>
+      <p className="mt-2 text-sm text-muted-foreground">
+        App-like communities — not a class list, not Square. Groups live inside a Quad.
+      </p>
+
       {creating ? (
         <form
-          className="mt-3 rounded-2xl bg-card p-4 ring-1 ring-border"
+          className="mt-4 space-y-3 rounded-2xl bg-card p-4 ring-1 ring-border"
           onSubmit={(e) => {
             e.preventDefault();
+            if (!name.trim()) return;
             if (createKind === "Class" && !canGovernClass(role)) {
-              toast.error("Only a class governor can open an official class group.");
+              toast.error("Only class governors can open a Class room.");
               return;
             }
-            toast.success(
-              createKind === "Study"
-                ? "Study group drafted. Students can join without lecturer permission."
-                : "Community drafted in this demo.",
-            );
+            toast.message("Community creation needs a signed-in account and server write.");
             setCreating(false);
             setName("");
           }}
         >
-          <p className="text-sm text-muted-foreground">
-            Students can start study groups. Official class groups stay with class governors. Lecturers teach on Board.
-          </p>
-          <div className="mt-3 flex gap-2">
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name this Quad or group" />
+          <div className="flex flex-wrap gap-2">
             {(["Study", "Interest", "Class"] as const).map((k) => (
               <button
                 key={k}
                 type="button"
                 onClick={() => setCreateKind(k)}
                 className={cn(
-                  "h-8 rounded-full px-3 text-xs",
+                  "h-9 rounded-full px-3 text-sm",
                   createKind === k ? "bg-ink text-paper" : "bg-secondary",
                 )}
               >
-                {k === "Study" ? "Study group" : k === "Class" ? "Class group" : "Interest"}
+                {k}
               </button>
             ))}
           </div>
-          <Input
-            className="mt-3"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={createKind === "Study" ? "Night calculus group" : "Community name"}
-          />
-          <Button type="submit" className="mt-3 w-full" disabled={!name.trim()}>
-            Save draft
+          <Button type="submit" size="sm" disabled={!name.trim()}>
+            Continue
           </Button>
         </form>
       ) : null}
 
-      <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-        {(["all", "Class", "Study", "University", "Faculty", "Interest"] as const).map((k) => (
+      <div className="mt-5 flex gap-2">
+        {(["discover", "mine"] as const).map((id) => (
           <button
-            key={k}
+            key={id}
             type="button"
-            onClick={() => setKind(k)}
+            onClick={() => setTab(id)}
             className={cn(
-              "h-9 shrink-0 rounded-full px-4 text-sm",
-              kind === k ? "bg-ink text-paper" : "bg-card ring-1 ring-border text-muted-foreground",
+              "h-9 rounded-full px-4 text-sm capitalize",
+              tab === id ? "bg-ink text-paper" : "bg-card ring-1 ring-border",
             )}
           >
-            {k === "all" ? "All" : k === "Class" ? "Classes" : k === "Study" ? "Study groups" : k === "Interest" ? "Scenes" : k}
+            {id}
           </button>
         ))}
       </div>
 
-      <div className="mt-4 flex gap-2">
-        <button
-          type="button"
-          onClick={() => setTab("discover")}
-          className={cn(
-            "h-9 rounded-full px-4 text-sm font-medium",
-            tab === "discover" ? "bg-ink text-paper" : "bg-card ring-1 ring-border text-muted-foreground",
-          )}
-        >
-          Discover
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("mine")}
-          className={cn(
-            "h-9 rounded-full px-4 text-sm font-medium",
-            tab === "mine" ? "bg-ink text-paper" : "bg-card ring-1 ring-border text-muted-foreground",
-          )}
-        >
-          My Communities
-        </button>
+      <div className="mt-3 flex gap-2 overflow-x-auto">
+        {(["all", "Class", "Study", "University", "Faculty", "Interest"] as const).map((id) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => setKind(id)}
+            className={cn(
+              "h-9 shrink-0 rounded-full px-3 text-xs",
+              kind === id ? "bg-ink text-paper" : "bg-secondary",
+            )}
+          >
+            {id === "all" ? "All" : communityKindLabel(id)}
+          </button>
+        ))}
       </div>
 
-      <Link
-        to="/communities/$id"
-        params={{ id: data?.communities[0]?.id ?? "unilag-campus" }}
-        className="relative mt-5 block overflow-hidden rounded-3xl"
-      >
-        <img src="/covers/campus-night.jpg" alt="" className="h-56 w-full object-cover" />
-        <div className="absolute inset-0 bg-ink/45" />
-        <div className="absolute inset-0 flex flex-col justify-end p-5 text-paper">
-          <span className="self-start rounded-full bg-paper/15 px-3 py-1 text-[10px] font-semibold tracking-widest uppercase">
-            Community spotlight
-          </span>
-          <h2 className="mt-3 font-display text-3xl text-paper">Make something worth sharing.</h2>
-          <p className="mt-2 text-sm text-paper/80">
-            Campus Entrepreneurs brings student ideas, feedback and collaboration into one room.
-          </p>
-          <span className="mt-4 inline-flex h-10 w-fit items-center rounded-full bg-paper px-4 text-sm font-medium text-ink">
-            Visit community
-          </span>
-        </div>
-      </Link>
+      <div className="relative mt-4">
+        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search Quads"
+          className="pl-10"
+        />
+      </div>
 
-      <ul className="mt-5 space-y-3 pb-8">
-        {shown.map((c) => (
-          <li key={c.id}>
-            <Link
-              to="/communities/$id"
-              params={{ id: c.id }}
-              className="flex overflow-hidden rounded-2xl bg-card ring-1 ring-border"
-            >
-              {c.cover ? (
-                <img src={c.cover} alt="" className="h-24 w-24 shrink-0 object-cover" />
-              ) : (
-                <div className="h-24 w-24 shrink-0 bg-secondary" />
-              )}
-              <div className="p-3">
-                <p className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
+      <ul className="mt-5 space-y-3">
+        {shown.length === 0 ? (
+          <li className="rounded-2xl bg-card p-6 text-center ring-1 ring-border">
+            <p className="font-medium">No Quads here yet</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Real communities appear when they exist in the database. Nothing is fabricated to fill the list.
+            </p>
+          </li>
+        ) : (
+          shown.map((c) => (
+            <li key={c.id}>
+              <Link
+                to="/communities/$id"
+                params={{ id: c.id }}
+                className="block rounded-2xl bg-card p-4 ring-1 ring-border"
+              >
+                <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
                   {communityKindLabel(c.kind)}
                 </p>
-                <h2 className="font-display text-lg">{c.name}</h2>
-                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{c.description}</p>
-              </div>
-            </Link>
-          </li>
-        ))}
+                <h2 className="mt-1 font-medium">{c.name}</h2>
+                <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{c.description}</p>
+              </Link>
+            </li>
+          ))
+        )}
       </ul>
     </main>
   );
