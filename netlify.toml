@@ -1,16 +1,16 @@
-# Netlify build for UNIBUD (TanStack Start + Nitro SSR).
-# Optional server env: OPENAI_API_KEY, XAI_API_KEY, DATABASE_URL
+# UNIBUD — Netlify (TanStack Start + Nitro SSR)
+# Server secrets (set in Netlify UI, never commit): OPENAI_API_KEY, XAI_API_KEY, DATABASE_URL
 
 [build]
-  command = "npm install --legacy-peer-deps --prefer-offline=false && npx --yes vite@8.3.2 build"
+  command = "npm install --legacy-peer-deps && npm run build:netlify"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
   VITE_AUTH_ENABLED = "false"
   NPM_CONFIG_LEGACY_PEER_DEPS = "true"
+  NODE_OPTIONS = "--max-old-space-size=4096"
 
-[context.production]
-  command = "npm install --legacy-peer-deps --prefer-offline=false && npx --yes vite@8.3.2 build"
-  publish = "dist"
-  environment = { NODE_VERSION = "22", NODE_ENV = "production", VITE_AUTH_ENABLED = "false" }
+[context.production.environment]
+  NODE_ENV = "production"
+  VITE_AUTH_ENABLED = "false"
