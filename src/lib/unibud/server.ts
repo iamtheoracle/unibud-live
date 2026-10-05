@@ -17,14 +17,15 @@ import type { ListingCategory, ListingKind, StudentProfile } from "./types";
 import { canTeach, type CampusRole } from "./roles";
 import { COMMUNITIES, DISCOVERY, LISTINGS, PEOPLE, POSTS, UNIVERSITIES } from "./catalog";
 
+/** Production fallback when DB is unavailable — never surface fixture people/posts/communities. */
 function emptyCatalog() {
   return {
     universities: UNIVERSITIES,
-    people: PEOPLE,
-    listings: LISTINGS,
-    communities: COMMUNITIES,
-    posts: POSTS,
-    discovery: DISCOVERY,
+    people: [] as typeof PEOPLE,
+    listings: [] as typeof LISTINGS,
+    communities: [] as typeof COMMUNITIES,
+    posts: [] as typeof POSTS,
+    discovery: [] as typeof DISCOVERY,
     replies: [] as ReturnType<typeof mapPostReply>[],
   };
 }
@@ -316,4 +317,3 @@ export const toggleCommentLike = createServerFn({ method: "POST" })
     await sql`insert into comment_likes (user_id, reply_id) values (${context.userId}, ${replyId})`;
     return { liked: true };
   });
-
