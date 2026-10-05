@@ -2,19 +2,15 @@
 # Optional server env: OPENAI_API_KEY, XAI_API_KEY, DATABASE_URL
 
 [build]
-  command = "npm install --legacy-peer-deps && npm install vite@8.3.2 --no-save --legacy-peer-deps && npx vite build"
+  command = "npm install --legacy-peer-deps --prefer-offline=false && npx --yes vite@8.3.2 build"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
   VITE_AUTH_ENABLED = "false"
+  NPM_CONFIG_LEGACY_PEER_DEPS = "true"
 
 [context.production]
-  command = "npm install --legacy-peer-deps && npm install vite@8.3.2 --no-save --legacy-peer-deps && npx vite build"
-  publish = "dist"
-  environment = { NODE_VERSION = "22", NODE_ENV = "production", VITE_AUTH_ENABLED = "false" }
-
-[context.deploy-preview]
-  command = "npm install --legacy-peer-deps && npm install vite@8.3.2 --no-save --legacy-peer-deps && npx vite build"
+  command = "npm install --legacy-peer-deps --prefer-offline=false && npx --yes vite@8.3.2 build"
   publish = "dist"
   environment = { NODE_VERSION = "22", NODE_ENV = "production", VITE_AUTH_ENABLED = "false" }
