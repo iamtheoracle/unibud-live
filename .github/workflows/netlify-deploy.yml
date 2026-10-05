@@ -1,0 +1,66 @@
+name: Deploy to Netlify
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Deploys production builds of UNIBUD to the Netlify site unibud-live-08dz.
+# Preferred path: link the repo in Netlify UI (Site configuration → Build & deploy → Continuous deployment).
+# This workflow is a fallback when the site is not Git-linked yet.
+#
+# Required GitHub repo secrets:
+#   NETLIFY_AUTH_TOKEN  — Personal access token from https://app.netlify.com/user/applications
+#   NETLIFY_SITE_ID     — 8fc34214-aaf6-4c4d-b298-611cc35ca429
+#
+# Optional secrets (server-only):
+#   OPENAI_API_KEY
+#   XAI_API_KEY
+#   DATABASE_URL
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_VERSION: "22"
+      VITE_AUTH_ENABLED: "false"
+      NPM_CONFIG_LEGACY_PEER_DEPS: "true"
+      NODE_OPTIONS: "--max-old-space-size=4096"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build
+        run: npm run build:netlify
+        env:
+          VITE_AUTH_ENABLED: "false"
+
+      - name: Install Netlify CLI
+        run: npm install -g netlify-cli
+
+      - name: Deploy to Netlify
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          if [ -z "$NETLIFY_AUTH_TOKEN" ] || [ -z "$NETLIFY_SITE_ID" ]; then
+            echo "Missing NETLIFY_AUTH_TOKEN or NETLIFY_SITE_ID secrets."
+            echo "Link the repo in Netlify UI instead, or add both secrets under Settings → Secrets."
+            exit 1
+          fi
+          # Publish client assets + Nitro SSR functions generated under .netlify/functions-internal
+          netlify deploy \
+            --prod \
+            --dir=dist \
+            --functions=.netlify/functions-internal \
+            --message "GitHub Actions deploy ${{ github.sha }}"
