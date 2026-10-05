@@ -39,7 +39,7 @@ function Settings() {
         Bud shortcut position
       </p>
       <p className="mt-1 text-xs text-muted-foreground">
-        Placement only. Bud always stays in the menu. Hidden does not disable Bud.
+        Top sits under the header (where navigation used to be). Bottom is a floating control. Hidden removes the shortcut only — Bud stays in the menu.
       </p>
       <div className="mt-3 grid grid-cols-3 gap-2">
         {(["top", "bottom", "hidden"] as BudShortcut[]).map((v) => (
