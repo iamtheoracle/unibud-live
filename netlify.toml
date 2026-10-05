@@ -1,9 +1,8 @@
-# Netlify build for UNIBUD (TanStack Start + Nitro).
-# PGlite is development-only; production needs DATABASE_URL when auth/DB is enabled.
-# Optional: OPENAI_API_KEY or XAI_API_KEY for Bud (server-only).
+# Netlify build for UNIBUD (TanStack Start + Nitro SSR).
+# Optional server env: OPENAI_API_KEY, XAI_API_KEY, DATABASE_URL
 
 [build]
-  command = "npm install --legacy-peer-deps && npx vite build"
+  command = "npm install --legacy-peer-deps && npm install vite@8.3.2 --no-save --legacy-peer-deps && npx vite build"
   publish = "dist"
 
 [build.environment]
@@ -11,11 +10,11 @@
   VITE_AUTH_ENABLED = "false"
 
 [context.production]
-  command = "npm install --legacy-peer-deps && npx vite build"
+  command = "npm install --legacy-peer-deps && npm install vite@8.3.2 --no-save --legacy-peer-deps && npx vite build"
   publish = "dist"
   environment = { NODE_VERSION = "22", NODE_ENV = "production", VITE_AUTH_ENABLED = "false" }
 
 [context.deploy-preview]
-  command = "npm install --legacy-peer-deps && npx vite build"
+  command = "npm install --legacy-peer-deps && npm install vite@8.3.2 --no-save --legacy-peer-deps && npx vite build"
   publish = "dist"
   environment = { NODE_VERSION = "22", NODE_ENV = "production", VITE_AUTH_ENABLED = "false" }
