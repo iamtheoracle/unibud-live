@@ -31,7 +31,7 @@ export function BudWave({
       aria-label="Bud"
       title="Bud"
       className={cn(
-        "group relative flex h-12 min-w-0 flex-1 items-center justify-center overflow-hidden",
+        "group relative flex h-14 min-w-0 flex-1 items-center justify-center overflow-hidden",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-bud)]/40",
         className,
       )}
@@ -130,10 +130,11 @@ export function BudWave({
 
       <span
         className={cn(
-          "relative z-[1] text-[10px] font-semibold tracking-[0.28em] uppercase",
-          "text-[color:var(--color-bud)] drop-shadow-[0_0_8px_rgb(109_94_246_/_0.35)]",
-          onBud ? "opacity-100" : "opacity-85 group-hover:opacity-100",
+          "bud-text-signal relative z-[1] text-[11px] font-semibold tracking-[0.32em] uppercase",
+          "text-[color:var(--color-bud)] drop-shadow-[0_0_10px_rgb(109_94_246_/_0.4)]",
+          onBud ? "opacity-100" : "opacity-90 group-hover:opacity-100",
         )}
+        data-live={live || onBud ? "true" : "false"}
       >
         Bud
       </span>
