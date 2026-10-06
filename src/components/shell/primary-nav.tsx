@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { LayoutGrid, MessageCircle, UserPlus, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/** Permanent navigator — icons only. Labels stay in aria-label for accessibility. */
 export const PRIMARY_NAV = [
   { to: "/", label: "Square", icon: LayoutGrid },
   { to: "/connect", label: "Connect", icon: UserPlus },
@@ -17,7 +18,10 @@ function activePath(pathname: string, to: string) {
 export function PrimaryNav({ className }: { className?: string }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
-    <nav aria-label="Primary" className={cn("flex items-end justify-between px-3 pt-1 pb-1", className)}>
+    <nav
+      aria-label="Primary"
+      className={cn("flex items-center justify-around px-2 py-1", className)}
+    >
       {PRIMARY_NAV.map((item) => {
         const on = activePath(pathname, item.to);
         const Icon = item.icon;
@@ -25,14 +29,17 @@ export function PrimaryNav({ className }: { className?: string }) {
           <Link
             key={item.to}
             to={item.to}
+            aria-label={item.label}
+            title={item.label}
             className={cn(
-              "relative flex min-w-[4.5rem] flex-col items-center gap-1 px-1 pb-2 pt-1",
-              on ? "text-ink" : "text-muted-foreground",
+              "relative grid size-11 place-items-center rounded-full transition-colors",
+              on ? "text-ink" : "text-muted-foreground hover:text-ink",
             )}
           >
-            <Icon className="size-5" strokeWidth={on ? 2.25 : 1.75} />
-            <span className="text-[11px] font-semibold tracking-[0.08em] uppercase">{item.label}</span>
-            {on ? <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-ink" /> : null}
+            <Icon className="size-6" strokeWidth={on ? 2.25 : 1.75} />
+            {on ? (
+              <span className="absolute bottom-1 left-1/2 h-0.5 w-4 -translate-x-1/2 rounded-full bg-ink" />
+            ) : null}
           </Link>
         );
       })}

@@ -4,29 +4,29 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Spark — compact quick-action gateway.
+ * Spark — quick-action gateway.
  * Exactly three destinations: Board · Commerce · Services.
- * Not a page, not a dashboard, not Bud.
+ * Large, meaningful panel — not a tiny menu, not Bud, not a full app.
  */
 const SPARK_ACTIONS = [
   {
     id: "board",
     label: "Board",
-    description: "Class, cohort, academic space",
+    description: "Your class, cohort, and academic space",
     to: "/board" as const,
     icon: GraduationCap,
   },
   {
     id: "commerce",
     label: "Commerce",
-    description: "Wallet, payments, marketplace",
+    description: "Wallet, payments, and marketplace",
     to: "/money" as const,
     icon: Wallet,
   },
   {
     id: "services",
     label: "Services",
-    description: "Find or offer campus services",
+    description: "Find or offer services around you",
     to: "/creator" as const,
     icon: BriefcaseBusiness,
   },
@@ -64,23 +64,29 @@ export function SparkGate({ className }: { className?: string }) {
         aria-label={open ? "Close Spark" : "Open Spark"}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "grid size-11 place-items-center rounded-full text-muted-foreground transition-colors",
-          open ? "bg-secondary text-ink" : "hover:bg-secondary/80 hover:text-ink",
+          "flex h-11 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold tracking-[0.06em] transition-colors",
+          open
+            ? "bg-ink text-paper"
+            : "bg-secondary text-ink hover:bg-secondary/80",
         )}
       >
-        <Zap className="size-5" strokeWidth={1.75} aria-hidden />
+        <Zap className="size-4 shrink-0" strokeWidth={2} aria-hidden />
+        <span>Spark</span>
       </button>
 
       {open ? (
         <div
           role="dialog"
           aria-label="Spark"
-          className="absolute bottom-[calc(100%+0.5rem)] left-1/2 z-50 w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 rounded-2xl bg-background p-2 shadow-soft ring-1 ring-border"
+          className="absolute bottom-[calc(100%+0.65rem)] right-0 z-50 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl bg-background shadow-soft ring-1 ring-border"
         >
-          <p className="px-3 pt-2 pb-1 text-[10px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
-            Spark
-          </p>
-          <ul className="space-y-0.5">
+          <div className="border-b border-border/70 bg-secondary/40 px-4 py-3">
+            <p className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+              Spark
+            </p>
+            <p className="mt-0.5 text-sm font-medium text-ink">Where do you need to go?</p>
+          </div>
+          <ul className="p-2">
             {SPARK_ACTIONS.map((action) => {
               const Icon = action.icon;
               return (
@@ -88,16 +94,18 @@ export function SparkGate({ className }: { className?: string }) {
                   <Link
                     to={action.to}
                     onClick={() => setOpen(false)}
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-secondary"
+                    className="flex items-center gap-3.5 rounded-xl px-3 py-3.5 text-left transition-colors hover:bg-secondary active:bg-secondary/80"
                   >
-                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary text-ink">
-                      <Icon className="size-4" strokeWidth={1.75} aria-hidden />
+                    <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-ink text-paper">
+                      <Icon className="size-5" strokeWidth={1.75} aria-hidden />
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-sm font-semibold tracking-wide uppercase">
+                      <span className="block text-[15px] font-semibold tracking-wide text-ink">
                         {action.label}
                       </span>
-                      <span className="block text-xs text-muted-foreground">{action.description}</span>
+                      <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
+                        {action.description}
+                      </span>
                     </span>
                   </Link>
                 </li>
