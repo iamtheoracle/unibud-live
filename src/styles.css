@@ -333,3 +333,15 @@
   .bud-wave-drift,
   .bud-wave-spark { animation: none; }
 }
+
+/* Bud animated signal text */
+@keyframes bud-text-glow {
+  0%, 100% { letter-spacing: 0.32em; opacity: 0.88; }
+  50% { letter-spacing: 0.38em; opacity: 1; }
+}
+.bud-text-signal[data-live="true"] {
+  animation: bud-text-glow 2.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bud-text-signal[data-live="true"] { animation: none; }
+}
