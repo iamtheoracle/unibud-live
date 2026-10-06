@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import type { SpillPost } from "@/lib/unibud/spill-data";
 import { CHALLENGES } from "@/lib/unibud/discover-data";
 import { setBudDraft } from "@/lib/bud/draft";
+import { RiffMark } from "@/components/brand/identity-marks";
 
 export const Route = createFileRoute("/_app/riff")({ component: Riff });
 
@@ -37,8 +38,13 @@ function Riff() {
   return (
     <main className="safe-bottom bg-card">
       <header className="px-5 pt-6">
-        <p className="kicker">Conversation</p>
-        <h1 className="mt-1 font-display text-4xl">Riff</h1>
+        <div className="flex items-center gap-3">
+          <RiffMark size={44} className="riff-mark-header" />
+          <div>
+            <p className="kicker">Conversation</p>
+            <h1 className="mt-0.5 font-display text-4xl">Riff</h1>
+          </div>
+        </div>
         <p className="mt-2 text-sm text-muted-foreground">
           Short posts that can become a whole conversation. Not Square. Not Chat. Not a profile tab.
         </p>
