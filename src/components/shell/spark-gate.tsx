@@ -1,13 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { BriefcaseBusiness, GraduationCap, Wallet, Zap } from "lucide-react";
+import { BriefcaseBusiness, GraduationCap, Wallet } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { LifeMark } from "@/components/brand/identity-marks";
 import { cn } from "@/lib/utils";
 
-/**
- * Spark — quick-action gateway.
- * Exactly three destinations: Board · Commerce · Services.
- * Large, meaningful panel — not a tiny menu, not Bud, not a full app.
- */
 const SPARK_ACTIONS = [
   {
     id: "board",
@@ -64,14 +60,11 @@ export function SparkGate({ className }: { className?: string }) {
         aria-label={open ? "Close Spark" : "Open Spark"}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "flex h-11 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold tracking-[0.06em] transition-colors",
-          open
-            ? "bg-ink text-paper"
-            : "bg-secondary text-ink hover:bg-secondary/80",
+          "grid size-12 place-items-center rounded-full transition-transform",
+          open ? "scale-105 bg-secondary ring-1 ring-border" : "hover:bg-secondary/70",
         )}
       >
-        <Zap className="size-4 shrink-0" strokeWidth={2} aria-hidden />
-        <span>Spark</span>
+        <LifeMark size={30} className={cn(open && "life-mark-active")} />
       </button>
 
       {open ? (
@@ -80,11 +73,14 @@ export function SparkGate({ className }: { className?: string }) {
           aria-label="Spark"
           className="absolute bottom-[calc(100%+0.65rem)] right-0 z-50 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl bg-background shadow-soft ring-1 ring-border"
         >
-          <div className="border-b border-border/70 bg-secondary/40 px-4 py-3">
-            <p className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-              Spark
-            </p>
-            <p className="mt-0.5 text-sm font-medium text-ink">Where do you need to go?</p>
+          <div className="flex items-center gap-3 border-b border-border/70 bg-secondary/40 px-4 py-3">
+            <LifeMark size={28} />
+            <div>
+              <p className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                Spark
+              </p>
+              <p className="text-sm font-medium text-ink">Where do you need to go?</p>
+            </div>
           </div>
           <ul className="p-2">
             {SPARK_ACTIONS.map((action) => {
