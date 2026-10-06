@@ -95,7 +95,7 @@ export function AppShell() {
           hideTabs || squareView === "peek"
             ? ""
             : showPrimary
-              ? "pt-[calc(3rem+env(safe-area-inset-top))] pb-[calc(5.75rem+env(safe-area-inset-bottom))]"
+              ? "pt-[calc(3rem+env(safe-area-inset-top))] pb-[calc(6.5rem+env(safe-area-inset-bottom))]"
               : "pt-[calc(3rem+env(safe-area-inset-top))]",
         )}
       >
@@ -109,15 +109,15 @@ export function AppShell() {
             hidden ? "translate-y-full" : "translate-y-0",
           )}
         >
-          <div className="mx-auto max-w-3xl px-2 pt-1">
-            <div className="px-1 pb-0.5">
+          <div className="mx-auto max-w-3xl px-2">
+            <div className="-mt-1 px-1 pt-1 pb-0">
               <BudWave />
             </div>
-            <div className="flex items-end gap-1">
+            <div className="flex items-center gap-2 border-t border-border/40 pt-0.5">
               <div className="min-w-0 flex-1">
                 <PrimaryNav />
               </div>
-              <SparkGate className="mb-1 shrink-0" />
+              <SparkGate className="shrink-0 pr-1" />
             </div>
           </div>
         </div>
