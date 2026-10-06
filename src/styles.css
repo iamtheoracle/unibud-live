@@ -115,8 +115,6 @@
   letter-spacing: -0.03em;
 }
 
-/* Drop — Ask Bud ink language; designed + is the action. */
-/* Drop — compact identity in the sash. Not a FAB, not a lone +. */
 .drop-trigger {
   display: inline-flex;
   flex-shrink: 0;
@@ -167,7 +165,6 @@
   color: var(--color-bud);
 }
 
-/* Square secondary feeds — compact tabs, not primary nav, not cards. */
 .square-lanes {
   display: flex;
   gap: 1.35rem;
@@ -237,7 +234,6 @@
   padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
 }
 
-/* iOS 26 liquid glass — camera / studio only */
 .glass {
   background: rgb(255 255 255 / 14%);
   backdrop-filter: blur(28px) saturate(1.6);
@@ -314,4 +310,16 @@
 }
 .cam-modes button[data-on="true"] {
   color: var(--color-paper);
+}
+
+/* Bud wave — motion only when real activity class is applied */
+@keyframes bud-wave-pulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.9; }
+}
+.bud-wave-pulse {
+  animation: bud-wave-pulse 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bud-wave-pulse { animation: none; }
 }
