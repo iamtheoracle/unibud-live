@@ -3,6 +3,8 @@ import { Bell, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Wordmark } from "@/components/brand/logo";
 import { AskBudFab } from "@/components/unibud/ask-bud";
+import { SparkGate } from "@/components/shell/spark-gate";
+import { BudWave } from "@/components/shell/bud-wave";
 import { DropSheet } from "@/components/unibud/drop-sheet";
 import { StudioRoot } from "@/components/studio/studio-root";
 import { cn } from "@/lib/utils";
@@ -93,7 +95,7 @@ export function AppShell() {
           hideTabs || squareView === "peek"
             ? ""
             : showPrimary
-              ? "pt-[calc(3rem+env(safe-area-inset-top))] pb-[calc(4.25rem+env(safe-area-inset-bottom))]"
+              ? "pt-[calc(3rem+env(safe-area-inset-top))] pb-[calc(5.75rem+env(safe-area-inset-bottom))]"
               : "pt-[calc(3rem+env(safe-area-inset-top))]",
         )}
       >
@@ -107,11 +109,23 @@ export function AppShell() {
             hidden ? "translate-y-full" : "translate-y-0",
           )}
         >
-          <PrimaryNav className="mx-auto max-w-3xl" />
+          <div className="mx-auto max-w-3xl px-2 pt-1">
+            <div className="px-1 pb-0.5">
+              <BudWave />
+            </div>
+            <div className="flex items-end gap-1">
+              <div className="min-w-0 flex-1">
+                <PrimaryNav />
+              </div>
+              <SparkGate className="mb-1 shrink-0" />
+            </div>
+          </div>
         </div>
       ) : null}
 
-      <AskBudFab menuOpen={drawer.open || hidden || composeOpen || dropOpen} />
+      {!showPrimary ? (
+        <AskBudFab menuOpen={drawer.open || hidden || composeOpen || dropOpen} />
+      ) : null}
       {dropOpen ? <DropSheet onClose={() => setDropOpen(false)} /> : null}
       <StudioRoot />
 
