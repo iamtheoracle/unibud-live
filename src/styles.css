@@ -312,14 +312,24 @@
   color: var(--color-paper);
 }
 
-/* Bud wave — motion only when real activity class is applied */
-@keyframes bud-wave-pulse {
-  0%, 100% { opacity: 0.45; }
-  50% { opacity: 0.9; }
+/* Bud wave — particle signal; motion only for real Bud activity */
+@keyframes bud-wave-drift {
+  0%, 100% { opacity: 0.75; transform: translateX(0); }
+  50% { opacity: 1; transform: translateX(2px); }
 }
-.bud-wave-pulse {
-  animation: bud-wave-pulse 1.6s ease-in-out infinite;
+@keyframes bud-wave-spark {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+.bud-wave-drift {
+  animation: bud-wave-drift 2.4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.bud-wave-spark {
+  animation: bud-wave-spark 1.8s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .bud-wave-pulse { animation: none; }
+  .bud-wave-drift,
+  .bud-wave-spark { animation: none; }
 }
