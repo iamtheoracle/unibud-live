@@ -312,36 +312,76 @@
   color: var(--color-paper);
 }
 
-/* Bud wave — particle signal; motion only for real Bud activity */
-@keyframes bud-wave-drift {
-  0%, 100% { opacity: 0.75; transform: translateX(0); }
-  50% { opacity: 1; transform: translateX(2px); }
+/* —— Identity marks: LIFE · RIFF · ORBIT · Bud signal —— */
+@keyframes life-breathe {
+  0%, 100% { filter: drop-shadow(0 0 4px rgb(123 108 255 / 0.45)); opacity: 0.92; }
+  50% { filter: drop-shadow(0 0 10px rgb(62 203 255 / 0.65)); opacity: 1; }
 }
-@keyframes bud-wave-spark {
-  0%, 100% { opacity: 0.85; }
-  50% { opacity: 1; }
+.life-mark-path {
+  animation: life-breathe 2.6s ease-in-out infinite;
 }
-.bud-wave-drift {
-  animation: bud-wave-drift 2.4s ease-in-out infinite;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-.bud-wave-spark {
-  animation: bud-wave-spark 1.8s ease-in-out infinite;
+.life-mark-active .life-mark-path {
+  animation-duration: 1.4s;
 }
 @media (prefers-reduced-motion: reduce) {
-  .bud-wave-drift,
-  .bud-wave-spark { animation: none; }
+  .life-mark-path { animation: none; }
 }
 
-/* Bud animated signal text */
-@keyframes bud-text-glow {
-  0%, 100% { letter-spacing: 0.32em; opacity: 0.88; }
-  50% { letter-spacing: 0.38em; opacity: 1; }
+@keyframes riff-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.95; }
+  50% { transform: scale(1.04); opacity: 1; }
 }
-.bud-text-signal[data-live="true"] {
-  animation: bud-text-glow 2.8s ease-in-out infinite;
+.riff-mark-core {
+  transform-origin: center;
+  animation: riff-pulse 3s ease-in-out infinite;
+}
+.riff-mark-header {
+  filter: drop-shadow(0 0 12px rgb(129 140 248 / 0.35));
 }
 @media (prefers-reduced-motion: reduce) {
-  .bud-text-signal[data-live="true"] { animation: none; }
+  .riff-mark-core { animation: none; }
+}
+
+@keyframes orbit-spin {
+  to { transform: rotate(360deg); }
+}
+.orbit-mark-spin {
+  animation: orbit-spin 2.8s linear infinite;
+  transform-origin: center;
+}
+@keyframes orbit-ring-wobble {
+  0%, 100% { opacity: 0.95; }
+  50% { opacity: 0.7; }
+}
+.orbit-ring-a { animation: orbit-ring-wobble 2s ease-in-out infinite; }
+.orbit-ring-b { animation: orbit-ring-wobble 2.4s ease-in-out infinite reverse; }
+@media (prefers-reduced-motion: reduce) {
+  .orbit-mark-spin,
+  .orbit-ring-a,
+  .orbit-ring-b { animation: none; }
+}
+
+@keyframes bud-wave-flow {
+  0% { transform: translateX(0); opacity: 0.85; }
+  50% { transform: translateX(3px); opacity: 1; }
+  100% { transform: translateX(0); opacity: 0.85; }
+}
+@keyframes bud-particle-twinkle {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+.bud-wave-live .bud-stroke-main,
+.bud-wave-live .bud-stroke-sub {
+  animation: bud-wave-flow 2.2s ease-in-out infinite;
+}
+.bud-wave-live .bud-particles {
+  animation: bud-particle-twinkle 1.8s ease-in-out infinite;
+}
+.bud-wave-idle .bud-stroke-main {
+  opacity: 0.88;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bud-wave-live .bud-stroke-main,
+  .bud-wave-live .bud-stroke-sub,
+  .bud-wave-live .bud-particles { animation: none; }
 }
