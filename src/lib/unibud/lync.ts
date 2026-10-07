@@ -19,6 +19,8 @@ export type LyncState = {
   daysToNextBonus: number | null;
   /** Last bonus milestone reached (count), if any. */
   lastBonusAtCount: number | null;
+  /** All milestones ever earned — kept even when a Lync resets. */
+  earnedMilestones: number[];
 };
 
 export type LyncConfig = {
@@ -30,8 +32,8 @@ export type LyncConfig = {
 
 /** Configurable activation — do not hard-code product magic numbers elsewhere. */
 export const DEFAULT_LYNC_CONFIG: LyncConfig = {
-  activationShares: 2,
-  bonusMilestones: [],
+  activationShares: 1,
+  bonusMilestones: [3, 7, 14, 30, 60, 100],
 };
 
 export function emptyLync(): LyncState {
@@ -43,6 +45,7 @@ export function emptyLync(): LyncState {
     startedAt: null,
     daysToNextBonus: null,
     lastBonusAtCount: null,
+    earnedMilestones: [],
   };
 }
 
@@ -131,12 +134,16 @@ export function applyQualifyingShare(
     events.push({ type: status === "active" ? "lync_activated" : "lync_started", at: atIso, count });
   }
 
+  // Earned milestones accumulate forever; streak reset does not remove them.
+  const earned = new Set(prev.earnedMilestones ?? []);
   for (const m of config.bonusMilestones) {
-    if (count === m && lastBonusAtCount !== m) {
+    if (count === m && !earned.has(m)) {
+      earned.add(m);
       lastBonusAtCount = m;
       events.push({ type: "lync_bonus_unlocked", at: atIso, count, milestone: m });
     }
   }
+  const earnedMilestones = [...earned].sort((a, b) => a - b);
 
   const state: LyncState = {
     count,
@@ -146,6 +153,7 @@ export function applyQualifyingShare(
     startedAt,
     daysToNextBonus: nextBonusDistance(count, config.bonusMilestones),
     lastBonusAtCount,
+    earnedMilestones,
   };
   return { state, events };
 }
