@@ -1,5 +1,6 @@
--- Lync: persist earned milestones across streak resets
+-- Lync: persist earned milestones across streak resets + longest streak
 alter table user_lync add column if not exists earned_milestones text not null default '[]';
+alter table user_lync add column if not exists longest_streak integer not null default 0;
 
 -- Quad: privacy + ownership
 alter table communities add column if not exists privacy text not null default 'public';
