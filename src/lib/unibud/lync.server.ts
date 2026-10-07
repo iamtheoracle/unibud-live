@@ -10,6 +10,19 @@ import {
 } from "./lync";
 import { notify } from "./server";
 
+function parseEarned(raw: unknown): number[] {
+  if (Array.isArray(raw)) return raw.map(Number).filter((n) => Number.isFinite(n));
+  if (typeof raw === "string") {
+    try {
+      const v = JSON.parse(raw) as unknown;
+      if (Array.isArray(v)) return v.map(Number).filter((n) => Number.isFinite(n));
+    } catch {
+      /* ignore */
+    }
+  }
+  return [];
+}
+
 function rowToState(row: Record<string, unknown> | undefined): LyncState {
   if (!row) return emptyLync();
   return {
@@ -20,6 +33,7 @@ function rowToState(row: Record<string, unknown> | undefined): LyncState {
     startedAt: row.started_at ? String(row.started_at) : null,
     daysToNextBonus: row.days_to_next_bonus == null ? null : Number(row.days_to_next_bonus),
     lastBonusAtCount: row.last_bonus_at_count == null ? null : Number(row.last_bonus_at_count),
+    earnedMilestones: parseEarned(row.earned_milestones),
   };
 }
 
@@ -49,25 +63,49 @@ export const recordLyncShare = createServerFn({ method: "POST" })
     }
 
     const { state, events } = applyQualifyingShare(prev);
-    await sql`
-      insert into user_lync (
-        user_id, count, status, last_share_day, last_share_at, started_at,
-        days_to_next_bonus, last_bonus_at_count, updated_at
-      ) values (
-        ${context.userId}, ${state.count}, ${state.status}, ${state.lastShareDay},
-        ${state.lastShareAt}, ${state.startedAt}, ${state.daysToNextBonus},
-        ${state.lastBonusAtCount}, now()
-      )
-      on conflict (user_id) do update set
-        count = excluded.count,
-        status = excluded.status,
-        last_share_day = excluded.last_share_day,
-        last_share_at = excluded.last_share_at,
-        started_at = excluded.started_at,
-        days_to_next_bonus = excluded.days_to_next_bonus,
-        last_bonus_at_count = excluded.last_bonus_at_count,
-        updated_at = now()
-    `;
+    const earnedJson = JSON.stringify(state.earnedMilestones ?? []);
+    try {
+      await sql`
+        insert into user_lync (
+          user_id, count, status, last_share_day, last_share_at, started_at,
+          days_to_next_bonus, last_bonus_at_count, earned_milestones, updated_at
+        ) values (
+          ${context.userId}, ${state.count}, ${state.status}, ${state.lastShareDay},
+          ${state.lastShareAt}, ${state.startedAt}, ${state.daysToNextBonus},
+          ${state.lastBonusAtCount}, ${earnedJson}, now()
+        )
+        on conflict (user_id) do update set
+          count = excluded.count,
+          status = excluded.status,
+          last_share_day = excluded.last_share_day,
+          last_share_at = excluded.last_share_at,
+          started_at = excluded.started_at,
+          days_to_next_bonus = excluded.days_to_next_bonus,
+          last_bonus_at_count = excluded.last_bonus_at_count,
+          earned_milestones = excluded.earned_milestones,
+          updated_at = now()
+      `;
+    } catch {
+      await sql`
+        insert into user_lync (
+          user_id, count, status, last_share_day, last_share_at, started_at,
+          days_to_next_bonus, last_bonus_at_count, updated_at
+        ) values (
+          ${context.userId}, ${state.count}, ${state.status}, ${state.lastShareDay},
+          ${state.lastShareAt}, ${state.startedAt}, ${state.daysToNextBonus},
+          ${state.lastBonusAtCount}, now()
+        )
+        on conflict (user_id) do update set
+          count = excluded.count,
+          status = excluded.status,
+          last_share_day = excluded.last_share_day,
+          last_share_at = excluded.last_share_at,
+          started_at = excluded.started_at,
+          days_to_next_bonus = excluded.days_to_next_bonus,
+          last_bonus_at_count = excluded.last_bonus_at_count,
+          updated_at = now()
+      `;
+    }
 
     for (const ev of events) {
       const id = `ly_${crypto.randomUUID().slice(0, 12)}`;
