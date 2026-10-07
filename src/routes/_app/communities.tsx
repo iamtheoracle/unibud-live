@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCatalog } from "@/lib/unibud/queries";
 import { myCommunities } from "@/lib/social/server";
+import { createQuad } from "@/lib/unibud/quad.server";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthReady } from "@/components/unibud/sign-in-gate";
 import { canGovernClass } from "@/lib/unibud/roles";
@@ -17,15 +18,10 @@ export const Route = createFileRoute("/_app/communities")({ component: Communiti
 
 function Communities() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  if (pathname !== "/communities" && pathname !== "/communities/") {
-    return <Outlet />;
-  }
-  return <CommunitiesList />;
-}
+  const nested = pathname !== "/communities" && pathname.startsWith("/communities/");
+  if (nested) return <Outlet />;
 
-function CommunitiesList() {
   const { data } = useCatalog();
-  // Reality First: only communities from the catalog API / DB — no fixture merge.
   const allRooms = data?.communities ?? [];
   const { user } = useAuthReady();
   const role = useCampusStore((s) => s.role ?? "student");
@@ -55,12 +51,7 @@ function CommunitiesList() {
       <p className="kicker">Find your rooms</p>
       <div className="mt-1 flex items-end justify-between gap-3">
         <h1 className="font-display text-4xl">Quad</h1>
-        <Button
-          size="sm"
-          variant="outline"
-          className="shrink-0"
-          onClick={() => setCreating((v) => !v)}
-        >
+        <Button size="sm" variant="outline" className="shrink-0" onClick={() => setCreating((v) => !v)}>
           <Plus className="size-4" />
           New
         </Button>
@@ -79,9 +70,20 @@ function CommunitiesList() {
               toast.error("Only class governors can open a Class room.");
               return;
             }
-            toast.message("Community creation needs a signed-in account and server write.");
-            setCreating(false);
-            setName("");
+            if (!user) {
+              toast.error("Sign in to create a Quad.");
+              return;
+            }
+            void createQuad({
+              data: { name: name.trim(), kind: createKind, description: "", privacy: "public" },
+            })
+              .then(() => {
+                toast.success("Quad created.");
+                setCreating(false);
+                setName("");
+                void mine.refetch();
+              })
+              .catch((err: Error) => toast.error(err.message || "Could not create Quad."));
           }}
         >
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name this Quad or group" />
@@ -91,10 +93,7 @@ function CommunitiesList() {
                 key={k}
                 type="button"
                 onClick={() => setCreateKind(k)}
-                className={cn(
-                  "h-9 rounded-full px-3 text-sm",
-                  createKind === k ? "bg-ink text-paper" : "bg-secondary",
-                )}
+                className={cn("h-9 rounded-full px-3 text-sm", createKind === k ? "bg-ink text-paper" : "bg-secondary")}
               >
                 {k}
               </button>
@@ -112,10 +111,7 @@ function CommunitiesList() {
             key={id}
             type="button"
             onClick={() => setTab(id)}
-            className={cn(
-              "h-9 rounded-full px-4 text-sm capitalize",
-              tab === id ? "bg-ink text-paper" : "bg-card ring-1 ring-border",
-            )}
+            className={cn("h-9 rounded-full px-4 text-sm capitalize", tab === id ? "bg-ink text-paper" : "bg-card ring-1 ring-border")}
           >
             {id}
           </button>
@@ -128,10 +124,7 @@ function CommunitiesList() {
             key={id}
             type="button"
             onClick={() => setKind(id)}
-            className={cn(
-              "h-9 shrink-0 rounded-full px-3 text-xs",
-              kind === id ? "bg-ink text-paper" : "bg-secondary",
-            )}
+            className={cn("h-9 shrink-0 rounded-full px-3 text-xs", kind === id ? "bg-ink text-paper" : "bg-secondary")}
           >
             {id === "all" ? "All" : communityKindLabel(id)}
           </button>
@@ -140,12 +133,7 @@ function CommunitiesList() {
 
       <div className="relative mt-4">
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search Quads"
-          className="pl-10"
-        />
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search Quads" className="pl-10" />
       </div>
 
       <ul className="mt-5 space-y-3">
@@ -159,14 +147,8 @@ function CommunitiesList() {
         ) : (
           shown.map((c) => (
             <li key={c.id}>
-              <Link
-                to="/communities/$id"
-                params={{ id: c.id }}
-                className="block rounded-2xl bg-card p-4 ring-1 ring-border"
-              >
-                <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-                  {communityKindLabel(c.kind)}
-                </p>
+              <Link to="/communities/$id" params={{ id: c.id }} className="block rounded-2xl bg-card p-4 ring-1 ring-border">
+                <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">{communityKindLabel(c.kind)}</p>
                 <h2 className="mt-1 font-medium">{c.name}</h2>
                 <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{c.description}</p>
               </Link>
