@@ -385,3 +385,21 @@
   .bud-wave-live .bud-stroke-sub,
   .bud-wave-live .bud-particles { animation: none; }
 }
+
+/* Deep Bud band under header */
+.bud-wave-band {
+  isolation: isolate;
+}
+.bud-wave-band::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgb(109 94 246 / 0.22),
+    transparent
+  );
+}
