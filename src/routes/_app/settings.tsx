@@ -33,7 +33,9 @@ function Settings() {
     <main className="safe-bottom px-5 pt-6">
       <p className="kicker">Account</p>
       <h1 className="mt-1 font-display text-4xl">Settings</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Privacy, notifications, Bud placement, and demo role.</p>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Privacy, notifications, and Bud placement. Device role preference is not platform authority.
+      </p>
 
       <p className="mt-8 text-xs font-medium tracking-wide text-muted-foreground uppercase">
         Bud shortcut position
@@ -78,10 +80,10 @@ function Settings() {
       </div>
 
       <p className="mt-8 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        Role on this device (demo)
+        Device preference (not platform authority)
       </p>
       <p className="mt-1 text-xs text-muted-foreground">
-        Roles do not inherit. Class Governor is still a student. Tutor Mode is lecturers only.
+        This only changes how this device labels the UI. Lecturer and moderator powers are granted by UNIBUD — they cannot be claimed here.
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         {(["student", "governor", "lecturer", "moderator"] as CampusRole[]).map((v) => (
@@ -90,7 +92,10 @@ function Settings() {
             type="button"
             onClick={() => {
               setRole(v);
-              if (user) void upsertMyProfile({ data: { campusRole: v } });
+              // Server ignores lecturer/moderator self-elevation.
+              if (user && (v === "student" || v === "governor")) {
+                void upsertMyProfile({ data: { campusRole: v } });
+              }
             }}
             className={cn(
               "h-9 rounded-full px-4 text-sm capitalize",
