@@ -19,8 +19,6 @@ export const Route = createFileRoute("/_app/communities")({ component: Communiti
 function Communities() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const nested = pathname !== "/communities" && pathname.startsWith("/communities/");
-  if (nested) return <Outlet />;
-
   const { data } = useCatalog();
   const allRooms = data?.communities ?? [];
   const { user } = useAuthReady();
@@ -45,6 +43,8 @@ function Communities() {
   const shown = (tab === "mine" ? communities.filter((c) => mine.data?.includes(c.id)) : communities).filter(
     (c) => kind === "all" || c.kind === kind || (kind === "Interest" && ["Interest", "Music", "Sports", "Career"].includes(c.kind)),
   );
+
+  if (nested) return <Outlet />;
 
   return (
     <main className="safe-bottom px-5 pt-6">
