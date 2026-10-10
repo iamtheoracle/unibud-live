@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCatalog } from "@/lib/unibud/queries";
 import { myCommunities } from "@/lib/social/server";
-import { createQuad } from "@/lib/unibud/quad.server";
+import { createQuad } from "@/lib/unibud/quad-api";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthReady } from "@/components/unibud/sign-in-gate";
 import { canGovernClass } from "@/lib/unibud/roles";
