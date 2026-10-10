@@ -8,7 +8,7 @@ export const SQUARE_LANES: { id: SquareLane; label: string }[] = [
   { id: "quad-drop", label: "Quad Drop" },
   { id: "buddies", label: "Buddies" },
   { id: "peek", label: "Peek" },
-  { id: "off-rails", label: "Off the Rails" },
+  { id: "off-rails", label: "Off the Radar" },
 ];
 
 export function isVideoPost(post: FeedPost) {
@@ -38,14 +38,12 @@ export function postsForLane(
   connections: string[],
 ): FeedPost[] {
   if (lane === "on-stream") return rankPosts(posts, ctx);
-  if (lane === "quad-drop") return campusContextual(posts, ctx);
+  if (lane === "quad-drop") return posts.filter((p) => campusContextual(p, ctx));
   if (lane === "buddies") {
-    const circle = new Set([...ctx.following, ...connections]);
-    return rankPosts(
-      posts.filter((p) => circle.has(p.authorHandle)),
-      ctx,
-    );
+    const set = new Set(connections);
+    return posts.filter((p) => set.has(p.authorHandle));
   }
-  if (lane === "peek") return rankPosts(posts.filter(isVideoPost), ctx);
-  return boiling(posts, ctx);
+  if (lane === "peek") return posts.filter((p) => isVideoPost(p));
+  if (lane === "off-rails") return boiling(posts);
+  return posts;
 }
