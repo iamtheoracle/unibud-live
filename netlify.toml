@@ -1,18 +1,20 @@
 # UNIBUD — Netlify (TanStack Start + Nitro SSR)
-# Server secrets (set in Netlify UI, never commit): OPENAI_API_KEY, XAI_API_KEY, DATABASE_URL
+# Server secrets (set in Netlify UI, never commit):
+#   DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL,
+#   XAI_API_KEY or OPENAI_API_KEY, optional GROK_AUTH_* / Google OAuth
+#
+# Production must set VITE_AUTH_ENABLED=true in the Netlify UI when real
+# multi-user auth is provisioned. Do not force auth off here.
 
 [build]
-  # Include devDependencies (nitro, vite plugins) — required for TanStack Start build.
   command = "npm install --legacy-peer-deps --include=dev && npm run build:netlify"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
-  VITE_AUTH_ENABLED = "false"
   NPM_CONFIG_LEGACY_PEER_DEPS = "true"
   NPM_CONFIG_PRODUCTION = "false"
   NODE_OPTIONS = "--max-old-space-size=4096"
 
-# Runtime only — do not force NODE_ENV=production during npm install (omits devDeps).
 [context.production.environment]
-  VITE_AUTH_ENABLED = "false"
+  NODE_VERSION = "22"
