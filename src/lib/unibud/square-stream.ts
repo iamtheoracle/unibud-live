@@ -31,19 +31,14 @@ export function loopStream<T extends { id: string }>(source: T[], count: number)
   return out;
 }
 
-export function postsForLane(
-  posts: FeedPost[],
-  lane: SquareLane,
-  ctx: RankContext,
-  connections: string[],
-): FeedPost[] {
+export function postsForLane(posts: FeedPost[], lane: SquareLane, ctx: RankContext): FeedPost[] {
   if (lane === "on-stream") return rankPosts(posts, ctx);
-  if (lane === "quad-drop") return posts.filter((p) => campusContextual(p, ctx));
+  if (lane === "quad-drop") return campusContextual(posts, ctx);
   if (lane === "buddies") {
-    const set = new Set(connections);
+    const set = new Set([...(ctx.connections ?? []), ...ctx.following]);
     return posts.filter((p) => set.has(p.authorHandle));
   }
   if (lane === "peek") return posts.filter((p) => isVideoPost(p));
-  if (lane === "off-rails") return boiling(posts);
+  if (lane === "off-rails") return boiling(posts, ctx);
   return posts;
 }
