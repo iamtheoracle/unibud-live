@@ -29,6 +29,53 @@ export const APP_ENV_REL_PATH = ".grok/app-env.json";
 
 const VITE_PREFIX = "VITE_";
 
+/** Server-only keys loaded from `.env` / `.env.local` — never VITE_-prefixed. */
+const SERVER_SECRET_KEYS = new Set([
+  "OPENAI_API_KEY",
+  "XAI_API_KEY",
+  "DATABASE_URL",
+  "BETTER_AUTH_SECRET",
+  "AUTH_SECRET",
+]);
+
+/**
+ * Parse dotenv-style text for allowed server secrets only.
+ * Does not support multiline values. Never maps into VITE_ namespace.
+ */
+export function parseServerSecrets(text) {
+  const env = {};
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq <= 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    if (!SERVER_SECRET_KEYS.has(key)) continue;
+    let value = trimmed.slice(eq + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    if (value) env[key] = value;
+  }
+  return env;
+}
+
+/** Load `.env` then `.env.local` secrets under `root` (local overrides). */
+export function readServerSecrets(root) {
+  const out = {};
+  for (const name of [".env", ".env.local"]) {
+    try {
+      Object.assign(out, parseServerSecrets(readFileSync(join(root, name), "utf8")));
+    } catch {
+      /* absent is fine */
+    }
+  }
+  return out;
+}
+
 /**
  * Parse an app-env document, keeping only `VITE_`-prefixed string entries.
  * Anything unparseable is an empty environment — a workspace without the file
@@ -110,7 +157,12 @@ function main(argv) {
     console.error("usage: node scripts/with-app-env.mjs <command> [args…]");
     process.exit(2);
   }
-  const env = mergeAppEnv(readAppEnv(projectRoot()), process.env);
+  const root = projectRoot();
+  // Secrets from gitignored .env* first; explicit process.env always wins.
+  const env = {
+    ...readServerSecrets(root),
+    ...mergeAppEnv(readAppEnv(root), process.env),
+  };
   const child = spawn(command, args, { stdio: "inherit", env });
   // The dev server is long-running and is stopped by signalling this wrapper.
   for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
