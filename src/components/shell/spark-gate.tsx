@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { BriefcaseBusiness, GraduationCap, LayoutPanelTop, Wallet } from "lucide-react";
+import { BriefcaseBusiness, Compass, GraduationCap, Wallet } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -62,14 +62,16 @@ export function SparkGate({ className }: { className?: string }) {
         type="button"
         aria-expanded={open}
         aria-haspopup="dialog"
-        aria-label={open ? "Close destinations" : "Open destinations"}
+        aria-label={open ? "Close destinations" : "Explore destinations"}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "grid size-12 place-items-center rounded-full bg-card text-ink shadow-soft ring-1 ring-border transition-transform",
-          open ? "scale-105 bg-secondary" : "hover:bg-secondary/80 active:scale-[0.98]",
+          "grid size-11 place-items-center rounded-full bg-bud text-bud-foreground shadow-soft ring-1 ring-bud/30 transition-[transform,box-shadow,background-color] duration-150",
+          open
+            ? "scale-105 shadow-md ring-bud/50"
+            : "hover:brightness-105 active:scale-95 active:brightness-95",
         )}
       >
-        <LayoutPanelTop className="size-5" strokeWidth={1.75} aria-hidden />
+        <Compass className="size-5" strokeWidth={1.75} aria-hidden />
       </button>
 
       {open ? (
