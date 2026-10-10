@@ -3,6 +3,7 @@ import type { FeedPost } from "./types";
 
 export type RankContext = {
   following: string[];
+  connections?: string[];
   interests: string[];
   universityId: string;
   likeCounts: Record<string, number>;
