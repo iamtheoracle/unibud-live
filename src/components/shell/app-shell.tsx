@@ -113,12 +113,21 @@ export function AppShell() {
           )}
         >
           <div className="mx-auto max-w-3xl px-2 pt-1">
-            <div className="flex items-center gap-2">
-              <div className="min-w-0 flex-1">
-                <PrimaryNav />
-              </div>
-              <SparkGate className="shrink-0 pr-1" />
-            </div>
+            <PrimaryNav />
+          </div>
+        </div>
+      ) : null}
+
+      {/* Destinations launcher — float above primary dock; not the Spark agent */}
+      {showPrimary && !hidden ? (
+        <div
+          className="pointer-events-none fixed right-3 z-40 max-w-3xl"
+          style={{
+            bottom: "calc(4.25rem + env(safe-area-inset-bottom, 0px))",
+          }}
+        >
+          <div className="pointer-events-auto ml-auto w-fit">
+            <SparkGate />
           </div>
         </div>
       ) : null}
