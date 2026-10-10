@@ -43,7 +43,14 @@ function xaiProvider(apiKey: string): AIProvider {
           body: JSON.stringify({ model: "grok-4.5", max_tokens: opts?.maxTokens ?? 700, messages }),
         });
         if (!res.ok) {
-          const error = res.status >= 500 ? "Bud couldn’t reach the model. Try again in a moment." : "Bud couldn’t reply just now. Try again.";
+          const error =
+            res.status === 401 || res.status === 403
+              ? "Bud’s model key was rejected. Check the server configuration."
+              : res.status === 429
+                ? "Bud is rate-limited right now. Wait a moment and try again."
+                : res.status >= 500
+                  ? "Bud couldn’t reach the model. Try again in a moment."
+                  : "Bud couldn’t reply just now. Try again.";
           return { ok: false, error, providerId: "xai" };
         }
         const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
@@ -77,9 +84,13 @@ function openaiProvider(apiKey: string): AIProvider {
         });
         if (!res.ok) {
           const error =
-            res.status >= 500
-              ? "Bud couldn’t reach the model. Try again in a moment."
-              : "Bud couldn’t reply just now. Try again.";
+            res.status === 401 || res.status === 403
+              ? "Bud’s OpenAI key was rejected. Check OPENAI_API_KEY on the server."
+              : res.status === 429
+                ? "Bud is rate-limited by OpenAI right now. Wait a moment and try again."
+                : res.status >= 500
+                  ? "Bud couldn’t reach OpenAI. Try again in a moment."
+                  : "Bud couldn’t reply just now. Try again.";
           return { ok: false, error, providerId: "openai" };
         }
         const body = (await res.json()) as { choices?: { message?: { content?: string } }[] };
