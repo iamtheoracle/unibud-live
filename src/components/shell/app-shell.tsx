@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { Wordmark } from "@/components/brand/logo";
 import { AskBudFab } from "@/components/unibud/ask-bud";
 import { SparkGate } from "@/components/shell/spark-gate";
-import { BudWave } from "@/components/shell/bud-wave";
 import { DropSheet } from "@/components/unibud/drop-sheet";
 import { StudioRoot } from "@/components/studio/studio-root";
 import { cn } from "@/lib/utils";
@@ -58,15 +57,25 @@ export function AppShell() {
             hidden ? "-translate-y-full" : "translate-y-0",
           )}
         >
-          <div className="relative mx-auto flex h-12 max-w-3xl items-center px-3">
-            <Link to="/" aria-label="UNIBUD" className="flex items-center">
-              <Wordmark size="header" className="object-left" />
+          <div className="mx-auto flex h-12 max-w-3xl items-center justify-between gap-2 px-3">
+            <button
+              type="button"
+              aria-label="Open menu"
+              onClick={drawer.openMenu}
+              className="grid size-11 place-items-center rounded-full text-foreground hover:bg-secondary"
+            >
+              <span className="flex flex-col gap-1">
+                <span className="block h-0.5 w-4 rounded-full bg-current" />
+                <span className="block h-0.5 w-3 rounded-full bg-current" />
+              </span>
+            </button>
+            <Link to="/" className="min-w-0 flex-1">
+              <Wordmark size="sm" className="mx-auto max-w-[7.5rem]" />
             </Link>
-            <div className="ml-auto flex items-center">
+            <div className="flex items-center gap-0.5">
               <Link
                 to="/search"
                 aria-label="Search"
-                title="Search"
                 className="grid size-11 place-items-center rounded-full text-foreground hover:bg-secondary"
               >
                 <Search className="size-5" />
@@ -87,7 +96,6 @@ export function AppShell() {
             </div>
           </div>
           <div className="mx-auto max-w-3xl border-t border-border/30">
-            <BudWave />
           </div>
         </header>
       )}
