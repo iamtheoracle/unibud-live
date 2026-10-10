@@ -1,10 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { BriefcaseBusiness, GraduationCap, Wallet } from "lucide-react";
+import { BriefcaseBusiness, GraduationCap, LayoutPanelTop, Wallet } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { LifeMark } from "@/components/brand/identity-marks";
 import { cn } from "@/lib/utils";
 
-const SPARK_ACTIONS = [
+/** Destinations exposed by the lifestyle launcher (not the Spark agent runtime). */
+const LAUNCHER_ACTIONS = [
   {
     id: "board",
     label: "Board",
@@ -28,6 +28,11 @@ const SPARK_ACTIONS = [
   },
 ] as const;
 
+/**
+ * Compact UI entry point for Board / Commerce / Services.
+ * Internal module name retained for compatibility; must not be labeled "Spark"
+ * in the UI (Spark is the separate agent orchestration system).
+ */
 export function SparkGate({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -57,33 +62,27 @@ export function SparkGate({ className }: { className?: string }) {
         type="button"
         aria-expanded={open}
         aria-haspopup="dialog"
-        aria-label={open ? "Close Spark" : "Open Spark"}
+        aria-label={open ? "Close destinations" : "Open destinations"}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "grid size-12 place-items-center rounded-full transition-transform",
-          open ? "scale-105 bg-secondary ring-1 ring-border" : "hover:bg-secondary/70",
+          "grid size-12 place-items-center rounded-full bg-card text-ink shadow-soft ring-1 ring-border transition-transform",
+          open ? "scale-105 bg-secondary" : "hover:bg-secondary/80 active:scale-[0.98]",
         )}
       >
-        <LifeMark size={30} className={cn(open && "life-mark-active")} />
+        <LayoutPanelTop className="size-5" strokeWidth={1.75} aria-hidden />
       </button>
 
       {open ? (
         <div
           role="dialog"
-          aria-label="Spark"
+          aria-label="Where do you need to go?"
           className="absolute bottom-[calc(100%+0.65rem)] right-0 z-50 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl bg-background shadow-soft ring-1 ring-border"
         >
-          <div className="flex items-center gap-3 border-b border-border/70 bg-secondary/40 px-4 py-3">
-            <LifeMark size={28} />
-            <div>
-              <p className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                Spark
-              </p>
-              <p className="text-sm font-medium text-ink">Where do you need to go?</p>
-            </div>
+          <div className="border-b border-border/70 bg-secondary/40 px-4 py-3">
+            <p className="text-sm font-medium text-ink">Where do you need to go?</p>
           </div>
           <ul className="p-2">
-            {SPARK_ACTIONS.map((action) => {
+            {LAUNCHER_ACTIONS.map((action) => {
               const Icon = action.icon;
               return (
                 <li key={action.id}>
