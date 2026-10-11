@@ -33,7 +33,11 @@ export const uploadMedia = createServerFn({ method: "POST" })
     if (parsed.bytes.length > MAX_UPLOAD_BYTES) {
       return { ok: false as const, error: "That file is over 8 MiB." };
     }
-    const mime = (data.mime || parsed.mime).trim().slice(0, 160);
+    const suppliedMime = data.mime?.trim();
+    if (suppliedMime && suppliedMime.toLowerCase() !== parsed.mime.toLowerCase()) {
+      throw new Error("File type does not match the uploaded payload.");
+    }
+    const mime = (suppliedMime || parsed.mime).slice(0, 160);
     if (!mime || !/^[\w.+-]+\/[\w.+-]+$/.test(mime)) {
       throw new Error("Unsupported file type.");
     }
