@@ -16,6 +16,7 @@ import {
 import type { ListingCategory, ListingKind, StudentProfile } from "./types";
 import { canTeach, type CampusRole } from "./roles";
 import { COMMUNITIES, DISCOVERY, LISTINGS, PEOPLE, POSTS, UNIVERSITIES } from "./catalog";
+import { resolveProfileRole } from "./profile-role";
 
 /** Production fallback when DB is unavailable — never surface fixture people/posts/communities. */
 function emptyCatalog() {
@@ -145,15 +146,7 @@ export const upsertMyProfile = createServerFn({ method: "POST" })
     const program = data.program ?? existingProfile?.program ?? "";
     const year = data.year ?? existingProfile?.year ?? "";
     const bio = data.bio ?? existingProfile?.bio ?? "";
-    // Privilege roles cannot be self-assigned. Lecturer/moderator require platform grant.
-    const requested = data.campusRole;
-    const existingRole = existingProfile?.campusRole ?? "student";
-    let campusRole = existingRole;
-    if (requested === "student" || requested === "governor") {
-      campusRole = requested;
-    } else if (requested === "lecturer" || requested === "moderator") {
-      campusRole = existingRole === "lecturer" || existingRole === "moderator" ? existingRole : "student";
-    }
+    const campusRole = resolveProfileRole(data.campusRole, existingProfile?.campusRole ?? "student");
     const onboardingDone = data.onboardingDone ?? existingProfile?.onboardingDone ?? false;
     if (existing[0]) {
       await sql`update student_profiles set display_name = ${displayName}, handle = ${handle},
