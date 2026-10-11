@@ -282,9 +282,15 @@ export const joinCommunity = createServerFn({ method: "POST" })
       if (!membership[0]) throw new Error("This community is private. Ask an admin to invite you.");
       return { joined: true, communityId };
     }
-    await sql`insert into community_members (user_id, community_id) values (${context.userId}, ${communityId}) on conflict do nothing`;
-    const count = await sql`select count(*)::int as count from community_members where community_id = ${communityId}`;
-    await sql`update communities set members = ${Number(count[0]?.count ?? 0)} where id = ${communityId}`;
+    // Increment only when this request creates a new membership. Recount-then-set
+    // can lose concurrent joins when two requests read different snapshots.
+    const inserted = await sql`insert into community_members (user_id, community_id)
+      values (${context.userId}, ${communityId})
+      on conflict do nothing
+      returning user_id`;
+    if (inserted.length > 0) {
+      await sql`update communities set members = coalesce(members, 0) + 1 where id = ${communityId}`;
+    }
     return { joined: true, communityId };
   });
 
