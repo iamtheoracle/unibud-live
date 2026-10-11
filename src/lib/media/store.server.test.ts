@@ -50,7 +50,7 @@ test("does not fall back to local files when configured object storage reports a
 
   try {
     await assert.rejects(
-      readMediaBytes("definitely-missing-object-storage-test"),
+      readMediaBytes("f4b8c5b4-08aa-4d6d-91e7-0e11a85d3210"),
       /not found in configured durable storage/,
     );
   } finally {
@@ -84,7 +84,7 @@ test("does not fall back to local files when configured object storage returns a
 
   try {
     await assert.rejects(
-      readMediaBytes("object-storage-error-test"),
+      readMediaBytes("dce29b55-9a11-4a83-81f0-0d24e6c12d20"),
       /Media object storage GET failed with status 503/,
     );
   } finally {
@@ -115,7 +115,7 @@ test("rejects incomplete object storage configuration instead of silently using 
 
   try {
     await assert.rejects(
-      readMediaBytes("incomplete-object-storage-config-test"),
+      readMediaBytes("b35c7a7a-cf72-49ce-8baf-8c7f2f4e1180"),
       /Media object storage configuration is incomplete/,
     );
   } finally {
@@ -151,7 +151,7 @@ test("failed object storage writes reject instead of falling back to local disk"
 
   try {
     await assert.rejects(
-      writeMediaBytes("object-storage-put-error-test", Buffer.from("payload")),
+      writeMediaBytes("8e8e63b4-7d6f-4f38-a9ac-0c6f4ab30f8c", Buffer.from("payload")),
       /Media object storage PUT failed with status 503/,
     );
   } finally {
@@ -187,7 +187,7 @@ test("failed object storage deletes surface an error instead of claiming cleanup
 
   try {
     await assert.rejects(
-      removeMediaBytes("object-storage-delete-error-test"),
+      removeMediaBytes("27b7d65c-f2c3-4a8f-90d1-3c5d79a6f040"),
       /Media object storage DELETE failed with status 503/,
     );
   } finally {
@@ -198,4 +198,20 @@ test("failed object storage deletes surface an error instead of claiming cleanup
       else process.env[key] = value;
     }
   }
+});
+
+
+test("rejects non-UUID media ids before accessing local or object storage", async () => {
+  await assert.rejects(
+    readMediaBytes("../../outside-media-root"),
+    /Invalid media id/,
+  );
+  await assert.rejects(
+    writeMediaBytes("../unsafe-media-id", Buffer.from("payload")),
+    /Invalid media id/,
+  );
+  await assert.rejects(
+    removeMediaBytes("not-a-media-id"),
+    /Invalid media id/,
+  );
 });
