@@ -4,6 +4,7 @@ import { authMiddleware } from "@/lib/auth/middleware";
 import { courseByCode } from "@/lib/unibud/academic";
 import { canTeach, type CampusRole } from "@/lib/unibud/roles";
 import { notify } from "@/lib/unibud/server";
+import { canTransitionBoardSessionStatus, type BoardSessionStatus } from "./session-policy";
 
 async function loadEnrollments(userId: string) {
   const sql = await getSql();
@@ -138,12 +139,15 @@ export const listAnnouncements = createServerFn({ method: "GET" })
 
 async function requireSessionAccess(userId: string, sessionId: string, mode: "read" | "attend" | "manage") {
   const sql = await getSql();
-  const sessions = await sql<{ id: string; course_code: string; lecturer_id: string }>`
-    select id, course_code, lecturer_id from board_sessions where id = ${sessionId} limit 1`;
+  const sessions = await sql<{ id: string; course_code: string; lecturer_id: string; status: string }>`
+    select id, course_code, lecturer_id, status from board_sessions where id = ${sessionId} limit 1`;
   const session = sessions[0];
   if (!session) throw new Error("Class session not found.");
 
   const isLecturer = session.lecturer_id === userId;
+  if (mode === "attend" && session.status !== "live") {
+    throw new Error("Attendance can only be recorded while the class session is live.");
+  }
   if (mode === "manage" && !isLecturer) {
     throw new Error("Only the assigned session lecturer can view attendance.");
   }
@@ -188,6 +192,24 @@ export const createBoardSession = createServerFn({ method: "POST" })
       startsAt: row.starts_at ? String(row.starts_at) : null,
       durationMinutes: Number(row.duration_minutes), createdAt: String(row.created_at),
     };
+  });
+
+/** Change a class session's lifecycle only through authorized lecturer actions. */
+export const setBoardSessionStatus = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { sessionId: string; status: "live" | "ended" | "cancelled" }) => input)
+  .handler(async ({ context, data }) => {
+    const { sql, session } = await requireSessionAccess(context.userId, data.sessionId, "manage");
+    if (!canTransitionBoardSessionStatus(session.status as BoardSessionStatus, data.status)) {
+      throw new Error(`Invalid class session transition: ${session.status} → ${data.status}.`);
+    }
+    const rows = await sql`
+      update board_sessions
+      set status = ${data.status}, updated_at = now()
+      where id = ${data.sessionId} and lecturer_id = ${context.userId} and status = ${session.status}
+      returning id, status, updated_at`;
+    if (!rows[0]) throw new Error("The class session changed before this update. Refresh and try again.");
+    return { id: String(rows[0].id), status: String(rows[0].status), updatedAt: String(rows[0].updated_at) };
   });
 
 export const listBoardSessions = createServerFn({ method: "GET" })
