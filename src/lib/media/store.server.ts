@@ -29,7 +29,22 @@ function s3Config(): S3Config | null {
   if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) {
     throw new Error("Media object storage configuration is incomplete.");
   }
-  return { endpoint: endpoint.replace(/\/$/, ""), bucket, region, accessKeyId, secretAccessKey };
+  let endpointUrl: URL;
+  try {
+    endpointUrl = new URL(endpoint);
+  } catch {
+    throw new Error("Media object storage endpoint must be a valid URL.");
+  }
+  const isLocalHttp = process.env.NODE_ENV !== "production"
+    && endpointUrl.protocol === "http:"
+    && ["localhost", "127.0.0.1", "[::1]"].includes(endpointUrl.hostname);
+  if (endpointUrl.protocol !== "https:" && !isLocalHttp) {
+    throw new Error("Media object storage endpoint must use HTTPS (HTTP is allowed only for local development).");
+  }
+  if (endpointUrl.username || endpointUrl.password || endpointUrl.search || endpointUrl.hash) {
+    throw new Error("Media object storage endpoint must not contain credentials, query parameters, or a fragment.");
+  }
+  return { endpoint: endpointUrl.toString().replace(/\/$/, ""), bucket, region, accessKeyId, secretAccessKey };
 }
 
 function hmac(key: Buffer | string, value: string) {
