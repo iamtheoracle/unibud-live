@@ -106,8 +106,28 @@ function openaiProvider(apiKey: string): AIProvider {
 
 export function getAIProvider(): AIProvider {
   const xai = typeof process !== "undefined" ? process.env.XAI_API_KEY : undefined;
-  if (xai && xai.trim()) return xaiProvider(xai.trim());
   const openai = typeof process !== "undefined" ? process.env.OPENAI_API_KEY : undefined;
-  if (openai && openai.trim()) return openaiProvider(openai.trim());
-  return freeProvider;
+  const providers: AIProvider[] = [];
+
+  // Prefer xAI, then fall back to OpenAI if both are configured.
+  if (xai && xai.trim()) providers.push(xaiProvider(xai.trim()));
+  if (openai && openai.trim()) providers.push(openaiProvider(openai.trim()));
+  if (providers.length === 0) return freeProvider;
+  if (providers.length === 1) return providers[0];
+
+  return {
+    id: providers.map((provider) => provider.id).join("->"),
+    kind: "remote",
+    capabilities: [...new Set(providers.flatMap((provider) => provider.capabilities))],
+    async complete(messages, opts) {
+      let lastResult: ProviderResult | undefined;
+      for (const provider of providers) {
+        const result = await provider.complete(messages, opts);
+        if (result.ok) return result;
+        lastResult = result;
+      }
+      // Keep the last real provider error. Never turn a failed model call into fake success.
+      return lastResult ?? freeProvider.complete(messages, opts);
+    },
+  };
 }
