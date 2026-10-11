@@ -1,4 +1,10 @@
 export type MediaKind = "photo" | "video" | "audio" | "file";
+
+const MEDIA_KINDS: readonly MediaKind[] = ["photo", "video", "audio", "file"];
+
+export function isMediaKind(value: unknown): value is MediaKind {
+  return typeof value === "string" && MEDIA_KINDS.includes(value as MediaKind);
+}
 export type MediaStatus = "uploading" | "processing" | "ready" | "failed" | "deleted" | "awaiting_file";
 export type MediaVisibility = "private" | "conversation" | "room" | "class" | "campus";
 
