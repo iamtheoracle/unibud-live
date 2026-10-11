@@ -16,6 +16,7 @@ import {
 import type { ListingCategory, ListingKind, StudentProfile } from "./types";
 import { canTeach, type CampusRole } from "./roles";
 import { COMMUNITIES, DISCOVERY, LISTINGS, PEOPLE, POSTS, UNIVERSITIES } from "./catalog";
+import { resolveProfileRole } from "./profile-role";
 
 /** Production fallback when DB is unavailable — never surface fixture people/posts/communities. */
 function emptyCatalog() {
@@ -145,12 +146,7 @@ export const upsertMyProfile = createServerFn({ method: "POST" })
     const program = data.program ?? existingProfile?.program ?? "";
     const year = data.year ?? existingProfile?.year ?? "";
     const bio = data.bio ?? existingProfile?.bio ?? "";
-    // Privileged roles must never be self-assigned through profile updates.
-    // A student can downgrade their role, but governor/lecturer/moderator grants
-    // must come from a trusted administrative workflow.
-    const requested = data.campusRole;
-    const existingRole = existingProfile?.campusRole ?? "student";
-    const campusRole = requested === "student" ? "student" : existingRole;
+    const campusRole = resolveProfileRole(data.campusRole, existingProfile?.campusRole ?? "student");
     const onboardingDone = data.onboardingDone ?? existingProfile?.onboardingDone ?? false;
     if (existing[0]) {
       await sql`update student_profiles set display_name = ${displayName}, handle = ${handle},
