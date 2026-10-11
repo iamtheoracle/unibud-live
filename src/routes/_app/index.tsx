@@ -64,7 +64,7 @@ function Square() {
   }, [catalog.posts, localPosts]);
 
   const lanePosts = useMemo(
-    () => postsForLane(merged, lane, { following, connections, interests, likeCounts, searches }),
+    () => postsForLane(merged, lane, { following, interests, universityId: "unilag", likeCounts, searches }, connections),
     [merged, lane, following, connections, interests, likeCounts, searches],
   );
 
@@ -388,7 +388,7 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
                   e.preventDefault();
                   if (!reply.trim()) return;
                   const body = reply.trim();
-                  addPostReply(key, body, "you");
+                  addPostReply(key, { id: crypto.randomUUID(), authorHandle: "you", body, createdAt: new Date().toISOString() });
                   if (user) void addSquareReply({ data: { postId: key, body } }).catch(() => {});
                   setReply("");
                 }}
