@@ -40,12 +40,15 @@ export const createQuad = createServerFn({ method: "POST" })
       }
     }
 
+    const profile = await sql<{ university_id: string }>`select university_id from student_profiles where user_id = ${context.userId} limit 1`;
+    if (!profile[0]) throw new Error("Complete your campus profile before creating a Quad.");
+    const universityId = String(profile[0].university_id);
     const id = `q_${crypto.randomUUID().slice(0, 10)}`;
     // Fail closed: never fall back to a schema that silently drops privacy or
     // ownership fields. A failed write must not create a public room by accident.
     await sql`
       insert into communities (id, name, kind, university_id, description, cover, members, privacy, created_by)
-      values (${id}, ${name}, ${kind}, ${null}, ${description}, ${data.cover ?? null}, ${1}, ${privacy}, ${context.userId})
+      values (${id}, ${name}, ${kind}, ${privacy === "campus" ? universityId : null}, ${description}, ${data.cover ?? null}, ${1}, ${privacy}, ${context.userId})
     `;
     await sql`
       insert into community_members (user_id, community_id, role)
@@ -62,9 +65,15 @@ export const joinQuad = createServerFn({ method: "POST" })
   .validator((communityId: string) => communityId)
   .handler(async ({ context, data: communityId }) => {
     const sql = await getSql();
-    const room = await sql<{ privacy?: string }>`select privacy from communities where id = ${communityId} limit 1`;
+    const room = await sql<{ privacy?: string }>`select privacy, university_id from communities where id = ${communityId} limit 1`;
     if (!room[0]) throw new Error("That Quad was not found.");
     const privacy = room[0].privacy ?? "public";
+    if (privacy === "campus") {
+      const profile = await sql<{ university_id: string }>`select university_id from student_profiles where user_id = ${context.userId} limit 1`;
+      if (!profile[0] || !room[0].university_id || String(profile[0].university_id) !== String(room[0].university_id)) {
+        throw new Error("This Quad is limited to its university community.");
+      }
+    }
     if (privacy === "private") {
       const already = await sql`
         select user_id from community_members where user_id = ${context.userId} and community_id = ${communityId}
