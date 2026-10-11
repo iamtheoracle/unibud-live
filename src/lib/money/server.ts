@@ -84,14 +84,15 @@ export const sendDemoMoney = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     assertDemoAmount(data.kobo, "Demo send");
     const sql = await getSql();
-    const balance = await ensureWallet(context.userId);
-    if (balance < data.kobo) throw new Error("Not enough demo balance");
+    await ensureWallet(context.userId);
     if (typeof data.handle !== "string" || data.handle.length > 80 || typeof data.note !== "string" || data.note.length > 500) {
       throw new Error("Demo send details are invalid.");
     }
     const handle = data.handle.replace(/^@/, "").trim().toLowerCase();
     if (!handle) throw new Error("Choose someone to pay");
-    await sql`update wallets set balance_kobo = balance_kobo - ${data.kobo}, updated_at = now() where user_id = ${context.userId}`;
+    const debited = await sql<{ balance_kobo: number }>`update wallets set balance_kobo = balance_kobo - ${data.kobo}, updated_at = now()
+      where user_id = ${context.userId} and balance_kobo >= ${data.kobo} returning balance_kobo`;
+    if (!debited[0]) throw new Error("Not enough demo balance");
     await sql`insert into wallet_tx (id, user_id, type, amount_kobo, status, counterparty, note)
       values (${crypto.randomUUID()}, ${context.userId}, ${"send"}, ${data.kobo}, ${"demo_recorded"}, ${handle}, ${data.note.trim() || "Demo send. No real money moved."})`;
     await notify(
@@ -110,12 +111,13 @@ export const withdrawDemo = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     assertDemoAmount(data.kobo, "Demo withdrawal");
     const sql = await getSql();
-    const balance = await ensureWallet(context.userId);
-    if (balance < data.kobo) throw new Error("Not enough demo balance");
+    await ensureWallet(context.userId);
     if (typeof data.destination !== "string" || !data.destination.trim() || data.destination.length > 255) {
       throw new Error("Demo destination is invalid.");
     }
-    await sql`update wallets set balance_kobo = balance_kobo - ${data.kobo}, updated_at = now() where user_id = ${context.userId}`;
+    const debited = await sql<{ balance_kobo: number }>`update wallets set balance_kobo = balance_kobo - ${data.kobo}, updated_at = now()
+      where user_id = ${context.userId} and balance_kobo >= ${data.kobo} returning balance_kobo`;
+    if (!debited[0]) throw new Error("Not enough demo balance");
     await sql`insert into wallet_tx (id, user_id, type, amount_kobo, status, counterparty, note)
       values (${crypto.randomUUID()}, ${context.userId}, ${"withdraw"}, ${data.kobo}, ${"demo_recorded"}, ${data.destination.trim()}, ${"Demo withdrawal recorded. No payout rail is connected."})`;
     await notify(
@@ -137,9 +139,10 @@ export const payListingDemo = createServerFn({ method: "POST" })
       throw new Error("Marketplace payment details are invalid.");
     }
     const sql = await getSql();
-    const balance = await ensureWallet(context.userId);
-    if (balance < data.kobo) throw new Error("Not enough demo balance");
-    await sql`update wallets set balance_kobo = balance_kobo - ${data.kobo}, updated_at = now() where user_id = ${context.userId}`;
+    await ensureWallet(context.userId);
+    const debited = await sql<{ balance_kobo: number }>`update wallets set balance_kobo = balance_kobo - ${data.kobo}, updated_at = now()
+      where user_id = ${context.userId} and balance_kobo >= ${data.kobo} returning balance_kobo`;
+    if (!debited[0]) throw new Error("Not enough demo balance");
     await sql`insert into wallet_tx (id, user_id, type, amount_kobo, status, counterparty, note)
       values (${crypto.randomUUID()}, ${context.userId}, ${"market_pay"}, ${data.kobo}, ${"demo_recorded"}, ${data.sellerHandle}, ${`Demo payment for “${data.title}”. No real money moved.`})`;
     await notify(
