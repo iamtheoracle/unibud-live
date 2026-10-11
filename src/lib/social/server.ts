@@ -302,13 +302,12 @@ export const createPost = createServerFn({ method: "POST" })
         ${data.image ?? null}, ${data.video ?? null},
         ${data.kind === "reel" ? "reel" : "post"}
       from authorized_member
-      returning id
+      returning id, author_handle
     `;
     if (!created[0]) {
       throw new Error("You must have an active profile and current permission to post in this Quad.");
     }
-    const profile = await sql`select handle from student_profiles where user_id = ${context.userId} limit 1`;
-    return { id, communityId, body, handle: String(profile[0]?.handle ?? "") };
+    return { id, communityId, body, handle: String(created[0].author_handle) };
   });
 
 export const joinCommunity = createServerFn({ method: "POST" })
