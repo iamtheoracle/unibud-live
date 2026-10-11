@@ -23,3 +23,24 @@ export function attendanceEventAction(
   if (nextKind === "leave" && lastKind !== "join") return "invalid";
   return "record";
 }
+
+export type AttendanceRosterEvent = {
+  userId: string;
+  kind: string;
+  createdAt: string;
+};
+
+export function summarizeAttendanceEvents(events: AttendanceRosterEvent[]) {
+  const byUser = new Map<string, { userId: string; joined?: string; left?: string }>();
+  for (const event of events) {
+    const current = byUser.get(event.userId) ?? { userId: event.userId };
+    if (event.kind === "join") {
+      if (!current.joined) current.joined = event.createdAt;
+      delete current.left;
+    } else if (event.kind === "leave" && current.joined) {
+      current.left = event.createdAt;
+    }
+    byUser.set(event.userId, current);
+  }
+  return [...byUser.values()];
+}
