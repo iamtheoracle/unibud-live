@@ -151,8 +151,26 @@ export const sendRoomMessage = createServerFn({ method: "POST" })
   .validator((input: { roomId: string; body: string; senderName: string; mediaId?: string; shareKind?: string; shareJson?: string }) => input)
   .handler(async ({ context, data }) => {
     const body = (data.body ?? "").trim();
+    const allowedShareKinds = new Set(["audio", "video", "photo", "bud", "file"]);
     if ((!body && !data.mediaId && !data.shareJson) || body.length > 10000) {
       throw new Error("Message must contain text or an attachment, up to 10,000 characters.");
+    }
+    if (data.shareJson && data.shareJson.length > 12000) {
+      throw new Error("Attachment details are too large.");
+    }
+    if (data.shareKind && !allowedShareKinds.has(data.shareKind)) {
+      throw new Error("Unsupported attachment type.");
+    }
+    if (data.shareJson) {
+      try {
+        const share = JSON.parse(data.shareJson) as { kind?: unknown };
+        if (!share || typeof share !== "object" || Array.isArray(share) ||
+          (share.kind !== undefined && (typeof share.kind !== "string" || !allowedShareKinds.has(share.kind)))) {
+          throw new Error("Invalid attachment details.");
+        }
+      } catch {
+        throw new Error("Invalid attachment details.");
+      }
     }
     const sql = await getSql();
     const room = await sql`select r.id, r.community_id from campus_rooms r join campus_room_members m on m.room_id = r.id and m.user_id = ${context.userId} where r.id = ${data.roomId} limit 1`;
