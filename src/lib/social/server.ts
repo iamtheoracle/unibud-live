@@ -125,6 +125,8 @@ export const createPost = createServerFn({ method: "POST" })
       if (!memberProfile[0] || !communityUniversity[0]?.university_id || String(memberProfile[0].university_id) !== String(communityUniversity[0].university_id)) {
         throw new Error("This Quad is limited to its university community.");
       }
+      const membership = await sql`select user_id from community_members where user_id = ${context.userId} and community_id = ${communityId} limit 1`;
+      if (!membership[0]) throw new Error("Join this campus Quad before posting.");
     }
     if (privacy === "private") {
       const membership = await sql`select user_id from community_members where user_id = ${context.userId} and community_id = ${communityId} limit 1`;
