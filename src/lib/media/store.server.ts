@@ -170,6 +170,12 @@ export async function removeMediaBytes(id: string) {
 }
 
 export function parseDataUrl(dataUrl: string, maxBytes?: number): { mime: string; bytes: Buffer } {
+  if (typeof dataUrl !== "string") throw new Error("Invalid media payload");
+  // Bound encoded input before running the full regular expression. Base64 needs
+  // at most 4 * ceil(maxBytes / 3) characters, plus a small MIME/data-URL header.
+  if (maxBytes !== undefined && dataUrl.length > 272 + 4 * Math.ceil(maxBytes / 3)) {
+    throw new Error(`Media payload exceeds the ${maxBytes}-byte limit.`);
+  }
   const m = /^data:([^;,]+);base64,([A-Za-z0-9+/]*={0,2})$/.exec(dataUrl);
   if (!m) throw new Error("Invalid media payload");
   // Estimate decoded size before allocating a Buffer. This keeps oversized
