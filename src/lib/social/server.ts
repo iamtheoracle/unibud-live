@@ -1,13 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
+import { courseByCode } from "@/lib/unibud/academic";
+import { canTeach, type CampusRole } from "@/lib/unibud/roles";
 
 type ConversationKind = "direct" | "group" | "class" | "study" | "community";
 
 async function requireMember(userId: string, conversationId: string) {
   const sql = await getSql();
   const rows = await sql`
-    select c.id
+    select c.id, c.kind, c.course_code
     from social_conversations c
     join social_conversation_members scm
       on scm.conversation_id = c.id and scm.user_id = ${userId}
@@ -18,6 +20,16 @@ async function requireMember(userId: string, conversationId: string) {
     limit 1
   `;
   if (!rows[0]) throw new Error("Conversation not found or access denied.");
+  if (String(rows[0].kind) === "class") {
+    const code = String(rows[0].course_code ?? "");
+    const course = courseByCode(code);
+    if (!course) throw new Error("Course conversation is no longer available.");
+    const profiles = await sql\`select campus_role, handle from student_profiles where user_id = \${userId} limit 1\`;
+    const profile = profiles[0];
+    const assigned = Boolean(profile && canTeach(String(profile.campus_role) as CampusRole) && String(profile.handle) === course.lecturerHandle);
+    const enrollment = await sql\`select id from enrollments where user_id = \${userId} and course_code = \${code} limit 1\`;
+    if (!assigned && !enrollment[0]) throw new Error("You must be enrolled in this course to access its class chat.");
+  }
 }
 
 export const createConversation = createServerFn({ method: "POST" })
