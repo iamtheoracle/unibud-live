@@ -64,7 +64,7 @@ function Communities() {
       {creating ? (
         <form
           className="mt-4 space-y-3 rounded-2xl bg-card p-4 ring-1 ring-border"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
             if (!name.trim()) return;
             if (createKind === "Class" && !canGovernClass(role)) {
