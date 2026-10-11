@@ -3,8 +3,9 @@ import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
 import { mapCommunity } from "./map";
 import type { CampusRole } from "./roles";
+import { resolveQuadPrivacy, resolveStoredQuadPrivacy, type QuadPrivacy } from "./quad-privacy";
 
-export type QuadPrivacy = "public" | "campus" | "private";
+export type { QuadPrivacy } from "./quad-privacy";
 
 export const createQuad = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
@@ -24,8 +25,9 @@ export const createQuad = createServerFn({ method: "POST" })
     if (!["Study", "Interest", "Class", "University", "Faculty"].includes(kind)) {
       throw new Error("Choose a supported Quad type.");
     }
-    const privacy: QuadPrivacy =
-      data.privacy === "private" || data.privacy === "campus" ? data.privacy : "public";
+    // TypeScript types do not validate requests at runtime. Reject explicitly
+    // supplied unknown values instead of silently creating a public Quad.
+    const privacy = resolveQuadPrivacy(data.privacy);
     const sql = await getSql();
 
     // Class-room creation is a privileged action and must be enforced server-side,
@@ -46,15 +48,20 @@ export const createQuad = createServerFn({ method: "POST" })
     const id = `q_${crypto.randomUUID().slice(0, 10)}`;
     // Fail closed: never fall back to a schema that silently drops privacy or
     // ownership fields. A failed write must not create a public room by accident.
-    await sql`
-      insert into communities (id, name, kind, university_id, description, cover, members, privacy, created_by)
-      values (${id}, ${name}, ${kind}, ${privacy === "campus" ? universityId : null}, ${description}, ${data.cover ?? null}, ${1}, ${privacy}, ${context.userId})
-    `;
-    await sql`
+    // Create the Quad and its owner membership in one SQL statement. If either
+    // insert fails, PostgreSQL rolls back both instead of leaving an orphaned Quad.
+    const created = await sql`
+      with new_quad as (
+        insert into communities (id, name, kind, university_id, description, cover, members, privacy, created_by)
+        values (${id}, ${name}, ${kind}, ${privacy === "campus" ? universityId : null}, ${description}, ${data.cover ?? null}, ${1}, ${privacy}, ${context.userId})
+        returning id
+      )
       insert into community_members (user_id, community_id, role)
-      values (${context.userId}, ${id}, ${"owner"})
+      select ${context.userId}, id, ${"owner"} from new_quad
       on conflict (user_id, community_id) do update set role = ${"owner"}
+      returning community_id
     `;
+    if (!created[0]) throw new Error("Quad could not be created. Please try again.");
     const rows = await sql`select * from communities where id = ${id} limit 1`;
     if (!rows[0]) throw new Error("Quad was created but could not be loaded. Refresh and check your Quads.");
     return mapCommunity(rows[0]);
@@ -67,7 +74,7 @@ export const joinQuad = createServerFn({ method: "POST" })
     const sql = await getSql();
     const room = await sql<{ privacy?: string; university_id?: string | null }>`select privacy, university_id from communities where id = ${communityId} limit 1`;
     if (!room[0]) throw new Error("That Quad was not found.");
-    const privacy = room[0].privacy ?? "public";
+    const privacy = resolveStoredQuadPrivacy(room[0].privacy);
     if (privacy === "campus") {
       const profile = await sql<{ university_id: string }>`select university_id from student_profiles where user_id = ${context.userId} limit 1`;
       if (!profile[0] || !room[0].university_id || String(profile[0].university_id) !== String(room[0].university_id)) {
@@ -81,16 +88,20 @@ export const joinQuad = createServerFn({ method: "POST" })
       if (!already[0]) throw new Error("This Quad is private. Ask an admin to invite you.");
       return { joined: true as const };
     }
-    const inserted = await sql`
-      insert into community_members (user_id, community_id, role)
-      values (${context.userId}, ${communityId}, ${"member"})
-      on conflict (user_id, community_id) do nothing
-      returning user_id
+    // Insert membership and increment the denormalized count in one statement.
+    // The count changes only when this request actually creates a membership.
+    await sql`
+      with inserted as (
+        insert into community_members (user_id, community_id, role)
+        values (${context.userId}, ${communityId}, ${"member"})
+        on conflict (user_id, community_id) do nothing
+        returning community_id
+      )
+      update communities c
+      set members = coalesce(c.members, 0) + 1
+      from inserted
+      where c.id = inserted.community_id
     `;
-    if (inserted[0]) {
-      const count = await sql`select count(*)::int as count from community_members where community_id = ${communityId}`;
-      await sql`update communities set members = ${Number(count[0]?.count ?? 0)} where id = ${communityId}`;
-    }
     return { joined: true as const };
   });
 
@@ -111,8 +122,18 @@ export const leaveQuad = createServerFn({ method: "POST" })
       `;
       if (!otherOwners[0]) throw new Error("Transfer Quad ownership before leaving.");
     }
-    await sql`delete from community_members where user_id = ${context.userId} and community_id = ${communityId}`;
-    const count = await sql`select count(*)::int as count from community_members where community_id = ${communityId}`;
-    await sql`update communities set members = ${Number(count[0]?.count ?? 0)} where id = ${communityId}`;
+    // Delete membership and decrement the denormalized count atomically.
+    // The CTE produces a row only when a membership was actually removed.
+    await sql`
+      with removed as (
+        delete from community_members
+        where user_id = ${context.userId} and community_id = ${communityId}
+        returning community_id
+      )
+      update communities c
+      set members = greatest(coalesce(c.members, 0) - 1, 0)
+      from removed
+      where c.id = removed.community_id
+    `;
     return { left: true as const };
   });
