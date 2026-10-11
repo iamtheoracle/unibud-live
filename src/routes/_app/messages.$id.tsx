@@ -11,6 +11,7 @@ import { fileToDataUrl } from "@/lib/media/client";
 import { mediaUrl } from "@/lib/media/types";
 import { parseShareJson, type ChatShare } from "@/lib/media/share";
 import { campusRoomById, ROOM_SEED, type CampusRoom } from "@/lib/unibud/chat-rooms";
+import { getCampusRoom, listPersistentRoomMessages } from "@/lib/unibud/rooms.server";
 import { canGovernClass } from "@/lib/unibud/roles";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { useStudioStore } from "@/lib/studio/store";
@@ -25,8 +26,43 @@ export const Route = createFileRoute("/_app/messages/$id")({ component: Thread }
 function Thread() {
   const { id } = Route.useParams();
   const room = campusRoomById(id);
+  if (id.startsWith("room_")) return <PersistentRoomThread id={id} />;
   if (room) return <RoomThread room={room} />;
   return <DirectThread id={id} />;
+}
+
+ 
+function PersistentRoomThread({ id }: { id: string }) {
+  const { user, isPending } = useAuthReady();
+  const qc = useQueryClient();
+  const [body, setBody] = useState("");
+  const room = useQuery({ queryKey: ["persistent-room", id], queryFn: () => getCampusRoom({ data: id }), enabled: Boolean(user) });
+  const messages = useQuery({ queryKey: ["persistent-room-messages", id], queryFn: () => listPersistentRoomMessages({ data: id }), enabled: Boolean(user && room.data) });
+  const send = useMutation({
+    mutationFn: async () => sendRoomMessage({ data: { roomId: id, senderName: "You", body: body.trim() } }),
+    onSuccess: async () => { setBody(""); await Promise.all([
+      qc.invalidateQueries({ queryKey: ["persistent-room-messages", id] }),
+      qc.invalidateQueries({ queryKey: ["persistent-campus-rooms"] }),
+    ]); },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Message could not be sent."),
+  });
+  if (isPending) return <div className="m-4 h-40 animate-pulse rounded-2xl bg-secondary" />;
+  if (!user) return <main className="px-5 py-8"><SignInCard title="Sign in to chat" body="Room messages are private to room members." /></main>;
+  if (room.isLoading) return <div className="m-4 h-40 animate-pulse rounded-2xl bg-secondary" />;
+  if (room.isError || !room.data) return <main className="px-5 py-8"><Link to="/messages" className="text-sm text-muted-foreground">← Back to chats</Link><div className="mt-6 rounded-2xl border border-border p-5"><h1 className="font-semibold">Room unavailable</h1><p className="mt-2 text-sm text-muted-foreground">This room may have been removed, or your account may no longer have access.</p><button type="button" className="mt-4 rounded-full bg-ink px-4 py-2 text-sm text-paper" onClick={() => void room.refetch()}>Try again</button></div></main>;
+  return <main className="flex min-h-[calc(100dvh-3.5rem)] flex-col bg-card">
+    <div className="flex items-center gap-3 border-b border-border px-4 py-3"><Link to="/messages" className="text-sm text-muted-foreground">←</Link><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{room.data.title}</p><p className="text-xs text-muted-foreground">{room.data.kind} room · Persistent chat</p></div></div>
+    <div className="flex-1 space-y-3 overflow-y-auto px-4 py-5">
+      {messages.isLoading ? <p className="py-8 text-center text-sm text-muted-foreground">Loading messages…</p> : null}
+      {messages.isError ? <div className="rounded-xl border border-border p-4 text-sm text-muted-foreground">Messages could not load. Check the database migration and room membership.</div> : null}
+      {(messages.data ?? []).map((m) => <div key={m.id} className={cn("max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed", m.sender === "You" ? "ml-auto bg-ink text-paper" : "bg-secondary text-foreground")}><p className="mb-1 text-[10px] font-semibold opacity-70">{m.sender}</p>{m.body}{m.mediaId ? <p className="mt-1 text-xs opacity-70">Attachment included</p> : null}</div>)}
+      {!messages.isLoading && !messages.isError && !(messages.data ?? []).length ? <p className="py-12 text-center text-sm text-muted-foreground">This room is ready. Send the first message.</p> : null}
+    </div>
+    <form className="flex items-end gap-2 border-t border-border p-3" onSubmit={(event) => { event.preventDefault(); if (body.trim() && !send.isPending) send.mutate(); }}>
+      <textarea value={body} onChange={(event) => setBody(event.target.value)} maxLength={10000} rows={2} placeholder="Write a message…" className="min-h-11 flex-1 resize-y rounded-2xl border border-border bg-background px-3 py-2 text-sm" />
+      <button type="submit" disabled={!body.trim() || send.isPending} className="h-11 rounded-full bg-ink px-4 text-sm font-medium text-paper disabled:opacity-40">{send.isPending ? "Sending…" : "Send"}</button>
+    </form>
+  </main>;
 }
 
 function DirectThread({ id }: { id: string }) {
