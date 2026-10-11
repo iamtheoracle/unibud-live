@@ -155,9 +155,6 @@ export const sendRoomMessage = createServerFn({ method: "POST" })
     if ((!body && !data.mediaId && !data.shareJson) || body.length > 10000) {
       throw new Error("Message must contain text or an attachment, up to 10,000 characters.");
     }
-    if (data.shareJson && data.shareJson.length > 12000) {
-      throw new Error("Attachment details are too large.");
-    }
     if (data.shareKind && !allowedShareKinds.has(data.shareKind)) {
       throw new Error("Unsupported attachment type.");
     }
