@@ -279,6 +279,19 @@ export const listAttendance = createServerFn({ method: "GET" })
     return [...byUser.entries()].map(([userId, v]) => ({ userId, ...v }));
   });
 
+/** Return only the signed-in user's attendance events for a session. */
+export const getMySessionAttendance = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .validator((sessionId: string) => sessionId)
+  .handler(async ({ context, data: sessionId }) => {
+    const { sql } = await requireSessionAccess(context.userId, sessionId, "read");
+    const rows = await sql`
+      select kind, created_at from attendance_events
+      where session_id = ${sessionId} and user_id = ${context.userId}
+      order by created_at`;
+    return rows.map((row) => ({ kind: String(row.kind), createdAt: String(row.created_at) }));
+  });
+
 export const askInClass = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { sessionId: string; body: string }) => input)
