@@ -128,3 +128,18 @@ export const listPersistentRoomMessages = createServerFn({ method: "GET" })
       createdAt: String(row.created_at),
     }));
   });
+
+
+export const getCampusRoom = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .validator((roomId: string) => roomId)
+  .handler(async ({ context, data: roomId }) => {
+    const room = await requireRoomMember(context.userId, roomId);
+    return {
+      id: String(room.id),
+      kind: String(room.kind) as RoomKind,
+      title: String(room.title),
+      subtitle: String(room.subtitle ?? ""),
+      communityId: room.community_id == null ? undefined : String(room.community_id),
+    };
+  });
