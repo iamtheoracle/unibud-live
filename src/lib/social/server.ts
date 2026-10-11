@@ -89,3 +89,51 @@ export const markConversationRead = createServerFn({ method: "POST" })
     await sql`update social_conversation_members set last_read_at = now() where conversation_id = ${data} and user_id = ${context.userId}`;
     return { ok: true };
   });
+
+
+/** Compatibility adapters for the existing Chat screens. */
+export const openConversation = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { handle: string }) => input)
+  .handler(async ({ context, data }) => {
+    const handle = typeof data.handle === "string" ? data.handle.trim().toLowerCase() : "";
+    if (!/^[a-z0-9_]{2,32}$/.test(handle)) throw new Error("Choose a valid user handle.");
+    const sql = await getSql();
+    const peerRows = await sql`select user_id from student_profiles where lower(handle) = ${handle} limit 1`;
+    if (!peerRows[0]) throw new Error("That person has not joined UNIBUD yet.");
+    const peerId = String(peerRows[0].user_id);
+    if (peerId === context.userId) throw new Error("You cannot start a conversation with yourself.");
+    const found = await sql`
+      select c.id from social_conversations c
+      join social_conversation_members a on a.conversation_id = c.id and a.user_id = ${context.userId}
+      join social_conversation_members b on b.conversation_id = c.id and b.user_id = ${peerId}
+      where c.kind = 'direct'
+        and (select count(*) from social_conversation_members x where x.conversation_id = c.id) = 2
+      limit 1`;
+    if (found[0]) return { id: String(found[0].id) };
+    return createConversation({ data: { memberIds: [peerId], kind: "direct" } });
+  });
+
+export const getConversation = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .validator((id: string) => id)
+  .handler(async ({ context, data: id }) => {
+    await requireMember(context.userId, id);
+    const sql = await getSql();
+    const c = await sql`select c.id, c.kind, c.title, c.updated_at,
+      peer.handle as peer_handle, peer.display_name as peer_name
+      from social_conversations c
+      join social_conversation_members mine on mine.conversation_id = c.id and mine.user_id = ${context.userId}
+      left join social_conversation_members other on other.conversation_id = c.id and other.user_id <> ${context.userId}
+      left join student_profiles peer on peer.user_id = other.user_id
+      where c.id = ${id} limit 1`;
+    if (!c[0]) throw new Error("Conversation not found.");
+    const rows = await sql`select id, sender_id, body, created_at from social_messages
+      where conversation_id = ${id} and deleted_at is null order by created_at asc limit 100`;
+    await sql`update social_conversation_members set last_read_at = now()
+      where conversation_id = ${id} and user_id = ${context.userId}`;
+    return {
+      conversation: { id: String(c[0].id), kind: String(c[0].kind), peerHandle: String(c[0].peer_handle ?? ""), peerName: String(c[0].peer_name ?? ""), title: String(c[0].title ?? "") },
+      messages: rows.map(m => ({ id: String(m.id), sender: String(m.sender_id) === context.userId ? "me" : "them", body: String(m.body), createdAt: String(m.created_at) })),
+    };
+  });
