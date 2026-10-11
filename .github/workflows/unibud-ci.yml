@@ -1,5 +1,5 @@
-name: UNIBUD Pre-UI Verification Gate
-# Full application verification gate
+name: UNIBUD Application Verification
+# Verify the application without touching production.
 
 on:
   push:
@@ -26,7 +26,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Authentication invariant
         run: npm run check:auth
@@ -34,15 +34,13 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Lint agent and integration layer (pre-UI gate)
+      - name: Lint agent and integration layer
         run: npx eslint src/lib/agents src/lib/spark src/lib/bud/server.ts src/lib/bud/spark.ts
 
-      # The existing UI/studio/routes lint baseline remains intentionally outside the pre-UI gate.
-      # Full application linting will be restored when UI implementation begins.
-
-      - name: Agent, Spark, and profile-role tests (pre-UI gate)
+      - name: Agent, Spark, and profile-role tests
         run: |
           npm run test:agents
           node --experimental-strip-types --test src/lib/unibud/profile-role.test.ts
 
-      # Full UI/template tests and production build remain deferred until UI implementation begins.
+      - name: Production-bundle build check
+        run: npm run build:netlify
