@@ -100,7 +100,11 @@ export const attachBudFile = createServerFn({ method: "POST" })
     const sql = await getSql();
     const owned = await sql`select id from media_assets where id = ${data.mediaId} and owner_id = ${context.userId} and status = ${"ready"}`;
     if (!owned[0]) throw new Error("Media not ready");
-    await sql`update bud_media set media_id = ${data.mediaId}, status = ${"ready"} where id = ${data.budId}`;
+    const target = await sql`select id, owner_id from bud_media where id = ${data.budId} limit 1`;
+    if (!target[0] || String(target[0].owner_id) !== context.userId) {
+      throw new Error("You can only attach files to media items you own.");
+    }
+    await sql`update bud_media set media_id = ${data.mediaId}, status = ${"ready"} where id = ${data.budId} and owner_id = ${context.userId}`;
     return { ok: true };
   });
 
