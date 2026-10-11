@@ -87,6 +87,11 @@ export const deleteBudConversation = createServerFn({ method: "POST" }).middlewa
 
 export const retryBud = createServerFn({ method: "POST" }).middleware([authMiddleware]).validator((input: { conversationId: string }) => input).handler(async ({ context, data }) => {
   const sql = await getSql();
+  // Retry must target a conversation owned by this user, not merely a matching message row.
+  const ownedConversation = await sql<{ id: string }>`select id from bud_conversations where id = ${data.conversationId} and user_id = ${context.userId} limit 1`;
+  if (!ownedConversation.length) {
+    return { ok: false as const, error: "Conversation not found.", conversationId: data.conversationId };
+  }
   const last = await sql<{ content: string }>`select content from bud_messages where user_id = ${context.userId} and conversation_id = ${data.conversationId} and role = 'user' order by created_at desc limit 1`;
   const prompt = last[0]?.content;
   if (!prompt) return { ok: false as const, error: "Nothing to retry." };
