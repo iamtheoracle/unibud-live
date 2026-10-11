@@ -114,9 +114,9 @@ function DirectThread({ id }: { id: string }) {
             {m.shareJson || m.mediaId ? (
               <ShareCard
                 share={
-                  parseShareJson(m.shareJson) ?? {
+                  parseShareJson(m.shareJson ?? undefined) ?? {
                     kind: (m.shareKind as ChatShare["kind"]) ?? "file",
-                    mediaId: m.mediaId,
+                    mediaId: m.mediaId ?? undefined,
                     title: m.body,
                   }
                 }
