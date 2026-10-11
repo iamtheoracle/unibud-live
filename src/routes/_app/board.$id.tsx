@@ -2,8 +2,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { courseByCode, boardIdFor, COURSE_CATALOGUE } from "@/lib/unibud/academic";
-import { EDU_PODCASTS } from "@/lib/unibud/podcast-data";
-import { BUD_MEDIA } from "@/lib/media/bud-media";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { canTeach } from "@/lib/unibud/roles";
 import {
@@ -52,8 +50,6 @@ function UniBoard() {
   const attendanceEvents = myAttendance.data ?? [];
   const present = attendanceEvents.some((event) => event.kind === "join");
   const inRoom = [...attendanceEvents].reverse().find((event) => event.kind === "join" || event.kind === "leave")?.kind === "join";
-  const pods = EDU_PODCASTS.filter((p) => p.course === course?.code);
-  const budMedia = BUD_MEDIA.filter((m) => m.title.includes(course?.code ?? ""));
 
   const anns = useQuery({
     queryKey: ["anns", course?.code],
@@ -250,20 +246,11 @@ function UniBoard() {
       </section>
 
       <section className="mt-8">
-        <h2 className="font-display text-2xl">Materials</h2>
+        <h2 className="font-display text-2xl">Course material references</h2>
+        <p className="mt-2 text-sm text-muted-foreground">These are catalogue references, not playable files. Verified uploads will appear when their access and playback paths are connected.</p>
         <ul className="mt-3 space-y-2 text-sm">
           {course.materials.map((m) => (
             <li key={m} className="text-muted-foreground">{m}</li>
-          ))}
-          {pods.map((p) => (
-            <li key={p.id} className="rounded-2xl bg-card p-3 ring-1 ring-border">
-              <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-bud">Bud · Educational</p>
-              <p className="mt-1 font-medium">{p.title}</p>
-              <p className="text-xs text-muted-foreground">{p.lecturer} · {p.duration}</p>
-            </li>
-          ))}
-          {budMedia.map((m) => (
-            <li key={m.id} className="text-sm">{m.title} · {m.durationMin} min</li>
           ))}
         </ul>
       </section>
