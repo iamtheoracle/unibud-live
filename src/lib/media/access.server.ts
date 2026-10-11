@@ -18,12 +18,17 @@ export async function canReadMedia({
 }): Promise<boolean> {
   const conversationId = row.conversation_id == null ? "" : String(row.conversation_id);
   const roomId = row.room_id == null ? "" : String(row.room_id);
+  const visibility = String(row.visibility);
+  const isOwner = String(row.owner_id) === userId;
 
-  // Uploads must belong to exactly one protected scope. Inconsistent records
-  // fail closed instead of letting membership in one scope bypass the other.
+  // A media record may have one protected scope, never two.
   if (conversationId && roomId) return false;
 
-  if (String(row.visibility) === "conversation" && conversationId) {
+  if (visibility === "conversation") {
+    // A room ID must not be treated as a substitute for a missing conversation ID.
+    if (roomId) return false;
+    // Legacy/malformed conversation records remain owner-only.
+    if (!conversationId) return isOwner;
     try {
       await assertConversationMember(userId, conversationId);
       return true;
@@ -32,10 +37,16 @@ export async function canReadMedia({
     }
   }
 
-  if (String(row.visibility) === "room" || roomId) {
-    if (!roomId) return false;
-    return isRoomMember(userId, roomId);
+  if (visibility === "room") {
+    // Room visibility must match room metadata exactly.
+    if (conversationId || !roomId) return false;
+    try {
+      return await isRoomMember(userId, roomId);
+    } catch {
+      return false;
+    }
   }
 
-  return String(row.owner_id) === userId;
+  // Private or unknown visibility is never shared by membership metadata.
+  return isOwner;
 }
