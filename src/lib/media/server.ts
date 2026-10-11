@@ -212,8 +212,12 @@ export const sendRoomMessage = createServerFn({ method: "POST" })
     if (data.shareKind && !allowedShareKinds.has(data.shareKind)) {
       throw new Error("Unsupported attachment type.");
     }
-    if (data.shareJson && !parseShareJson(data.shareJson)) {
+    const shared = data.shareJson ? parseShareJson(data.shareJson) : undefined;
+    if (data.shareJson && !shared) {
       throw new Error("Invalid attachment details.");
+    }
+    if (shared && data.shareKind && shared.kind !== data.shareKind) {
+      throw new Error("Attachment type does not match its details.");
     }
     const sql = await getSql();
     const room = await sql`select r.id, r.community_id from campus_rooms r join campus_room_members m on m.room_id = r.id and m.user_id = ${context.userId} where r.id = ${data.roomId} limit 1`;
@@ -222,8 +226,9 @@ export const sendRoomMessage = createServerFn({ method: "POST" })
       const cm = await sql`select user_id from community_members where community_id = ${String(room[0].community_id)} and user_id = ${context.userId} limit 1`;
       if (!cm[0]) throw new Error("Join the linked Quad before sending to its room.");
     }
-    if (data.mediaId) {
-      const media = await sql`select id from media_assets where id = ${data.mediaId}
+    const roomMediaIds = [data.mediaId, shared?.mediaId].filter((id): id is string => Boolean(id));
+    for (const mediaId of new Set(roomMediaIds)) {
+      const media = await sql`select id from media_assets where id = ${mediaId}
         and owner_id = ${context.userId}
         and room_id = ${data.roomId}
         and conversation_id is null
@@ -231,6 +236,18 @@ export const sendRoomMessage = createServerFn({ method: "POST" })
         and status = ${"ready"}
         limit 1`;
       if (!media[0]) throw new Error("Room attachment not found or access denied.");
+    }
+    if (shared?.budMediaId) {
+      const budMedia = await sql`select id from bud_media where id = ${shared.budMediaId}
+        and owner_id = ${context.userId}
+        and status = ${"ready"}
+        and media_id is not null
+        limit 1`;
+      if (!budMedia[0]) throw new Error("Bud attachment not found or access denied.");
+    }
+    if (shared?.audioId) {
+      const audio = await sql`select audio_id from audio_objects where audio_id = ${shared.audioId} limit 1`;
+      if (!audio[0]) throw new Error("Audio attachment not found or access denied.");
     }
     const profile = await sql`select handle, display_name from student_profiles where user_id = ${context.userId} limit 1`;
     const senderName = String(profile[0]?.display_name ?? profile[0]?.handle ?? "UNIBUD member").slice(0, 80);
