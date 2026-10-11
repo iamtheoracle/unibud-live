@@ -122,6 +122,9 @@ export const sendMessage = createServerFn({ method: "POST" })
     if ((!body && !data.mediaId && !data.shareJson) || body.length > 10000) throw new Error("Message must contain text or an attachment, up to 10,000 characters.");
     const allowedShareKinds = new Set(["audio", "video", "photo", "bud", "file"]);
     if (data.shareKind && !allowedShareKinds.has(data.shareKind)) throw new Error("Unsupported attachment type.");
+    if (data.shareKind && !data.mediaId && !data.shareJson) {
+      throw new Error("Attachment details are required when an attachment type is selected.");
+    }
     const shared = data.shareJson ? parseShareJson(data.shareJson) : undefined;
     if (data.shareJson && !shared) {
       throw new Error("Invalid attachment details.");
