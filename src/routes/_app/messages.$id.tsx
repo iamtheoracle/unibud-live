@@ -59,7 +59,7 @@ function PersistentRoomThread({ id }: { id: string }) {
       shareKind: pending.kind,
       shareJson: JSON.stringify(pending),
     }).then(() => useCampusStore.getState().setPendingShare(undefined)).catch(() => {
-      sentPending.current = false;
+      toast.error("Share could not be sent. It has been kept so you can retry.");
     });
   }, [user, room.data, send]);
   if (isPending) return <div className="m-4 h-40 animate-pulse rounded-2xl bg-secondary" />;
