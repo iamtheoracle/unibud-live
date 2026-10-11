@@ -60,7 +60,7 @@ export const listBudConversations = createServerFn({ method: "GET" }).middleware
   const sql = await getSql();
   await backfillLegacy(sql, context.userId);
   const rows = await sql<{ id: string; title: string; updated_at: string; preview: string | null }>`
-    select c.id, c.title, c.updated_at, (select m.content from bud_messages m where m.conversation_id = c.id order by created_at desc limit 1) as preview
+    select c.id, c.title, c.updated_at, (select m.content from bud_messages m where m.conversation_id = c.id and m.user_id = c.user_id order by m.created_at desc limit 1) as preview
     from bud_conversations c where c.user_id = ${context.userId} order by c.updated_at desc limit 40`;
   return rows.map(mapConversation);
 });
