@@ -5,6 +5,7 @@ import { isSafeShareSource, parseShareJson } from "@/lib/media/share";
 import { courseByCode } from "@/lib/unibud/academic";
 import { canTeach, type CampusRole } from "@/lib/unibud/roles";
 import { resolveStoredQuadPrivacy } from "@/lib/unibud/quad-privacy";
+import { isAudioAvailableForSharing } from "@/lib/music/audio-policy";
 
 type ConversationKind = "direct" | "group" | "class" | "study" | "community";
 
@@ -156,8 +157,8 @@ export const sendMessage = createServerFn({ method: "POST" })
       if (!budMedia[0]) throw new Error("Bud attachment not found or access denied.");
     }
     if (shared?.audioId) {
-      const audio = await sql`select audio_id from audio_objects where audio_id = ${shared.audioId} limit 1`;
-      if (!audio[0]) throw new Error("Audio attachment not found or access denied.");
+      const audio = await sql`select audio_id, status from audio_objects where audio_id = ${shared.audioId} limit 1`;
+      if (!audio[0] || !isAudioAvailableForSharing(audio[0].status)) throw new Error("Audio attachment not found or is unavailable.");
     }
     const id = crypto.randomUUID();
     const rows = await sql`insert into social_messages (id, conversation_id, sender_id, body, media_id, share_kind, share_json)
