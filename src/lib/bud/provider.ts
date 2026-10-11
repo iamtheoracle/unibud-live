@@ -134,12 +134,14 @@ export function createFallbackProvider(providers: AIProvider[], timeoutMs = 10_0
         let result: ProviderResult;
         try {
           result = await provider.complete(messages, { ...opts, signal: controller.signal });
+        } catch {
+          result = { ok: false, error: "The model provider failed unexpectedly. Trying the next available model.", providerId: provider.id };
         } finally {
           clearTimeout(timeout);
           opts?.signal?.removeEventListener("abort", abortFromCaller);
         }
-        if (result!.ok) return result!;
-        lastResult = result!;
+        if (result.ok) return result;
+        lastResult = result;
         // A caller cancellation is different from a provider-specific timeout:
         // do not start another network request after the caller has cancelled.
         if (opts?.signal?.aborted) return lastResult;
