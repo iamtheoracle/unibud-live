@@ -336,7 +336,7 @@ export function mapProfile(r: {
     program: r.program,
     year: r.year,
     bio: r.bio,
-    campusRole: r.campus_role,
+    campusRole: (r.campus_role ?? undefined) as import("./roles").CampusRole | undefined,
     onboardingDone: Boolean(r.onboarding_done),
   };
 }
