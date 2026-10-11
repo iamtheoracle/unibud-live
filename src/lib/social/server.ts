@@ -121,6 +121,14 @@ export const sendMessage = createServerFn({ method: "POST" })
     if ((!body && !data.mediaId && !data.shareJson) || body.length > 10000) throw new Error("Message must contain text or an attachment, up to 10,000 characters.");
     await requireMember(context.userId, data.conversationId);
     const sql = await getSql();
+    if (data.mediaId) {
+      const media = await sql`select id from media_assets
+        where id = ${data.mediaId}
+          and conversation_id = ${data.conversationId}
+          and status = ${"ready"}
+        limit 1`;
+      if (!media[0]) throw new Error("Attachment is not ready or does not belong to this conversation.");
+    }
     const id = crypto.randomUUID();
     const rows = await sql`insert into social_messages (id, conversation_id, sender_id, body, media_id, share_kind, share_json)
       values (${id}, ${data.conversationId}, ${context.userId}, ${body || data.shareKind || "Attachment"}, ${data.mediaId ?? null}, ${data.shareKind ?? null}, ${data.shareJson ?? null})
