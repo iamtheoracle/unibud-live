@@ -174,6 +174,48 @@ export const joinCommunity = createServerFn({ method: "POST" })
     return { joined: true, communityId };
   });
 
+/** Open the persistent chat for a Quad only after verifying current membership. */
+export const openCommunityConversation = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((communityId: string) => communityId)
+  .handler(async ({ context, data: communityId }) => {
+    const sql = await getSql();
+    const access = await sql`
+      select c.id, c.name
+      from communities c
+      join community_members cm on cm.community_id = c.id and cm.user_id = ${context.userId}
+      where c.id = ${communityId}
+      limit 1
+    `;
+    if (!access[0]) throw new Error("Join this Quad before opening its chat.");
+    const inserted = await sql`
+      insert into social_conversations (id, kind, title, created_by, community_id)
+      values (${crypto.randomUUID()}, 'community', ${String(access[0].name)}, ${context.userId}, ${communityId})
+      on conflict (community_id) where kind = 'community' and community_id is not null do nothing
+      returning id
+    `;
+    let conversationId = inserted[0] ? String(inserted[0].id) : "";
+    if (!conversationId) {
+      const existing = await sql`
+        select id from social_conversations
+        where kind = 'community' and community_id = ${communityId}
+        limit 1
+      `;
+      if (!existing[0]) throw new Error("Could not open this Quad chat. Please retry.");
+      conversationId = String(existing[0].id);
+    }
+    // Synchronize current members when the room is opened. Removed members are
+    // not re-added, so membership revocation remains effective.
+    await sql`
+      insert into social_conversation_members (conversation_id, user_id)
+      select ${conversationId}, cm.user_id
+      from community_members cm
+      where cm.community_id = ${communityId}
+      on conflict (conversation_id, user_id) do nothing
+    `;
+    return { id: conversationId };
+  });
+
 export const myCommunities = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {
