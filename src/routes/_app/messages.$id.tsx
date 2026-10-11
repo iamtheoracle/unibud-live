@@ -530,7 +530,17 @@ function Composer({
         <input
           value={body}
           onChange={(e) => setBody(e.target.value)}
+          onPaste={(e) => {
+            const imageItem = Array.from(e.clipboardData.items).find((item) => item.kind === "file" && item.type.startsWith("image/"));
+            const image = imageItem?.getAsFile();
+            if (image) {
+              e.preventDefault();
+              const namedImage = new File([image], `pasted-image-${Date.now()}.${image.type.split("/")[1] || "png"}`, { type: image.type });
+              void sendFile(namedImage, "photo");
+            }
+          }}
           placeholder={placeholder}
+          aria-label="Message. Paste an image to send it."
           className="h-11 flex-1 rounded-full bg-secondary px-4 text-sm outline-none"
         />
         <button
