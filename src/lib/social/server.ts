@@ -315,6 +315,182 @@ export const listChatPeople = createServerFn({ method: "GET" })
     }));
   });
 
+function connectProfile(row: Record<string, unknown>) {
+  return {
+    userId: String(row.user_id),
+    handle: String(row.handle),
+    name: String(row.display_name ?? row.handle),
+    universityId: String(row.university_id ?? ""),
+    program: String(row.program ?? ""),
+    year: String(row.year ?? ""),
+    bio: String(row.bio ?? ""),
+  };
+}
+
+/** Real registered profiles only. Search is server-side and excludes the current user. */
+export const listConnectPeople = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .validator((input: { query?: string }) => input)
+  .handler(async ({ context, data }) => {
+    const query = (data.query ?? "").trim().slice(0, 100);
+    const sql = await getSql();
+    const rows = await sql`
+      select user_id, handle, display_name, university_id, program, year, bio
+      from student_profiles
+      where user_id <> ${context.userId}
+        and handle is not null and length(trim(handle)) > 0
+        and (
+          ${query} = ''
+          or handle ilike ${'%' + query + '%'}
+          or display_name ilike ${'%' + query + '%'}
+          or program ilike ${'%' + query + '%'}
+          or university_id ilike ${'%' + query + '%'}
+        )
+      order by display_name asc nulls last, handle asc
+      limit 50`;
+    return rows.map((row) => connectProfile(row as Record<string, unknown>));
+  });
+
+/** Durable incoming/outgoing requests, accepted connections, follows and followers. */
+export const getMyConnectState = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    const sql = await getSql();
+    const [incoming, outgoing, connections, following, followers] = await Promise.all([
+      sql`select p.user_id, p.handle, p.display_name, p.university_id, p.program, p.year, p.bio
+          from social_connection_requests r join student_profiles p on p.user_id = r.requester_id
+          where r.recipient_id = ${context.userId} and r.status = 'pending'
+          order by r.created_at desc`,
+      sql`select p.user_id, p.handle, p.display_name, p.university_id, p.program, p.year, p.bio
+          from social_connection_requests r join student_profiles p on p.user_id = r.recipient_id
+          where r.requester_id = ${context.userId} and r.status = 'pending'
+          order by r.created_at desc`,
+      sql`select p.user_id, p.handle, p.display_name, p.university_id, p.program, p.year, p.bio
+          from social_connection_requests r
+          join student_profiles p on p.user_id = case when r.requester_id = ${context.userId} then r.recipient_id else r.requester_id end
+          where r.status = 'accepted'
+            and (r.requester_id = ${context.userId} or r.recipient_id = ${context.userId})
+          order by r.updated_at desc`,
+      sql`select p.user_id, p.handle, p.display_name, p.university_id, p.program, p.year, p.bio
+          from social_follows f join student_profiles p on p.user_id = f.followed_id
+          where f.follower_id = ${context.userId}
+          order by f.created_at desc`,
+      sql`select p.user_id, p.handle, p.display_name, p.university_id, p.program, p.year, p.bio
+          from social_follows f join student_profiles p on p.user_id = f.follower_id
+          where f.followed_id = ${context.userId}
+          order by f.created_at desc`,
+    ]);
+    return {
+      incoming: incoming.map((row) => connectProfile(row as Record<string, unknown>)),
+      outgoing: outgoing.map((row) => connectProfile(row as Record<string, unknown>)),
+      connections: connections.map((row) => connectProfile(row as Record<string, unknown>)),
+      following: following.map((row) => connectProfile(row as Record<string, unknown>)),
+      followers: followers.map((row) => connectProfile(row as Record<string, unknown>)),
+    };
+  });
+
+export const requestConnection = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { handle: string }) => input)
+  .handler(async ({ context, data }) => {
+    const handle = data.handle.trim().toLowerCase();
+    if (!/^[a-z0-9_]{2,32}$/.test(handle)) throw new Error("Choose a valid user handle.");
+    const sql = await getSql();
+    const peers = await sql`select user_id from student_profiles where lower(handle) = ${handle} limit 1`;
+    if (!peers[0]) throw new Error("That person has not joined UNIBUD yet.");
+    const peerId = String(peers[0].user_id);
+    if (peerId === context.userId) throw new Error("You cannot connect with yourself.");
+    const accepted = await sql`select requester_id from social_connection_requests
+      where status = 'accepted'
+        and ((requester_id = ${context.userId} and recipient_id = ${peerId})
+          or (requester_id = ${peerId} and recipient_id = ${context.userId}))
+      limit 1`;
+    if (accepted[0]) throw new Error("You are already connected.");
+    const incoming = await sql`select requester_id from social_connection_requests
+      where requester_id = ${peerId} and recipient_id = ${context.userId} and status = 'pending' limit 1`;
+    if (incoming[0]) throw new Error("This person has already sent you a request. Accept it from Requests.");
+    const existing = await sql`select status from social_connection_requests
+      where requester_id = ${context.userId} and recipient_id = ${peerId} limit 1`;
+    if (existing[0] && String(existing[0].status) === "pending") return { ok: true, alreadyPending: true };
+    await sql`insert into social_connection_requests (requester_id, recipient_id, status)
+      values (${context.userId}, ${peerId}, 'pending')
+      on conflict (requester_id, recipient_id) do update
+      set status = 'pending', updated_at = now()
+      where social_connection_requests.status in ('declined', 'cancelled', 'removed')`;
+    return { ok: true, alreadyPending: false };
+  });
+
+export const respondToConnectionRequest = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { handle: string; accept: boolean }) => input)
+  .handler(async ({ context, data }) => {
+    const handle = data.handle.trim().toLowerCase();
+    const sql = await getSql();
+    const peers = await sql`select user_id from student_profiles where lower(handle) = ${handle} limit 1`;
+    if (!peers[0]) throw new Error("That person has not joined UNIBUD yet.");
+    const peerId = String(peers[0].user_id);
+    const rows = await sql`update social_connection_requests
+      set status = ${data.accept ? "accepted" : "declined"}, updated_at = now()
+      where requester_id = ${peerId} and recipient_id = ${context.userId} and status = 'pending'
+      returning requester_id`;
+    if (!rows[0]) throw new Error("That connection request is no longer pending.");
+    return { ok: true };
+  });
+
+export const cancelConnectionRequest = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { handle: string }) => input)
+  .handler(async ({ context, data }) => {
+    const handle = data.handle.trim().toLowerCase();
+    const sql = await getSql();
+    const peers = await sql`select user_id from student_profiles where lower(handle) = ${handle} limit 1`;
+    if (!peers[0]) throw new Error("That person has not joined UNIBUD yet.");
+    const rows = await sql`update social_connection_requests
+      set status = 'cancelled', updated_at = now()
+      where requester_id = ${context.userId} and recipient_id = ${String(peers[0].user_id)} and status = 'pending'
+      returning requester_id`;
+    if (!rows[0]) throw new Error("That connection request is no longer pending.");
+    return { ok: true };
+  });
+
+export const removeConnection = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { handle: string }) => input)
+  .handler(async ({ context, data }) => {
+    const handle = data.handle.trim().toLowerCase();
+    const sql = await getSql();
+    const peers = await sql`select user_id from student_profiles where lower(handle) = ${handle} limit 1`;
+    if (!peers[0]) throw new Error("That person has not joined UNIBUD yet.");
+    const peerId = String(peers[0].user_id);
+    const rows = await sql`update social_connection_requests
+      set status = 'removed', updated_at = now()
+      where status = 'accepted'
+        and ((requester_id = ${context.userId} and recipient_id = ${peerId})
+          or (requester_id = ${peerId} and recipient_id = ${context.userId}))
+      returning requester_id`;
+    if (!rows.length) throw new Error("You are not connected to that person.");
+    return { ok: true };
+  });
+
+export const setFollow = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { handle: string; following: boolean }) => input)
+  .handler(async ({ context, data }) => {
+    const handle = data.handle.trim().toLowerCase();
+    const sql = await getSql();
+    const peers = await sql`select user_id from student_profiles where lower(handle) = ${handle} limit 1`;
+    if (!peers[0]) throw new Error("That person has not joined UNIBUD yet.");
+    const peerId = String(peers[0].user_id);
+    if (peerId === context.userId) throw new Error("You cannot follow yourself.");
+    if (data.following) {
+      await sql`insert into social_follows (follower_id, followed_id)
+        values (${context.userId}, ${peerId}) on conflict do nothing`;
+    } else {
+      await sql`delete from social_follows where follower_id = ${context.userId} and followed_id = ${peerId}`;
+    }
+    return { ok: true };
+  });
+
 /** Compatibility adapters for the existing Chat screens. */
 export const openConversation = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
