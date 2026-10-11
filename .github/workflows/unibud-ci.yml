@@ -57,6 +57,8 @@ jobs:
           'src/routes/_app/board.$id.tsx'
           src/routes/_app/podcasts.tsx
           src/routes/_app/connect.tsx
+          'src/routes/_app/u.$handle.tsx'
+          src/components/unibud/relation-actions.tsx
           src/components/bud/workspace.tsx
           src/lib/media/server.ts
           src/lib/media/share.ts
