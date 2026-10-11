@@ -23,6 +23,13 @@ export const createConversation = createServerFn({ method: "POST" })
     if (memberIds.length < 2) throw new Error("Add at least one other member.");
     const title = (data.title ?? "").trim().slice(0, 120);
     const sql = await getSql();
+    // Only allow accounts with a real UNIBUD profile into member lists.
+    // The current user may still be finishing profile setup.
+    for (const memberId of memberIds) {
+      if (memberId === context.userId) continue;
+      const profile = await sql`select user_id from student_profiles where user_id = ${memberId} limit 1`;
+      if (!profile[0]) throw new Error("One or more members have not joined UNIBUD yet.");
+    }
     const id = crypto.randomUUID();
     await sql`insert into social_conversations (id, kind, title, created_by) values (${id}, ${kind}, ${title}, ${context.userId})`;
     for (const memberId of memberIds) {
@@ -43,7 +50,11 @@ export const listConversations = createServerFn({ method: "GET" })
         (select count(*)::int from social_conversation_members cm where cm.conversation_id = c.id) as member_count
       from social_conversations c
       join social_conversation_members mine on mine.conversation_id = c.id and mine.user_id = ${context.userId}
-      left join social_conversation_members other on other.conversation_id = c.id and other.user_id <> ${context.userId}
+      left join lateral (
+        select cm.user_id from social_conversation_members cm
+        where cm.conversation_id = c.id and cm.user_id <> ${context.userId}
+        order by cm.joined_at asc limit 1
+      ) other on true
       left join student_profiles peer on peer.user_id = other.user_id
       order by coalesce((select max(m.created_at) from social_messages m where m.conversation_id = c.id), c.updated_at) desc
       limit 100`;
@@ -94,6 +105,24 @@ export const markConversationRead = createServerFn({ method: "POST" })
   });
 
 
+/** Real, registered profiles for the direct-message picker. Never suggest fictional directory entries. */
+export const listChatPeople = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    const sql = await getSql();
+    const rows = await sql`
+      select handle, display_name
+      from student_profiles
+      where user_id <> ${context.userId}
+        and handle is not null and length(trim(handle)) > 0
+      order by display_name asc nulls last, handle asc
+      limit 30`;
+    return rows.map((row) => ({
+      handle: String(row.handle),
+      name: String(row.display_name ?? row.handle),
+    }));
+  });
+
 /** Compatibility adapters for the existing Chat screens. */
 export const openConversation = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
@@ -130,7 +159,11 @@ export const getConversation = createServerFn({ method: "GET" })
       peer.handle as peer_handle, peer.display_name as peer_name
       from social_conversations c
       join social_conversation_members mine on mine.conversation_id = c.id and mine.user_id = ${context.userId}
-      left join social_conversation_members other on other.conversation_id = c.id and other.user_id <> ${context.userId}
+      left join lateral (
+        select cm.user_id from social_conversation_members cm
+        where cm.conversation_id = c.id and cm.user_id <> ${context.userId}
+        order by cm.joined_at asc limit 1
+      ) other on true
       left join student_profiles peer on peer.user_id = other.user_id
       where c.id = ${id} limit 1`;
     if (!c[0]) throw new Error("Conversation not found.");
