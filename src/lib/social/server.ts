@@ -18,7 +18,14 @@ export const createConversation = createServerFn({ method: "POST" })
     const memberIds = [...new Set([context.userId, ...data.memberIds].filter((id) => typeof id === "string" && id.trim()).map((id) => id.trim()))];
     if (memberIds.length > 100) throw new Error("A conversation can have at most 100 members.");
     const kind = data.kind ?? "direct";
-    if (!["direct", "group", "class", "study", "community"].includes(kind)) throw new Error("Invalid conversation type.");
+    if (!["direct", "group", "study", "class", "community"].includes(kind)) throw new Error("Invalid conversation type.");
+    // Class and community threads must be created through resource-aware flows
+    // that can verify course enrollment or community membership. This generic
+    // endpoint has no resource ID, so fail closed instead of creating orphaned
+    // threads that bypass those boundaries.
+    if (kind === "class" || kind === "community") {
+      throw new Error("Class and community conversations must be opened from their course or community.");
+    }
     if (kind === "direct" && memberIds.length !== 2) throw new Error("A direct conversation requires two members.");
     if (memberIds.length < 2) throw new Error("Add at least one other member.");
     const title = (data.title ?? "").trim().slice(0, 120);
