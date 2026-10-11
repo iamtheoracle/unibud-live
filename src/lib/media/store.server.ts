@@ -90,6 +90,13 @@ export async function writeMediaBytes(id: string, bytes: Buffer) {
   return filePath;
 }
 
+/** Map storage read failures to HTTP semantics without disguising outages as missing files. */
+export function mediaStorageErrorStatus(error: unknown): 404 | 503 {
+  if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return 404;
+  if (error instanceof Error && error.message === "Media object was not found in configured durable storage.") return 404;
+  return 503;
+}
+
 export async function readMediaBytes(id: string) {
   const stored = await objectStorageRequest(id, "GET");
   if (stored !== undefined) {
