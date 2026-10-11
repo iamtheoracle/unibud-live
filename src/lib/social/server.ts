@@ -114,8 +114,12 @@ export const createPost = createServerFn({ method: "POST" })
     const body = data.body.trim();
     if (!communityId || !body || body.length > 10000) throw new Error("A post needs a community and text up to 10,000 characters.");
     const sql = await getSql();
-    const community = await sql`select id from communities where id = ${communityId} limit 1`;
+    const community = await sql`select id, privacy from communities where id = ${communityId} limit 1`;
     if (!community[0]) throw new Error("Community not found.");
+    if (String(community[0].privacy ?? "public") === "private") {
+      const membership = await sql`select user_id from community_members where user_id = ${context.userId} and community_id = ${communityId} limit 1`;
+      if (!membership[0]) throw new Error("You must be invited to this private community before posting.");
+    }
     const profile = await sql`select handle from student_profiles where user_id = ${context.userId} limit 1`;
     if (!profile[0]) throw new Error("Finish setting up your UNIBUD profile before posting.");
     const id = `post_${crypto.randomUUID()}`;
@@ -128,8 +132,14 @@ export const joinCommunity = createServerFn({ method: "POST" })
   .validator((communityId: string) => communityId)
   .handler(async ({ context, data: communityId }) => {
     const sql = await getSql();
-    const exists = await sql`select id from communities where id = ${communityId} limit 1`;
+    const exists = await sql`select id, privacy from communities where id = ${communityId} limit 1`;
     if (!exists[0]) throw new Error("Community not found.");
+    const privacy = String(exists[0].privacy ?? "public");
+    if (privacy === "private") {
+      const membership = await sql`select user_id from community_members where user_id = ${context.userId} and community_id = ${communityId} limit 1`;
+      if (!membership[0]) throw new Error("This community is private. Ask an admin to invite you.");
+      return { joined: true, communityId };
+    }
     await sql`insert into community_members (user_id, community_id) values (${context.userId}, ${communityId}) on conflict do nothing`;
     const count = await sql`select count(*)::int as count from community_members where community_id = ${communityId}`;
     await sql`update communities set members = ${Number(count[0]?.count ?? 0)} where id = ${communityId}`;
