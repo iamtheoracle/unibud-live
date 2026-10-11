@@ -175,9 +175,24 @@ export const sendMessage = createServerFn({ method: "POST" })
       if (!audio[0] || !isAudioAvailableForSharing(audio[0].status)) throw new Error("Audio attachment not found or is unavailable.");
     }
     const id = crypto.randomUUID();
-    const rows = await sql`insert into social_messages (id, conversation_id, sender_id, body, media_id, share_kind, share_json)
-      values (${id}, ${data.conversationId}, ${context.userId}, ${body || data.shareKind || "Attachment"}, ${data.mediaId ?? null}, ${data.shareKind ?? null}, ${data.shareJson ?? null})
-      returning id, conversation_id, sender_id, body, created_at, media_id, share_kind, share_json`;
+    // Recheck membership in the same statement that persists the message.
+    // FOR KEY SHARE makes a concurrent membership deletion wait until this
+    // insert finishes, closing the authorization-check/insert race.
+    const rows = await sql`
+      with authorized_member as (
+        select user_id
+        from social_conversation_members
+        where conversation_id = ${data.conversationId} and user_id = ${context.userId}
+        for key share
+      )
+      insert into social_messages (id, conversation_id, sender_id, body, media_id, share_kind, share_json)
+      select ${id}, ${data.conversationId}, authorized_member.user_id,
+        ${body || data.shareKind || "Attachment"}, ${data.mediaId ?? null},
+        ${data.shareKind ?? null}, ${data.shareJson ?? null}
+      from authorized_member
+      returning id, conversation_id, sender_id, body, created_at, media_id, share_kind, share_json
+    `;
+    if (!rows[0]) throw new Error("You are no longer a member of this conversation.");
     await sql`update social_conversations set updated_at = now() where id = ${data.conversationId}`;
     const r = rows[0];
     return { id: String(r.id), conversationId: String(r.conversation_id), senderId: String(r.sender_id), body: String(r.body), createdAt: String(r.created_at), mediaId: r.media_id == null ? null : String(r.media_id), shareKind: r.share_kind == null ? null : String(r.share_kind), shareJson: r.share_json == null ? null : String(r.share_json) };
