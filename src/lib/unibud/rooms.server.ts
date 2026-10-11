@@ -68,6 +68,7 @@ export const createCampusRoom = createServerFn({ method: "POST" })
     if (title.length < 2) throw new Error("Room title must contain at least two characters.");
     if (!["group", "class", "study", "community"].includes(data.kind)) throw new Error("Invalid room type.");
     if (data.kind === "class") throw new Error("Class rooms must be created through a verified course flow.");
+    if (String(data.kind) === "community") throw new Error("Create community-linked rooms through the authorized Quad management flow.");
     if (data.isPrivate) throw new Error("Private rooms are unavailable until room invitations are supported.");
     const sql = await getSql();
     if (data.kind === "community" && !data.communityId) throw new Error("Community rooms must be linked to an existing Quad.");
