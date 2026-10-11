@@ -212,6 +212,9 @@ export const sendRoomMessage = createServerFn({ method: "POST" })
     if (data.shareKind && !allowedShareKinds.has(data.shareKind)) {
       throw new Error("Unsupported attachment type.");
     }
+    if (data.shareKind && !data.mediaId && !data.shareJson) {
+      throw new Error("Attachment details are required when an attachment type is selected.");
+    }
     const shared = data.shareJson ? parseShareJson(data.shareJson) : undefined;
     if (data.shareJson && !shared) {
       throw new Error("Invalid attachment details.");
