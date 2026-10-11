@@ -6,8 +6,17 @@ type ConversationKind = "direct" | "group" | "class" | "study" | "community";
 
 async function requireMember(userId: string, conversationId: string) {
   const sql = await getSql();
-  const rows = await sql`select conversation_id from social_conversation_members
-    where conversation_id = ${conversationId} and user_id = ${userId} limit 1`;
+  const rows = await sql`
+    select c.id
+    from social_conversations c
+    join social_conversation_members scm
+      on scm.conversation_id = c.id and scm.user_id = ${userId}
+    left join community_members cm
+      on cm.community_id = c.community_id and cm.user_id = ${userId}
+    where c.id = ${conversationId}
+      and (c.kind <> 'community' or (c.community_id is not null and cm.user_id is not null))
+    limit 1
+  `;
   if (!rows[0]) throw new Error("Conversation not found or access denied.");
 }
 
