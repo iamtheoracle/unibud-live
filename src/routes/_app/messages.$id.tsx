@@ -55,6 +55,9 @@ function DirectThread({ id }: { id: string }) {
       void qc.invalidateQueries({ queryKey: ["convo", id] });
       void qc.invalidateQueries({ queryKey: ["convos"] });
     },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Message could not be sent.");
+    },
   });
 
   if (isPending) return <div className="m-4 h-40 animate-pulse rounded-2xl bg-secondary" />;
@@ -66,6 +69,27 @@ function DirectThread({ id }: { id: string }) {
     );
   }
   const person = personByHandle(q.data?.conversation.peerHandle ?? "");
+  if (q.isLoading) return <div className="m-4 h-40 animate-pulse rounded-2xl bg-secondary" />;
+  if (q.isError || !q.data) {
+    return (
+      <main className="px-5 py-8">
+        <Link to="/messages" className="text-sm text-muted-foreground">← Back to chats</Link>
+        <div className="mt-6 rounded-2xl border border-border p-5">
+          <h1 className="font-semibold">Conversation unavailable</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            This thread may have been removed, or your account may not have access to it.
+          </p>
+          <button
+            type="button"
+            className="mt-4 rounded-full bg-ink px-4 py-2 text-sm text-paper"
+            onClick={() => void q.refetch()}
+          >
+            Try again
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-[calc(100dvh-3.5rem)] flex-col bg-card">
