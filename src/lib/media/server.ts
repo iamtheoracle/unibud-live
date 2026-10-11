@@ -136,10 +136,12 @@ export const reportMedia = createServerFn({ method: "POST" })
 
 export const listBudMedia = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
-  .handler(async () => {
+  .handler(async ({ context }) => {
     const sql = await getSql();
-    // Only expose real attached media, never placeholder or seed rows that have no uploaded file.
-    const rows = await sql`select * from bud_media where status = ${"ready"} and media_id is not null order by created_at desc`;
+    // Do not expose every user's ready classroom files to every authenticated caller.
+    // Until class/course visibility is tied to a verified enrollment/lecturer scope,
+    // this endpoint lists only the caller's own attached files (fail closed).
+    const rows = await sql`select * from bud_media where owner_id = ${context.userId} and status = ${"ready"} and media_id is not null order by created_at desc`;
     return rows.map((r) => ({
       id: String(r.id),
       kind: String(r.kind),
