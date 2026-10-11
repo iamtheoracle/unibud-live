@@ -115,7 +115,7 @@ export const postAnnouncement = createServerFn({ method: "POST" })
     const recipients = await sql`
       select user_id from enrollments
       where course_code = ${data.courseCode} and user_id <> ${context.userId}`;
-    const href = `/board/${data.courseCode.toLowerCase().replace(/\\s+/g, "")}`;
+    const href = `/board/${data.courseCode.toLowerCase().replace(/\s+/g, "")}`;
     const deliveries = await Promise.allSettled(
       recipients.map((recipient) => notify(String(recipient.user_id), "class", title, body, href)),
     );
