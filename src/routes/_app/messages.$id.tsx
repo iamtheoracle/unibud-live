@@ -39,13 +39,29 @@ function PersistentRoomThread({ id }: { id: string }) {
   const room = useQuery({ queryKey: ["persistent-room", id], queryFn: () => getCampusRoom({ data: id }), enabled: Boolean(user) });
   const messages = useQuery({ queryKey: ["persistent-room-messages", id], queryFn: () => listPersistentRoomMessages({ data: id }), enabled: Boolean(user && room.data) });
   const send = useMutation({
-    mutationFn: async () => sendRoomMessage({ data: { roomId: id, senderName: "You", body: body.trim() } }),
+    mutationFn: (extra?: { body?: string; mediaId?: string; shareKind?: string; shareJson?: string }) =>
+      sendRoomMessage({ data: { roomId: id, senderName: "You", body: extra?.body ?? body.trim(), mediaId: extra?.mediaId, shareKind: extra?.shareKind, shareJson: extra?.shareJson } }),
     onSuccess: async () => { setBody(""); await Promise.all([
       qc.invalidateQueries({ queryKey: ["persistent-room-messages", id] }),
       qc.invalidateQueries({ queryKey: ["persistent-campus-rooms"] }),
     ]); },
     onError: (error) => toast.error(error instanceof Error ? error.message : "Message could not be sent."),
   });
+  const sentPending = useRef(false);
+  useEffect(() => {
+    if (sentPending.current || !user || !room.data) return;
+    const pending = useCampusStore.getState().pendingShare;
+    if (!pending) return;
+    sentPending.current = true;
+    void send.mutateAsync({
+      body: pending.title ?? "",
+      mediaId: pending.mediaId,
+      shareKind: pending.kind,
+      shareJson: JSON.stringify(pending),
+    }).then(() => useCampusStore.getState().setPendingShare(undefined)).catch(() => {
+      sentPending.current = false;
+    });
+  }, [user, room.data, send]);
   if (isPending) return <div className="m-4 h-40 animate-pulse rounded-2xl bg-secondary" />;
   if (!user) return <main className="px-5 py-8"><SignInCard title="Sign in to chat" body="Room messages are private to room members." /></main>;
   if (room.isLoading) return <div className="m-4 h-40 animate-pulse rounded-2xl bg-secondary" />;
