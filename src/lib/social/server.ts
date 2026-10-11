@@ -249,9 +249,18 @@ export const createPost = createServerFn({ method: "POST" })
       const membership = await sql`select user_id from community_members where user_id = ${context.userId} and community_id = ${communityId} limit 1`;
       if (!membership[0]) throw new Error("Join this campus Quad before posting.");
     }
-    if (privacy === "private") {
-      const membership = await sql`select user_id from community_members where user_id = ${context.userId} and community_id = ${communityId} limit 1`;
-      if (!membership[0]) throw new Error("You must be invited to this private community before posting.");
+    // Posting requires current membership for every visibility level. The UI
+    // hides the composer from non-members, but server authorization must stand
+    // on its own because callers can invoke this endpoint directly.
+    const membership = await sql`select user_id from community_members where user_id = ${context.userId} and community_id = ${communityId} limit 1`;
+    if (!membership[0]) {
+      if (privacy === "private") {
+        throw new Error("You must be invited to this private community before posting.");
+      }
+      if (privacy === "campus") {
+        throw new Error("Join this campus Quad before posting.");
+      }
+      throw new Error("Join this community before posting.");
     }
     const profile = await sql`select handle from student_profiles where user_id = ${context.userId} limit 1`;
     if (!profile[0]) throw new Error("Finish setting up your UNIBUD profile before posting.");
