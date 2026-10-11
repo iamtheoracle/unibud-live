@@ -1,6 +1,23 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { mediaStorageErrorStatus, parseDataUrl, readMediaBytes, removeMediaBytes, writeMediaBytes } from "./store.server.ts";
+import { isMediaKind, kindFromMime } from "./types.ts";
+
+test("accepts only the supported media kind values", () => {
+  for (const kind of ["photo", "video", "audio", "file"]) {
+    assert.equal(isMediaKind(kind), true);
+  }
+  for (const kind of ["image", "document", "", null, 3, {}, undefined]) {
+    assert.equal(isMediaKind(kind), false);
+  }
+});
+
+test("infers media kind from MIME types without case sensitivity at the upload boundary", () => {
+  assert.equal(kindFromMime("image/png"), "photo");
+  assert.equal(kindFromMime("video/mp4"), "video");
+  assert.equal(kindFromMime("audio/mpeg"), "audio");
+  assert.equal(kindFromMime("application/pdf"), "file");
+});
 
 test("maps missing local or durable objects to 404", () => {
   assert.equal(mediaStorageErrorStatus(Object.assign(new Error("file missing"), { code: "ENOENT" })), 404);
