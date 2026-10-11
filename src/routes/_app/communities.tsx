@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useCatalog } from "@/lib/unibud/queries";
 import { myCommunities } from "@/lib/social/server";
 import { createQuad } from "@/lib/unibud/quad";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthReady } from "@/components/unibud/sign-in-gate";
 import { canGovernClass } from "@/lib/unibud/roles";
 import { useCampusStore } from "@/lib/unibud/campus-store";
@@ -21,6 +21,7 @@ function Communities() {
   const nested = pathname !== "/communities" && pathname.startsWith("/communities/");
   if (nested) return <Outlet />;
 
+  const queryClient = useQueryClient();
   const { data } = useCatalog();
   const allRooms = data?.communities ?? [];
   const { user } = useAuthReady();
@@ -81,7 +82,8 @@ function Communities() {
                 toast.success("Quad created.");
                 setCreating(false);
                 setName("");
-                void mine.refetch();
+                await queryClient.invalidateQueries({ queryKey: ["catalog"] });
+                await mine.refetch();
               })
               .catch((err: Error) => toast.error(err.message || "Could not create Quad."));
           }}
