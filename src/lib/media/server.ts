@@ -204,7 +204,13 @@ export const sendRoomMessage = createServerFn({ method: "POST" })
       if (!cm[0]) throw new Error("Join the linked Quad before sending to its room.");
     }
     if (data.mediaId) {
-      const media = await sql`select id from media_assets where id = ${data.mediaId} and owner_id = ${context.userId} and room_id = ${data.roomId} and status = ${"ready"} limit 1`;
+      const media = await sql`select id from media_assets where id = ${data.mediaId}
+        and owner_id = ${context.userId}
+        and room_id = ${data.roomId}
+        and conversation_id is null
+        and visibility = ${"room"}
+        and status = ${"ready"}
+        limit 1`;
       if (!media[0]) throw new Error("Room attachment not found or access denied.");
     }
     const profile = await sql`select handle, display_name from student_profiles where user_id = ${context.userId} limit 1`;
