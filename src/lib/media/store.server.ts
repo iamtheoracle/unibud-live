@@ -66,6 +66,9 @@ function objectRequest(config: S3Config, id: string, method: "GET" | "PUT" | "DE
 }
 
 async function objectStorageRequest(id: string, method: "GET" | "PUT" | "DELETE", bytes?: Buffer): Promise<Buffer | null | undefined> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+    throw new Error("Invalid media id.");
+  }
   const config = s3Config();
   // undefined means object storage is not configured; null means a configured
   // object store explicitly reported that the requested object is missing.
