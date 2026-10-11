@@ -11,7 +11,7 @@ import { fileToDataUrl } from "@/lib/media/client";
 import { mediaUrl } from "@/lib/media/types";
 import { parseShareJson, type ChatShare } from "@/lib/media/share";
 import { campusRoomById, ROOM_SEED, type CampusRoom } from "@/lib/unibud/chat-rooms";
-import { getCampusRoom, listPersistentRoomMessages } from "@/lib/unibud/rooms.server";
+import { getCampusRoom, listPersistentRoomMessages } from "@/lib/unibud/rooms";
 import { canGovernClass } from "@/lib/unibud/roles";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { useStudioStore } from "@/lib/studio/store";
