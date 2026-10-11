@@ -5,9 +5,8 @@ import { toast } from "sonner";
 import { Avatar } from "@/components/unibud/person";
 import { EmptyState } from "@/components/unibud/empty";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
-import { listChatPeople } from "@/lib/social/server";
 import { relativeTime } from "@/lib/unibud/format";
-import { listConversations, openConversation } from "@/lib/social/server";
+import { listChatPeople, listConversations, openConversation } from "@/lib/social/server";
 import { CAMPUS_ROOMS, type RoomKind } from "@/lib/unibud/chat-rooms";
 import { cn } from "@/lib/utils";
 
