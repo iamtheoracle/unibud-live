@@ -375,7 +375,7 @@ test("does not follow redirects for signed object-storage requests", async () =>
 
 
 test("rejects object-storage responses that declare an oversized content length", async () => {
-  const response = new Response("not read", { headers: { "content-length": String(8 * 1024 * 1024 + 1) } });
+  const response = new Response(null, { headers: { "content-length": String(8 * 1024 * 1024 + 1) } });
   await assert.rejects(readBoundedResponseBytes(response), /configured size limit/);
 });
 
