@@ -18,10 +18,46 @@ export function ShareCard({ share }: { share: ChatShare }) {
   const src = srcOf(share);
 
   if (share.kind === "photo" && src) {
-    return <img src={src} alt="" className="mt-2 max-h-48 w-full rounded-xl object-cover" />;
+    return (
+      <div className="mt-2">
+        <a href={src} target="_blank" rel="noreferrer" aria-label="Open full-size image">
+          <img src={src} alt={share.title ?? "Shared image"} className="max-h-64 w-full rounded-xl object-contain" />
+        </a>
+        <div className="mt-2 flex flex-wrap gap-3 text-xs font-medium">
+          <a href={src} download={share.title || "unibud-image"} className="underline">Save image</a>
+          <button type="button" className="underline" onClick={async () => {
+            try {
+              if (navigator.share) await navigator.share({ title: share.title ?? "Shared image", url: src });
+              else if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(new URL(src, window.location.href).href);
+              }
+            } catch {
+              // A dismissed native share sheet is not an error that needs surfacing.
+            }
+          }}>Share</button>
+        </div>
+      </div>
+    );
   }
   if (share.kind === "video" && src) {
-    return <video src={src} className="mt-2 max-h-56 w-full rounded-xl" controls playsInline />;
+    return (
+      <div className="mt-2">
+        <video src={src} className="max-h-56 w-full rounded-xl" controls playsInline />
+        <div className="mt-2 flex gap-3 text-xs font-medium">
+          <a href={src} download={share.title || "unibud-video"} className="underline">Save video</a>
+          <button type="button" className="underline" onClick={async () => {
+            try {
+              if (navigator.share) await navigator.share({ title: share.title ?? "Shared video", url: src });
+              else if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(new URL(src, window.location.href).href);
+              }
+            } catch {
+              // A dismissed native share sheet is not an error that needs surfacing.
+            }
+          }}>Share</button>
+        </div>
+      </div>
+    );
   }
   if (share.kind === "file") {
     return (
