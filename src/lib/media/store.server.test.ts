@@ -1,6 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseDataUrl, readMediaBytes, removeMediaBytes, writeMediaBytes } from "./store.server.ts";
+import { mediaStorageErrorStatus, parseDataUrl, readMediaBytes, removeMediaBytes, writeMediaBytes } from "./store.server.ts";
+
+test("maps missing local or durable objects to 404", () => {
+  assert.equal(mediaStorageErrorStatus(Object.assign(new Error("file missing"), { code: "ENOENT" })), 404);
+  assert.equal(mediaStorageErrorStatus(new Error("Media object was not found in configured durable storage.")), 404);
+});
+
+test("maps object-storage outages and configuration failures to 503", () => {
+  assert.equal(mediaStorageErrorStatus(new Error("Media object storage GET failed with status 503.")), 503);
+  assert.equal(mediaStorageErrorStatus(new Error("Media object storage configuration is incomplete.")), 503);
+  assert.equal(mediaStorageErrorStatus(new Error("network request failed")), 503);
+});
 
 test("parses valid Base64 media data URLs", () => {
   const parsed = parseDataUrl("data:text/plain;base64,aGVsbG8=");
