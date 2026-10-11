@@ -26,7 +26,6 @@ import { cn } from "@/lib/utils";
 
 const items = [
   { to: "/profile", label: "Profile", icon: CircleUser },
-  { to: "/messages", label: "Chat", icon: MessageSquareText },
   { to: "/bud", label: "Bud", icon: Sparkles },
   { to: "/riff", label: "Riff", icon: Megaphone },
   { to: "/search", label: "Search", icon: Search },
