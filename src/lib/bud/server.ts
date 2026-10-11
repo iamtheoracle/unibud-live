@@ -12,6 +12,8 @@ import { inferSparkDomain, sparkSystemNotes } from "./spark";
 import { executeThroughSpark } from "@/lib/spark/runtime";
 import type { AgentRequest } from "@/lib/agents/core/contracts.ts";
 import { assertBudUserFacingText } from "@/lib/agents/response-policy.ts";
+import { canReadMedia } from "@/lib/media/access.server";
+import { assertConversationMember } from "@/lib/social/server";
 import { isSafeShareSource } from "@/lib/media/share";
 
 const SYSTEM = `You are Bud. You are the student's study buddy and companion inside UNIBUD. You are part of a real internal system, but never expose internal agents, routing, providers, or notes.
@@ -137,6 +139,34 @@ export const askBud = createServerFn({ method: "POST" }).middleware([authMiddlew
     }
   }
   const sql = await getSql();
+  if (data.media?.mediaId) {
+    const mediaRows = await sql`select owner_id, status, visibility, conversation_id, room_id
+      from media_assets where id = ${data.media.mediaId} and status = ${"ready"} limit 1`;
+    const mediaRow = mediaRows[0];
+    if (!mediaRow) {
+      return { ok: false as const, error: "Media item not found or access denied." };
+    }
+    const allowed = await canReadMedia({
+      userId: context.userId,
+      row: mediaRow,
+      assertConversationMember,
+      isRoomMember: async (memberId, roomId) => {
+        const membership = await sql`select r.id, r.community_id from campus_rooms r
+          join campus_room_members m on m.room_id = r.id and m.user_id = ${memberId}
+          where r.id = ${roomId} limit 1`;
+        if (!membership[0]) return false;
+        if (membership[0].community_id) {
+          const communityMember = await sql`select user_id from community_members
+            where community_id = ${String(membership[0].community_id)} and user_id = ${memberId} limit 1`;
+          if (!communityMember[0]) return false;
+        }
+        return true;
+      },
+    });
+    if (!allowed) {
+      return { ok: false as const, error: "Media item not found or access denied." };
+    }
+  }
   let conversationId = data.conversationId;
   if (conversationId) {
     // A caller must own the target conversation before any message is written.
