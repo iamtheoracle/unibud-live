@@ -1,92 +1,147 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Avatar, PersonMeta } from "@/components/unibud/person";
-import { RelationActions } from "@/components/unibud/relation-actions";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Avatar } from "@/components/unibud/person";
+import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PEOPLE, uniById } from "@/lib/unibud/catalog";
-import { useCampusStore } from "@/lib/unibud/campus-store";
-import { academicLine, proximityScore, sharedContext } from "@/lib/unibud/identity";
+import {
+  cancelConnectionRequest,
+  getMyConnectState,
+  listConnectPeople,
+  openConversation,
+  removeConnection,
+  requestConnection,
+  respondToConnectionRequest,
+  setFollow,
+} from "@/lib/social/server";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/connect")({ component: Connect });
 
 type Tab = "discover" | "requests" | "sent" | "connections" | "following" | "followers";
+type ConnectPerson = {
+  userId: string;
+  handle: string;
+  name: string;
+  universityId: string;
+  program: string;
+  year: string;
+  bio: string;
+};
+
+const TABS: Array<[Tab, string]> = [
+  ["discover", "Discover"],
+  ["requests", "Requests"],
+  ["sent", "Sent"],
+  ["connections", "Connections"],
+  ["following", "Following"],
+  ["followers", "Followers"],
+];
 
 function Connect() {
   const [tab, setTab] = useState<Tab>("discover");
   const [q, setQ] = useState("");
-  const incoming = useCampusStore((s) => s.incoming);
-  const outgoing = useCampusStore((s) => s.outgoing);
-  const connections = useCampusStore((s) => s.connections);
-  const following = useCampusStore((s) => s.following);
-  const followers = useCampusStore((s) => s.followers);
-  const accept = useCampusStore((s) => s.accept);
-  const decline = useCampusStore((s) => s.decline);
-  const cancelRequest = useCampusStore((s) => s.cancelRequest);
-  const homeCampusId = useCampusStore((s) => s.homeCampusId);
-  const faculty = useCampusStore((s) => s.faculty);
-  const department = useCampusStore((s) => s.department);
-  const lens = {
-    universityId: homeCampusId || "unilag",
-    program: "Computer Engineering",
-    year: "300",
-    faculty,
-    department,
+  const { user, isPending } = useAuthReady();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const relations = useQuery({
+    queryKey: ["connect-state"],
+    queryFn: () => getMyConnectState(),
+    enabled: Boolean(user),
+  });
+  const directory = useQuery({
+    queryKey: ["connect-directory", q],
+    queryFn: () => listConnectPeople({ data: { query: q } }),
+    enabled: Boolean(user) && tab === "discover",
+  });
+  const refresh = async () => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ["connect-state"] }),
+      qc.invalidateQueries({ queryKey: ["connect-directory"] }),
+    ]);
   };
+  const request = useMutation({
+    mutationFn: (handle: string) => requestConnection({ data: { handle } }),
+    onSuccess: async (result) => {
+      toast.success(result.alreadyPending ? "Request is already pending." : "Connection request sent.");
+      await refresh();
+    },
+    onError: (error: unknown) => toast.error(error instanceof Error ? error.message : "Could not send the request."),
+  });
+  const respond = useMutation({
+    mutationFn: (input: { handle: string; accept: boolean }) => respondToConnectionRequest({ data: input }),
+    onSuccess: async (_result, input) => {
+      toast.success(input.accept ? "Connection accepted." : "Request declined.");
+      await refresh();
+    },
+    onError: (error: unknown) => toast.error(error instanceof Error ? error.message : "Could not update the request."),
+  });
+  const cancel = useMutation({
+    mutationFn: (handle: string) => cancelConnectionRequest({ data: { handle } }),
+    onSuccess: async () => { toast.success("Request cancelled."); await refresh(); },
+    onError: (error: unknown) => toast.error(error instanceof Error ? error.message : "Could not cancel the request."),
+  });
+  const remove = useMutation({
+    mutationFn: (handle: string) => removeConnection({ data: { handle } }),
+    onSuccess: async () => { toast.success("Connection removed."); await refresh(); },
+    onError: (error: unknown) => toast.error(error instanceof Error ? error.message : "Could not remove the connection."),
+  });
+  const follow = useMutation({
+    mutationFn: (input: { handle: string; following: boolean }) => setFollow({ data: input }),
+    onSuccess: async (_result, input) => {
+      toast.success(input.following ? "Following." : "Unfollowed.");
+      await refresh();
+    },
+    onError: (error: unknown) => toast.error(error instanceof Error ? error.message : "Could not update follow state."),
+  });
 
-  const filtered = useMemo(
-    () =>
-      PEOPLE.filter((p) => {
-        const hay = `${p.name} ${p.handle} ${p.program} ${p.year} ${p.universityId} ${p.faculty ?? ""} ${p.department ?? ""}`.toLowerCase();
-        return !q.trim() || hay.includes(q.toLowerCase());
-      }),
-    [q],
-  );
+  if (isPending) return <div className="m-4 h-40 animate-pulse rounded-2xl bg-secondary" />;
+  if (!user) {
+    return <main className="px-5 py-8"><SignInCard title="Sign in to Connect" body="Discover registered UNIBUD profiles and manage real connection requests." /></main>;
+  }
 
-  const list =
-    tab === "requests"
-      ? PEOPLE.filter((p) => incoming.includes(p.handle))
+  const state = relations.data;
+  const shown: ConnectPerson[] = tab === "discover"
+    ? directory.data ?? []
+    : tab === "requests"
+      ? state?.incoming ?? []
       : tab === "sent"
-        ? PEOPLE.filter((p) => outgoing.includes(p.handle))
+        ? state?.outgoing ?? []
         : tab === "connections"
-          ? PEOPLE.filter((p) => connections.includes(p.handle))
+          ? state?.connections ?? []
           : tab === "following"
-            ? PEOPLE.filter((p) => following.includes(p.handle))
-            : tab === "followers"
-              ? PEOPLE.filter((p) => followers.includes(p.handle))
-              : filtered;
+            ? state?.following ?? []
+            : state?.followers ?? [];
+  const busy = request.isPending || respond.isPending || cancel.isPending || remove.isPending || follow.isPending;
 
-  const suggested = [...filtered].sort((a, b) => proximityScore(b, connections, lens) - proximityScore(a, connections, lens));
-  const shown = tab === "discover" ? suggested : list;
+  async function message(person: ConnectPerson) {
+    try {
+      const result = await openConversation({ data: { handle: person.handle } });
+      await navigate({ to: "/messages/$id", params: { id: result.id } });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not open the conversation.");
+    }
+  }
 
   return (
     <main className="safe-bottom px-5 pt-6">
       <p className="kicker">People</p>
       <h1 className="mt-1 font-display text-4xl">Connect</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Find people you would not normally meet — same interests, other cities, other schools.
-        Connect is mutual. Follow is one-way.
+        Discover registered UNIBUD members. Connection requests and follows are saved to your account.
       </p>
       <div className="mt-5">
         <Input
           value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search people, programmes, places, interests"
-          aria-label="Search students"
+          onChange={(event) => setQ(event.target.value)}
+          placeholder="Search names, handles, programmes or universities"
+          aria-label="Search registered UNIBUD profiles"
         />
       </div>
       <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-        {(
-          [
-            ["discover", "Discover"],
-            ["requests", "Requests"],
-            ["sent", "Sent"],
-            ["connections", "Connections"],
-            ["following", "Following"],
-            ["followers", "Followers"],
-          ] as const
-        ).map(([id, label]) => (
+        {TABS.map(([id, label]) => (
           <button
             key={id}
             type="button"
@@ -97,9 +152,9 @@ function Connect() {
             )}
           >
             {label}
-            {id === "requests" && incoming.length ? (
+            {id === "requests" && state?.incoming.length ? (
               <span className="ml-1 inline-flex min-w-4 justify-center rounded-full bg-bud px-1 text-[10px] text-bud-foreground">
-                {incoming.length}
+                {state.incoming.length}
               </span>
             ) : null}
           </button>
@@ -108,100 +163,92 @@ function Connect() {
 
       {tab === "discover" ? (
         <section className="mt-5 rounded-3xl bg-ink px-6 py-7 text-paper">
-          <p className="kicker text-bud">People you may never have met</p>
-          <h2 className="mt-3 font-display text-3xl text-paper">Same interests beat same postcode.</h2>
+          <p className="kicker text-bud">Real people, real connections</p>
+          <h2 className="mt-3 font-display text-3xl text-paper">Find your next collaborator.</h2>
           <p className="mt-3 text-sm text-paper/70">
-            Robotics in Nairobi. Physics in Johannesburg. Language exchange. Builders, players, and
-            people who like the same strange things you like.
+            Only profiles that have joined UNIBUD appear here. Empty results mean there are no matching registered profiles yet.
           </p>
         </section>
       ) : null}
 
-      {tab === "discover" ? (
-        <div className="mt-5 grid gap-3">
-          <Lane title="Builders far from you" handles={["aisha_nbo", "chinedu", "adaeze"]} />
-          <Lane title="Sky, games, language" handles={["jonas_wits", "yuki_lang", "ibrahim"]} />
-          <Lane title="Creators" handles={PEOPLE.filter((p) => p.tags?.includes("creator")).map((p) => p.handle)} />
+      {relations.isLoading || (tab === "discover" && directory.isLoading) ? (
+        <div className="mt-5 space-y-3">
+          <div className="h-24 animate-pulse rounded-2xl bg-secondary" />
+          <div className="h-24 animate-pulse rounded-2xl bg-secondary" />
         </div>
-      ) : null}
-
-      <ul className="mt-5 space-y-3">
-        {shown.map((p) => {
-          const uni = uniById(p.universityId);
-          const ctx = sharedContext(p, lens);
-          const mutuals = connections.filter((h) => h !== p.handle).slice(0, 2);
-          return (
-            <li key={p.handle} className="rounded-2xl bg-card p-3 ring-1 ring-border">
-              <div className="flex items-center gap-3">
-                <Link to="/u/$handle" params={{ handle: p.handle }}>
-                  <Avatar name={p.name} className="size-12" />
-                </Link>
-                <Link to="/u/$handle" params={{ handle: p.handle }} className="min-w-0 flex-1">
-                  <PersonMeta person={p} compact />
-                  <p className="truncate text-xs text-muted-foreground">
-                    {uni?.shortName} · {academicLine(p)}
-                  </p>
-                  {ctx.items.length ? (
-                    <p className="text-[11px] text-muted-foreground">{ctx.items.join(" · ")}</p>
-                  ) : null}
-                  {mutuals.length ? (
-                    <p className="text-[11px] text-muted-foreground">
-                      Mutual: {mutuals.map((h) => `@${h}`).join(", ")}
+      ) : relations.isError || (tab === "discover" && directory.isError) ? (
+        <div className="mt-5 rounded-2xl border border-border p-4">
+          <p className="text-sm font-medium">Connect could not load.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Check your connection and try again.</p>
+          <Button size="sm" variant="outline" className="mt-3" onClick={() => { void relations.refetch(); void directory.refetch(); }}>
+            Try again
+          </Button>
+        </div>
+      ) : (
+        <ul className="mt-5 space-y-3">
+          {shown.map((person) => {
+            const connected = Boolean(state?.connections.some((item) => item.handle === person.handle));
+            const outgoingPending = Boolean(state?.outgoing.some((item) => item.handle === person.handle));
+            const incomingPending = Boolean(state?.incoming.some((item) => item.handle === person.handle));
+            const isFollowing = Boolean(state?.following.some((item) => item.handle === person.handle));
+            return (
+              <li key={person.userId} className="rounded-2xl bg-card p-3 ring-1 ring-border">
+                <div className="flex items-center gap-3">
+                  <Link to="/u/$handle" params={{ handle: person.handle }}>
+                    <Avatar name={person.name} className="size-12" />
+                  </Link>
+                  <Link to="/u/$handle" params={{ handle: person.handle }} className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{person.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">@{person.handle}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {[person.program, person.year ? `Year ${person.year}` : "", person.universityId].filter(Boolean).join(" · ")}
                     </p>
-                  ) : null}
-                </Link>
-              </div>
-              <div className="mt-3">
-                {tab === "requests" ? (
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={() => accept(p.handle)}>
-                      Accept
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => decline(p.handle)}>
-                      Decline
-                    </Button>
-                  </div>
-                ) : tab === "sent" ? (
-                  <Button size="sm" variant="outline" onClick={() => cancelRequest(p.handle)}>
-                    Pending · Cancel
-                  </Button>
-                ) : (
-                  <RelationActions handle={p.handle} />
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-      {shown.length === 0 ? (
-        <p className="py-12 text-center text-sm text-muted-foreground">Nobody in this list yet.</p>
+                    {person.bio ? <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{person.bio}</p> : null}
+                  </Link>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {tab === "requests" ? (
+                    <>
+                      <Button size="sm" disabled={busy} onClick={() => respond.mutate({ handle: person.handle, accept: true })}>Accept</Button>
+                      <Button size="sm" variant="outline" disabled={busy} onClick={() => respond.mutate({ handle: person.handle, accept: false })}>Decline</Button>
+                    </>
+                  ) : tab === "sent" ? (
+                    <Button size="sm" variant="outline" disabled={busy} onClick={() => cancel.mutate(person.handle)}>Pending · Cancel</Button>
+                  ) : tab === "connections" ? (
+                    <>
+                      <Button size="sm" variant="outline" disabled={busy} onClick={() => void message(person)}>Message</Button>
+                      <Button size="sm" variant="ghost" disabled={busy} onClick={() => remove.mutate(person.handle)}>Remove connection</Button>
+                    </>
+                  ) : (
+                    <>
+                      {connected ? (
+                        <Button size="sm" variant="outline" disabled={busy} onClick={() => void message(person)}>Message</Button>
+                      ) : incomingPending ? (
+                        <Button size="sm" disabled={busy} onClick={() => respond.mutate({ handle: person.handle, accept: true })}>Accept request</Button>
+                      ) : outgoingPending ? (
+                        <Button size="sm" variant="outline" disabled={busy} onClick={() => cancel.mutate(person.handle)}>Pending · Cancel</Button>
+                      ) : (
+                        <Button size="sm" disabled={busy} onClick={() => request.mutate(person.handle)}>Connect</Button>
+                      )}
+                      <Button size="sm" variant="outline" disabled={busy} onClick={() => follow.mutate({ handle: person.handle, following: !isFollowing })}>
+                        {isFollowing ? "Unfollow" : "Follow"}
+                      </Button>
+                      {tab === "followers" && connected ? (
+                        <Button size="sm" variant="ghost" disabled={busy} onClick={() => remove.mutate(person.handle)}>Remove connection</Button>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {!relations.isLoading && !(tab === "discover" && directory.isLoading) && shown.length === 0 ? (
+        <p className="py-12 text-center text-sm text-muted-foreground">
+          {tab === "discover" ? "No registered profiles match that search yet." : "Nothing here yet."}
+        </p>
       ) : null}
     </main>
-  );
-}
-
-function Lane({ title, handles }: { title: string; handles: string[] }) {
-  const people = handles.map((h) => PEOPLE.find((p) => p.handle === h)).filter(Boolean);
-  if (!people.length) return null;
-  return (
-    <section className="rounded-2xl bg-card p-4 ring-1 ring-border">
-      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{title}</p>
-      <ul className="mt-3 space-y-3">
-        {people.map((p) => (
-          <li key={p!.handle} className="flex items-center gap-3">
-            <Link to="/u/$handle" params={{ handle: p!.handle }}>
-              <Avatar name={p!.name} />
-            </Link>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{p!.name}</p>
-              <p className="truncate text-[11px] text-muted-foreground">
-                @{p!.handle} · {p!.bio}
-              </p>
-            </div>
-            <RelationActions handle={p!.handle} />
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }
