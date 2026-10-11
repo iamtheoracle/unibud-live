@@ -37,31 +37,34 @@ export const listConversations = createServerFn({ method: "GET" })
     const sql = await getSql();
     const rows = await sql`
       select c.id, c.kind, c.title, c.updated_at,
+        peer.handle as peer_handle,
         (select m.body from social_messages m where m.conversation_id = c.id and m.deleted_at is null order by m.created_at desc limit 1) as last_message,
         (select m.created_at from social_messages m where m.conversation_id = c.id and m.deleted_at is null order by m.created_at desc limit 1) as last_message_at,
         (select count(*)::int from social_conversation_members cm where cm.conversation_id = c.id) as member_count
       from social_conversations c
       join social_conversation_members mine on mine.conversation_id = c.id and mine.user_id = ${context.userId}
+      left join social_conversation_members other on other.conversation_id = c.id and other.user_id <> ${context.userId}
+      left join student_profiles peer on peer.user_id = other.user_id
       order by coalesce((select max(m.created_at) from social_messages m where m.conversation_id = c.id), c.updated_at) desc
       limit 100`;
-    return rows.map((r) => ({ id: String(r.id), kind: String(r.kind) as ConversationKind, title: String(r.title), updatedAt: String(r.updated_at), lastMessage: r.last_message == null ? null : String(r.last_message), lastMessageAt: r.last_message_at == null ? null : String(r.last_message_at), memberCount: Number(r.member_count) }));
+    return rows.map((r) => ({ id: String(r.id), kind: String(r.kind) as ConversationKind, title: String(r.title), peerHandle: String(r.peer_handle ?? ""), updatedAt: String(r.updated_at), lastBody: r.last_message == null ? "" : String(r.last_message), lastMessage: r.last_message == null ? null : String(r.last_message), lastMessageAt: r.last_message_at == null ? null : String(r.last_message_at), memberCount: Number(r.member_count) }));
   });
 
 export const sendMessage = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((input: { conversationId: string; body: string }) => input)
+  .validator((input: { conversationId: string; body: string; mediaId?: string; shareKind?: string; shareJson?: string }) => input)
   .handler(async ({ context, data }) => {
-    const body = data.body.trim();
-    if (!body || body.length > 10000) throw new Error("Message must contain 1 to 10,000 characters.");
+    const body = (data.body ?? "").trim();
+    if ((!body && !data.mediaId && !data.shareJson) || body.length > 10000) throw new Error("Message must contain text or an attachment, up to 10,000 characters.");
     await requireMember(context.userId, data.conversationId);
     const sql = await getSql();
     const id = crypto.randomUUID();
-    const rows = await sql`insert into social_messages (id, conversation_id, sender_id, body)
-      values (${id}, ${data.conversationId}, ${context.userId}, ${body})
-      returning id, conversation_id, sender_id, body, created_at`;
+    const rows = await sql`insert into social_messages (id, conversation_id, sender_id, body, media_id, share_kind, share_json)
+      values (${id}, ${data.conversationId}, ${context.userId}, ${body || data.shareKind || "Attachment"}, ${data.mediaId ?? null}, ${data.shareKind ?? null}, ${data.shareJson ?? null})
+      returning id, conversation_id, sender_id, body, created_at, media_id, share_kind, share_json`;
     await sql`update social_conversations set updated_at = now() where id = ${data.conversationId}`;
     const r = rows[0];
-    return { id: String(r.id), conversationId: String(r.conversation_id), senderId: String(r.sender_id), body: String(r.body), createdAt: String(r.created_at) };
+    return { id: String(r.id), conversationId: String(r.conversation_id), senderId: String(r.sender_id), body: String(r.body), createdAt: String(r.created_at), mediaId: r.media_id == null ? null : String(r.media_id), shareKind: r.share_kind == null ? null : String(r.share_kind), shareJson: r.share_json == null ? null : String(r.share_json) };
   });
 
 export const listMessages = createServerFn({ method: "GET" })
@@ -128,12 +131,12 @@ export const getConversation = createServerFn({ method: "GET" })
       left join student_profiles peer on peer.user_id = other.user_id
       where c.id = ${id} limit 1`;
     if (!c[0]) throw new Error("Conversation not found.");
-    const rows = await sql`select id, sender_id, body, created_at from social_messages
+    const rows = await sql`select id, sender_id, body, created_at, media_id, share_kind, share_json from social_messages
       where conversation_id = ${id} and deleted_at is null order by created_at asc limit 100`;
     await sql`update social_conversation_members set last_read_at = now()
       where conversation_id = ${id} and user_id = ${context.userId}`;
     return {
       conversation: { id: String(c[0].id), kind: String(c[0].kind), peerHandle: String(c[0].peer_handle ?? ""), peerName: String(c[0].peer_name ?? ""), title: String(c[0].title ?? "") },
-      messages: rows.map(m => ({ id: String(m.id), sender: String(m.sender_id) === context.userId ? "me" : "them", body: String(m.body), createdAt: String(m.created_at) })),
+      messages: rows.map(m => ({ id: String(m.id), sender: String(m.sender_id) === context.userId ? "me" : "them", body: String(m.body), createdAt: String(m.created_at), mediaId: m.media_id == null ? null : String(m.media_id), shareKind: m.share_kind == null ? null : String(m.share_kind), shareJson: m.share_json == null ? null : String(m.share_json) })),
     };
   });
