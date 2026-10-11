@@ -11,7 +11,7 @@ export type ChatShare = {
 /** Only allow navigable web URLs or same-origin relative paths for shared media. */
 export function isSafeShareSource(src: string): boolean {
   const value = src.trim();
-  if (!value || value.startsWith("//") || /[\u0000-\u001f\u007f]/.test(value)) return false;
+  if (!value || value.startsWith("//") || value.includes("\\") || /[\u0000-\u001f\u007f]/.test(value)) return false;
   if (value.startsWith("/")) return true;
   try {
     const url = new URL(value);
