@@ -2,55 +2,58 @@ import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
 import { mapCommunity } from "./map";
+import type { CampusRole } from "./roles";
 
 export type QuadPrivacy = "public" | "campus" | "private";
 
 export const createQuad = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator(
-    (input: {
-      name: string;
-      description?: string;
-      kind?: string;
-      privacy?: QuadPrivacy;
-      cover?: string;
-    }) => input,
-  )
+  .validator((input: {
+    name: string;
+    description?: string;
+    kind?: string;
+    privacy?: QuadPrivacy;
+    cover?: string;
+  }) => input)
   .handler(async ({ context, data }) => {
     const name = data.name.trim();
     if (name.length < 2) throw new Error("Give your Quad a name.");
     if (name.length > 80) throw new Error("Keep the name under 80 characters.");
     const description = (data.description ?? "").trim().slice(0, 500);
     const kind = (data.kind ?? "Interest").trim() || "Interest";
+    if (!["Study", "Interest", "Class", "University", "Faculty"].includes(kind)) {
+      throw new Error("Choose a supported Quad type.");
+    }
     const privacy: QuadPrivacy =
       data.privacy === "private" || data.privacy === "campus" ? data.privacy : "public";
     const sql = await getSql();
+
+    // Class-room creation is a privileged action and must be enforced server-side,
+    // not just by the button's visibility or client-side role state.
+    if (kind === "Class") {
+      const rows = await sql<{ campus_role?: string }>`
+        select campus_role from student_profiles where user_id = ${context.userId} limit 1
+      `;
+      const role = String(rows[0]?.campus_role ?? "student") as CampusRole;
+      if (role !== "governor") {
+        throw new Error("Only verified class governors can create Class Quads.");
+      }
+    }
+
     const id = `q_${crypto.randomUUID().slice(0, 10)}`;
-    try {
-      await sql`
-        insert into communities (id, name, kind, university_id, description, cover, members, privacy, created_by)
-        values (${id}, ${name}, ${kind}, ${null}, ${description}, ${data.cover ?? null}, ${1}, ${privacy}, ${context.userId})
-      `;
-    } catch {
-      await sql`
-        insert into communities (id, name, kind, university_id, description, cover, members)
-        values (${id}, ${name}, ${kind}, ${null}, ${description}, ${data.cover ?? null}, ${1})
-      `;
-    }
-    try {
-      await sql`
-        insert into community_members (user_id, community_id, role)
-        values (${context.userId}, ${id}, ${"owner"})
-        on conflict (user_id, community_id) do update set role = ${"owner"}
-      `;
-    } catch {
-      await sql`
-        insert into community_members (user_id, community_id)
-        values (${context.userId}, ${id})
-        on conflict do nothing
-      `;
-    }
+    // Fail closed: never fall back to a schema that silently drops privacy or
+    // ownership fields. A failed write must not create a public room by accident.
+    await sql`
+      insert into communities (id, name, kind, university_id, description, cover, members, privacy, created_by)
+      values (${id}, ${name}, ${kind}, ${null}, ${description}, ${data.cover ?? null}, ${1}, ${privacy}, ${context.userId})
+    `;
+    await sql`
+      insert into community_members (user_id, community_id, role)
+      values (${context.userId}, ${id}, ${"owner"})
+      on conflict (user_id, community_id) do update set role = ${"owner"}
+    `;
     const rows = await sql`select * from communities where id = ${id} limit 1`;
+    if (!rows[0]) throw new Error("Quad was created but could not be loaded. Refresh and check your Quads.");
     return mapCommunity(rows[0]);
   });
 
@@ -69,23 +72,16 @@ export const joinQuad = createServerFn({ method: "POST" })
       if (!already[0]) throw new Error("This Quad is private. Ask an admin to invite you.");
       return { joined: true as const };
     }
-    const existing = await sql`
-      select user_id from community_members where user_id = ${context.userId} and community_id = ${communityId}
+    const inserted = await sql`
+      insert into community_members (user_id, community_id, role)
+      values (${context.userId}, ${communityId}, ${"member"})
+      on conflict (user_id, community_id) do nothing
+      returning user_id
     `;
-    if (existing[0]) return { joined: true as const };
-    try {
-      await sql`
-        insert into community_members (user_id, community_id, role)
-        values (${context.userId}, ${communityId}, ${"member"})
-      `;
-    } catch {
-      await sql`
-        insert into community_members (user_id, community_id)
-        values (${context.userId}, ${communityId})
-        on conflict do nothing
-      `;
+    if (inserted[0]) {
+      const count = await sql`select count(*)::int as count from community_members where community_id = ${communityId}`;
+      await sql`update communities set members = ${Number(count[0]?.count ?? 0)} where id = ${communityId}`;
     }
-    await sql`update communities set members = members + 1 where id = ${communityId}`;
     return { joined: true as const };
   });
 
@@ -98,7 +94,16 @@ export const leaveQuad = createServerFn({ method: "POST" })
       select role from community_members where user_id = ${context.userId} and community_id = ${communityId}
     `;
     if (!mem[0]) return { left: true as const };
+    if (mem[0].role === "owner") {
+      const otherOwners = await sql`
+        select user_id from community_members
+        where community_id = ${communityId} and role = ${"owner"} and user_id <> ${context.userId}
+        limit 1
+      `;
+      if (!otherOwners[0]) throw new Error("Transfer Quad ownership before leaving.");
+    }
     await sql`delete from community_members where user_id = ${context.userId} and community_id = ${communityId}`;
-    await sql`update communities set members = greatest(members - 1, 0) where id = ${communityId}`;
+    const count = await sql`select count(*)::int as count from community_members where community_id = ${communityId}`;
+    await sql`update communities set members = ${Number(count[0]?.count ?? 0)} where id = ${communityId}`;
     return { left: true as const };
   });
