@@ -119,15 +119,30 @@ export const sendMessage = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const body = (data.body ?? "").trim();
     if ((!body && !data.mediaId && !data.shareJson) || body.length > 10000) throw new Error("Message must contain text or an attachment, up to 10,000 characters.");
+    const allowedShareKinds = new Set(["audio", "video", "photo", "bud", "file"]);
+    if (data.shareJson && data.shareJson.length > 12000) throw new Error("Attachment details are too large.");
+    if (data.shareKind && !allowedShareKinds.has(data.shareKind)) throw new Error("Unsupported attachment type.");
+    if (data.shareJson) {
+      try {
+        const share = JSON.parse(data.shareJson) as { kind?: unknown };
+        if (!share || typeof share !== "object" || Array.isArray(share) ||
+          (share.kind !== undefined && (typeof share.kind !== "string" || !allowedShareKinds.has(share.kind)))) {
+          throw new Error("Invalid attachment details.");
+        }
+      } catch {
+        throw new Error("Invalid attachment details.");
+      }
+    }
     await requireMember(context.userId, data.conversationId);
     const sql = await getSql();
     if (data.mediaId) {
       const media = await sql`select id from media_assets
         where id = ${data.mediaId}
+          and owner_id = ${context.userId}
           and conversation_id = ${data.conversationId}
           and status = ${"ready"}
         limit 1`;
-      if (!media[0]) throw new Error("Attachment is not ready or does not belong to this conversation.");
+      if (!media[0]) throw new Error("Attachment is not ready, not owned by you, or does not belong to this conversation.");
     }
     const id = crypto.randomUUID();
     const rows = await sql`insert into social_messages (id, conversation_id, sender_id, body, media_id, share_kind, share_json)
