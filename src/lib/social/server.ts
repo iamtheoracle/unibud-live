@@ -287,13 +287,24 @@ export const openCommunityConversation = createServerFn({ method: "POST" })
   .handler(async ({ context, data: communityId }) => {
     const sql = await getSql();
     const access = await sql`
-      select c.id, c.name
+      select c.id, c.name, c.privacy, c.university_id
       from communities c
       join community_members cm on cm.community_id = c.id and cm.user_id = ${context.userId}
       where c.id = ${communityId}
       limit 1
     `;
     if (!access[0]) throw new Error("Join this Quad before opening its chat.");
+    const privacy = String(access[0].privacy ?? "public");
+    if (!["public", "campus", "private"].includes(privacy)) {
+      throw new Error("Community privacy settings are invalid; chat access is disabled.");
+    }
+    if (privacy === "campus") {
+      const profile = await sql`select university_id from student_profiles where user_id = ${context.userId} limit 1`;
+      if (!profile[0]?.university_id || !access[0].university_id ||
+          String(profile[0].university_id) !== String(access[0].university_id)) {
+        throw new Error("This Quad is limited to its university community.");
+      }
+    }
     const inserted = await sql`
       insert into social_conversations (id, kind, title, created_by, community_id)
       values (${crypto.randomUUID()}, 'community', ${String(access[0].name)}, ${context.userId}, ${communityId})
