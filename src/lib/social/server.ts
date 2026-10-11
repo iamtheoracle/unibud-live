@@ -317,7 +317,11 @@ export const openCommunityConversation = createServerFn({ method: "POST" })
     const opened = await sql`
       with community_conversation as (
         insert into social_conversations (id, kind, title, created_by, community_id)
-        values (${crypto.randomUUID()}, 'community', ${String(access[0].name)}, ${context.userId}, ${communityId})
+        select ${crypto.randomUUID()}, 'community', c.name, ${context.userId}, c.id
+        from communities c
+        join community_members current_member
+          on current_member.community_id = c.id and current_member.user_id = ${context.userId}
+        where c.id = ${communityId}
         on conflict (community_id) where kind = 'community' and community_id is not null
         do update set title = excluded.title
         returning id
