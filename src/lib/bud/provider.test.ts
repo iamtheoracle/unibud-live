@@ -50,3 +50,29 @@ test('Bud falls back to OpenAI when xAI returns an error', async () => {
     else process.env.OPENAI_API_KEY = previousOpenai;
   }
 });
+
+test('Bud never reports success when both configured providers fail', async () => {
+  const previousXai = process.env.XAI_API_KEY;
+  const previousOpenai = process.env.OPENAI_API_KEY;
+  const previousFetch = globalThis.fetch;
+  const calls: string[] = [];
+  process.env.XAI_API_KEY = 'test-xai-key';
+  process.env.OPENAI_API_KEY = 'test-openai-key';
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    calls.push(String(input));
+    return new Response('unavailable', { status: 503 });
+  }) as typeof fetch;
+  try {
+    const result = await getAIProvider().complete([{ role: 'user', content: 'test' }]);
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.match(result.error, /couldn.t reach the model/i);
+    assert.deepEqual(calls, ['https://api.x.ai/v1/chat/completions', 'https://api.openai.com/v1/chat/completions']);
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousXai === undefined) delete process.env.XAI_API_KEY;
+    else process.env.XAI_API_KEY = previousXai;
+    if (previousOpenai === undefined) delete process.env.OPENAI_API_KEY;
+    else process.env.OPENAI_API_KEY = previousOpenai;
+  }
+});
+
