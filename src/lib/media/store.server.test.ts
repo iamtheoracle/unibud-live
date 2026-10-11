@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mediaStorageErrorStatus, parseDataUrl, readMediaBytes, removeMediaBytes, writeMediaBytes } from "./store.server.ts";
+import { mediaStorageErrorStatus, parseDataUrl, readBoundedResponseBytes, readMediaBytes, removeMediaBytes, writeMediaBytes } from "./store.server.ts";
 import { isMediaKind, kindFromMime, resolveMediaKind } from "./types.ts";
 
 test("accepts only the supported media kind values", () => {
@@ -371,4 +371,29 @@ test("does not follow redirects for signed object-storage requests", async () =>
       else process.env[key] = value;
     }
   }
+});
+
+
+test("rejects object-storage responses that declare an oversized content length", async () => {
+  const response = new Response("not read", { headers: { "content-length": String(8 * 1024 * 1024 + 1) } });
+  await assert.rejects(readBoundedResponseBytes(response), /configured size limit/);
+});
+
+test("rejects streamed object-storage responses that exceed the media size limit", async () => {
+  let cancelled = false;
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new Uint8Array(8 * 1024 * 1024));
+      controller.enqueue(new Uint8Array(1));
+    },
+    cancel() { cancelled = true; },
+  });
+  const response = new Response(body);
+  await assert.rejects(readBoundedResponseBytes(response), /configured size limit/);
+  assert.equal(cancelled, true, "oversized streams should be cancelled instead of fully buffered");
+});
+
+test("accepts bounded object-storage response bodies", async () => {
+  const response = new Response(new Uint8Array([1, 2, 3]));
+  assert.deepEqual(await readBoundedResponseBytes(response, 3), Buffer.from([1, 2, 3]));
 });
