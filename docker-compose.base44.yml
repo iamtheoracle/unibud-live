@@ -11,7 +11,7 @@ services:
     environment:
       - USE_PGLITE=true
       - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS
-    command: ["sh", "-ec", "npm ci --no-audit --no-fund && exec npm run dev"]
+    command: ["sh", "-ec", "npm install --no-audit --no-fund && exec npm run dev"]
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 10s
