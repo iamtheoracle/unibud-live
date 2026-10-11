@@ -112,7 +112,13 @@ export function parseDataUrl(dataUrl: string, maxBytes?: number): { mime: string
   if (maxBytes !== undefined && estimatedBytes > maxBytes) {
     throw new Error(`Media payload exceeds the ${maxBytes}-byte limit.`);
   }
+  // Buffer.from(..., "base64") is intentionally permissive. Reject malformed
+  // or non-canonical input instead of silently decoding a different payload.
+  if (encoded.length % 4 !== 0 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) {
+    throw new Error("Invalid media payload");
+  }
   const bytes = Buffer.from(encoded, "base64");
+  if (bytes.toString("base64") !== encoded) throw new Error("Invalid media payload");
   if (maxBytes !== undefined && bytes.length > maxBytes) {
     throw new Error(`Media payload exceeds the ${maxBytes}-byte limit.`);
   }
