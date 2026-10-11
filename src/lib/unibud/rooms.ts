@@ -73,9 +73,15 @@ export const createCampusRoom = createServerFn({ method: "POST" })
     const sql = await getSql();
     if (data.communityId) throw new Error("Community-linked rooms must be created through the authorized Quad management flow.");
     const id = `room_${crypto.randomUUID()}`;
-    await sql`insert into campus_rooms (id, kind, title, subtitle, created_by, community_id, is_private)
-      values (${id}, ${data.kind}, ${title}, ${subtitle}, ${context.userId}, ${data.communityId ?? null}, ${Boolean(data.isPrivate)})`;
-    await sql`insert into campus_room_members (room_id, user_id, role) values (${id}, ${context.userId}, 'owner')`;
+    await sql`
+      with inserted_room as (
+        insert into campus_rooms (id, kind, title, subtitle, created_by, community_id, is_private)
+        values (${id}, ${data.kind}, ${title}, ${subtitle}, ${context.userId}, ${data.communityId ?? null}, ${Boolean(data.isPrivate)})
+        returning id
+      )
+      insert into campus_room_members (room_id, user_id, role)
+      select id, ${context.userId}, 'owner' from inserted_room
+    `;
     return { id, kind: data.kind, title, subtitle };
   });
 
