@@ -295,7 +295,7 @@ export const createPost = createServerFn({ method: "POST" })
             and c.university_id is not null
             and sp.university_id = c.university_id
           ))
-        for key share of cm, c
+        for share of cm, c
       )
       insert into posts (id, community_id, author_handle, body, image, video, kind)
       select ${id}, ${communityId}, authorized_member.handle, ${body},
