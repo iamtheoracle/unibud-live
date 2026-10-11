@@ -134,8 +134,8 @@ export const listRoomMessages = createServerFn({ method: "GET" })
       const cm = await sql`select user_id from community_members where community_id = ${String(room[0].community_id)} and user_id = ${context.userId} limit 1`;
       if (!cm[0]) throw new Error("Join the linked Quad before accessing its room.");
     }
-    const rows = await sql`select * from room_messages where room_id = ${roomId} order by created_at asc limit 200`;
-    return rows.map((r) => ({
+    const rows = await sql`select * from room_messages where room_id = ${roomId} order by created_at desc limit 200`;
+    return rows.reverse().map((r) => ({
       id: String(r.id),
       sender: String(r.sender_name),
       body: String(r.body),
