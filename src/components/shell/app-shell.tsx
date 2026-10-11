@@ -95,7 +95,7 @@ export function AppShell() {
             ? ""
             : showPrimary
               ? "pt-[calc(3rem+env(safe-area-inset-top))] pb-[calc(4.5rem+env(safe-area-inset-bottom))]"
-              : "pt-[calc(3rem+3.25rem+env(safe-area-inset-top))]",
+              : "pt-[calc(3rem+env(safe-area-inset-top))]",
         )}
       >
         <Outlet />
@@ -117,6 +117,8 @@ export function AppShell() {
           </div>
         </div>
       ) : null}
+
+      {showPrimary ? <SparkGate /> : null}
 
       {!showPrimary ? (
         <AskBudFab menuOpen={drawer.open || hidden || composeOpen || dropOpen} />
