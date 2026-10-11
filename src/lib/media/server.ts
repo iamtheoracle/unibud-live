@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
 import { parseShareJson } from "@/lib/media/share";
+import { canReadMedia } from "@/lib/media/access.server";
 import { assertConversationMember } from "@/lib/social/server";
 import { parseDataUrl, removeMediaBytes, writeMediaBytes } from "./store.server";
 import { kindFromMime, MAX_UPLOAD_BYTES, type MediaKind } from "./types";
@@ -114,8 +115,27 @@ export const reportMedia = createServerFn({ method: "POST" })
     if (reason.length < 3) throw new Error("Please provide a short reason for this report.");
     const sql = await getSql();
     if (data.mediaId) {
-      const target = await sql`select id from media_assets where id = ${data.mediaId} and status <> ${"deleted"} limit 1`;
-      if (!target[0]) throw new Error("Media item not found.");
+      const target = await sql`select owner_id, status, visibility, conversation_id, room_id
+        from media_assets where id = ${data.mediaId} and status = ${"ready"} limit 1`;
+      if (!target[0]) throw new Error("Media item not found or access denied.");
+      const allowed = await canReadMedia({
+        userId: context.userId,
+        row: target[0],
+        assertConversationMember,
+        isRoomMember: async (memberId, roomId) => {
+          const membership = await sql`select r.id, r.community_id from campus_rooms r
+            join campus_room_members m on m.room_id = r.id and m.user_id = ${memberId}
+            where r.id = ${roomId} limit 1`;
+          if (!membership[0]) return false;
+          if (membership[0].community_id) {
+            const communityMember = await sql`select user_id from community_members
+              where community_id = ${String(membership[0].community_id)} and user_id = ${memberId} limit 1`;
+            if (!communityMember[0]) return false;
+          }
+          return true;
+        },
+      });
+      if (!allowed) throw new Error("Media item not found or access denied.");
     } else if (data.audioId) {
       const target = await sql`select audio_id from audio_objects where audio_id = ${data.audioId} limit 1`;
       if (!target[0]) throw new Error("Audio item not found.");
