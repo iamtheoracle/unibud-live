@@ -71,7 +71,7 @@ export const listConversations = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const sql = await getSql();
     const rows = await sql`
-      select c.id, c.kind, c.title, c.updated_at,
+      select c.id, c.kind, c.title, c.course_code, c.updated_at,
         peer.handle as peer_handle,
         (select m.body from social_messages m where m.conversation_id = c.id and m.deleted_at is null order by m.created_at desc limit 1) as last_message,
         (select m.created_at from social_messages m where m.conversation_id = c.id and m.deleted_at is null order by m.created_at desc limit 1) as last_message_at,
