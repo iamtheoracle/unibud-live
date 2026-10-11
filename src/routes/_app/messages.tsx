@@ -6,7 +6,7 @@ import { Avatar } from "@/components/unibud/person";
 import { EmptyState } from "@/components/unibud/empty";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
 import { relativeTime } from "@/lib/unibud/format";
-import { listChatPeople, listConversations, openConversation } from "@/lib/social/server";
+import { createConversation, listChatPeople, listConversations, openConversation } from "@/lib/social/server";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/messages")({ component: ChatList });
@@ -16,7 +16,10 @@ type Tab = "direct" | "group" | "class" | "study" | "community";
 function ChatList() {
   const { user, isPending } = useAuthReady();
   const nav = useNavigate();
+  const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>("direct");
+  const [groupTitle, setGroupTitle] = useState("");
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const convos = useQuery({
     queryKey: ["convos"],
     queryFn: () => listConversations(),
@@ -25,7 +28,7 @@ function ChatList() {
   const people = useQuery({
     queryKey: ["chat-people"],
     queryFn: () => listChatPeople(),
-    enabled: Boolean(user) && tab === "direct",
+    enabled: Boolean(user) && (tab === "direct" || tab === "group"),
   });
 
   if (isPending) return <div className="m-4 h-40 animate-pulse rounded-2xl bg-secondary" />;
@@ -142,6 +145,70 @@ function ChatList() {
             ) : null}
           </ul>
         </>
+      ) : tab === "group" ? (
+        <section className="mt-5 space-y-4">
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <h2 className="text-sm font-semibold">Create a group chat</h2>
+            <p className="mt-1 text-xs text-muted-foreground">Choose real UNIBUD profiles. You can add up to 99 other members.</p>
+            <input
+              value={groupTitle}
+              onChange={(event) => setGroupTitle(event.target.value)}
+              maxLength={120}
+              placeholder="Group name (optional)"
+              className="mt-3 h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"
+            />
+            <div className="mt-3 max-h-64 space-y-1 overflow-y-auto">
+              {(people.data ?? []).map((person) => {
+                const selected = selectedMembers.includes(person.userId);
+                return (
+                  <label key={person.userId} className="flex cursor-pointer items-center gap-3 rounded-xl px-2 py-2 hover:bg-secondary">
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() => setSelectedMembers((current) => selected ? current.filter((id) => id !== person.userId) : current.length < 99 ? [...current, person.userId] : current)}
+                    />
+                    <Avatar name={person.name} className="size-9" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{person.name}</span>
+                      <span className="block truncate text-xs text-muted-foreground">@{person.handle}</span>
+                    </span>
+                  </label>
+                );
+              })}
+              {!people.isLoading && !people.data?.length ? <p className="py-4 text-sm text-muted-foreground">No other student profiles are available yet.</p> : null}
+            </div>
+            <button
+              type="button"
+              disabled={selectedMembers.length < 1}
+              onClick={async () => {
+                try {
+                  const created = await createConversation({ data: { memberIds: selectedMembers, title: groupTitle, kind: "group" } });
+                  setGroupTitle("");
+                  setSelectedMembers([]);
+                  await qc.invalidateQueries({ queryKey: ["convos"] });
+                  nav({ to: "/messages/$id", params: { id: created.id } });
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : "Could not create the group.");
+                }
+              }}
+              className="mt-4 h-10 w-full rounded-full bg-ink px-4 text-sm font-medium text-paper disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Create group · {selectedMembers.length} selected
+            </button>
+          </div>
+          <ul className="space-y-2">
+            {rooms.map((conversation) => (
+              <li key={conversation.id}>
+                <Link to="/messages/$id" params={{ id: conversation.id }} className="block rounded-2xl bg-card p-4 ring-1 ring-border">
+                  <p className="text-[11px] font-semibold tracking-wide text-bud uppercase">group</p>
+                  <p className="mt-1 text-sm font-semibold">{conversation.title || "Untitled group chat"}</p>
+                  <p className="mt-2 truncate text-sm text-muted-foreground">{conversation.lastBody || "No messages yet"}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">{conversation.memberCount} members · {relativeTime(conversation.updatedAt)}</p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : (
         <ul className="mt-5 space-y-2">
           {rooms.map((conversation) => (
