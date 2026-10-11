@@ -6,18 +6,7 @@ import { canReadMedia } from "@/lib/media/access.server";
 import { assertConversationMember } from "@/lib/social/server";
 import { parseDataUrl, removeMediaBytes, writeMediaBytes } from "./store.server";
 import { resolveMediaKind, MAX_UPLOAD_BYTES, type MediaKind } from "./types";
-import { BUD_MEDIA } from "./bud-media";
 import { REVENUE_POLICY } from "@/lib/music/monetization";
-
-async function ensureBudSeed() {
-  const sql = await getSql();
-  for (const m of BUD_MEDIA) {
-    const existing = await sql`select id from bud_media where id = ${m.id} limit 1`;
-    if (existing[0]) continue;
-    await sql`insert into bud_media (id, owner_id, kind, title, course, duration_min, status, visibility)
-      values (${m.id}, ${"unibud-academic"}, ${m.kind}, ${m.title}, ${m.course ?? null}, ${m.durationMin}, ${"awaiting_file"}, ${"class"})`;
-  }
-}
 
 export const uploadMedia = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
@@ -148,9 +137,9 @@ export const reportMedia = createServerFn({ method: "POST" })
 export const listBudMedia = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async () => {
-    await ensureBudSeed();
     const sql = await getSql();
-    const rows = await sql`select * from bud_media order by created_at desc`;
+    // Only expose real attached media, never placeholder or seed rows that have no uploaded file.
+    const rows = await sql`select * from bud_media where status = ${"ready"} and media_id is not null order by created_at desc`;
     return rows.map((r) => ({
       id: String(r.id),
       kind: String(r.kind),
