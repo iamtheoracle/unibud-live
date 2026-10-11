@@ -171,8 +171,8 @@ export const sendRoomMessage = createServerFn({ method: "POST" })
     await sql`insert into room_messages (id, room_id, user_id, sender_name, body, media_id, share_kind, share_json)
       values (${id}, ${data.roomId}, ${context.userId}, ${senderName}, ${body || data.shareKind || "Attachment"}, ${data.mediaId ?? null}, ${data.shareKind ?? null}, ${data.shareJson ?? null})`;
     await sql`update campus_rooms set updated_at = now() where id = ${data.roomId}`;
-    const rows = await sql`select * from room_messages where room_id = ${data.roomId} order by created_at asc`;
-    return rows.map((r) => ({
+    const rows = await sql`select * from room_messages where room_id = ${data.roomId} order by created_at desc limit 200`;
+    return rows.reverse().map((r) => ({
       id: String(r.id),
       sender: String(r.sender_name),
       body: String(r.body),
