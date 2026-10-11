@@ -393,6 +393,7 @@ export const requestConnection = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { handle: string }) => input)
   .handler(async ({ context, data }) => {
+    if (typeof data.handle !== "string") throw new Error("Choose a valid user handle.");
     const handle = data.handle.trim().toLowerCase();
     if (!/^[a-z0-9_]{2,32}$/.test(handle)) throw new Error("Choose a valid user handle.");
     const sql = await getSql();
@@ -424,6 +425,7 @@ export const respondToConnectionRequest = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { handle: string; accept: boolean }) => input)
   .handler(async ({ context, data }) => {
+    if (typeof data.handle !== "string" || typeof data.accept !== "boolean") throw new Error("Invalid connection response.");
     const handle = data.handle.trim().toLowerCase();
     const sql = await getSql();
     const peers = await sql`select user_id from student_profiles where lower(handle) = ${handle} limit 1`;
@@ -441,6 +443,7 @@ export const cancelConnectionRequest = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { handle: string }) => input)
   .handler(async ({ context, data }) => {
+    if (typeof data.handle !== "string") throw new Error("Choose a valid user handle.");
     const handle = data.handle.trim().toLowerCase();
     const sql = await getSql();
     const peers = await sql`select user_id from student_profiles where lower(handle) = ${handle} limit 1`;
@@ -457,6 +460,7 @@ export const removeConnection = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { handle: string }) => input)
   .handler(async ({ context, data }) => {
+    if (typeof data.handle !== "string") throw new Error("Choose a valid user handle.");
     const handle = data.handle.trim().toLowerCase();
     const sql = await getSql();
     const peers = await sql`select user_id from student_profiles where lower(handle) = ${handle} limit 1`;
@@ -476,6 +480,7 @@ export const setFollow = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { handle: string; following: boolean }) => input)
   .handler(async ({ context, data }) => {
+    if (typeof data.handle !== "string" || typeof data.following !== "boolean") throw new Error("Invalid follow action.");
     const handle = data.handle.trim().toLowerCase();
     const sql = await getSql();
     const peers = await sql`select user_id from student_profiles where lower(handle) = ${handle} limit 1`;
