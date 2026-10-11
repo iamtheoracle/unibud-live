@@ -62,7 +62,6 @@ export function BudWorkspace() {
   const { user, isPending } = useAuthReady();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const role = useCampusStore((s) => s.role ?? "student");
   const [focusId, setFocusId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
