@@ -118,8 +118,13 @@ export const leaveQuad = createServerFn({ method: "POST" })
       `;
       if (!otherOwners[0]) throw new Error("Transfer Quad ownership before leaving.");
     }
-    await sql`delete from community_members where user_id = ${context.userId} and community_id = ${communityId}`;
-    const count = await sql`select count(*)::int as count from community_members where community_id = ${communityId}`;
-    await sql`update communities set members = ${Number(count[0]?.count ?? 0)} where id = ${communityId}`;
+    // Only decrement when this request actually removes a membership. A
+    // recount-then-set can overwrite concurrent joins or leaves with stale data.
+    const removed = await sql`delete from community_members
+      where user_id = ${context.userId} and community_id = ${communityId}
+      returning user_id`;
+    if (removed.length > 0) {
+      await sql`update communities set members = greatest(coalesce(members, 0) - 1, 0) where id = ${communityId}`;
+    }
     return { left: true as const };
   });
