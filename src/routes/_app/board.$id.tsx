@@ -293,7 +293,7 @@ function UniBoard() {
         </ul>
       </section>
 
-      {lecturer && session ? (
+      {lecturer ? (
         <section className="mt-8">
           <h2 className="font-display text-2xl">Lecturer view</h2>
           <p className="mt-1 text-xs text-muted-foreground">Attendance is from join/leave in this live session. Recordings never rewrite it.</p>
@@ -311,7 +311,7 @@ function UniBoard() {
               <li key={item.id}>{item.body}</li>
             ))}
           </ul>
-          {session.status !== "live" ? (
+          {session?.status !== "live" ? (
             <Button size="sm" className="mt-3" disabled={startLive.isPending} onClick={() => startLive.mutate()}>
               {startLive.isPending ? "Starting…" : "Start live class"}
             </Button>
