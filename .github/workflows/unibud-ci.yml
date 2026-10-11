@@ -55,5 +55,8 @@ jobs:
       - name: Media payload parser tests
         run: npm run test:media
 
+      - name: Academic session lifecycle tests
+        run: npm run test:academic
+
       - name: Production-bundle build check
         run: npm run build:netlify
