@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Avatar } from "@/components/unibud/person";
 import { RelationActions } from "@/components/unibud/relation-actions";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
-import { getPublicProfile } from "@/lib/social/server";
+import { getPublicProfile, listPublicProfilePosts } from "@/lib/social/server";
+import { relativeTime } from "@/lib/unibud/format";
 import { uniById } from "@/lib/unibud/catalog";
 
 export const Route = createFileRoute("/_app/u/$handle")({ component: PublicProfile });
@@ -15,6 +16,11 @@ function PublicProfile() {
     queryKey: ["public-profile", handle],
     queryFn: () => getPublicProfile({ data: handle }),
     enabled: Boolean(user),
+  });
+  const posts = useQuery({
+    queryKey: ["profile-posts", handle],
+    queryFn: () => listPublicProfilePosts({ data: handle }),
+    enabled: Boolean(user) && Boolean(profile.data),
   });
 
   if (isPending) return <div className="m-4 h-40 animate-pulse rounded-2xl bg-secondary" />;
@@ -77,11 +83,26 @@ function PublicProfile() {
           <RelationActions handle={person.handle} />
         </div>
       ) : null}
-      <section className="mt-8 rounded-2xl border border-border p-4">
-        <h2 className="text-sm font-semibold">Member activity</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Public posts and profile activity will appear here when their persisted feed and privacy rules are connected. This page does not substitute sample posts for a real member’s activity.
-        </p>
+      <section className="mt-8">
+        <h2 className="font-display text-2xl">Posts</h2>
+        {posts.isLoading ? (
+          <p className="mt-3 text-sm text-muted-foreground">Loading posts…</p>
+        ) : posts.isError ? (
+          <p className="mt-3 text-sm text-muted-foreground">Posts could not be loaded.</p>
+        ) : posts.data?.length ? (
+          <ul className="mt-3 space-y-3">
+            {posts.data.map((post) => (
+              <li key={post.id} className="rounded-2xl bg-card p-4 ring-1 ring-border">
+                <p className="text-sm leading-relaxed">{post.body}</p>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {post.communityName} · {relativeTime(post.createdAt)}{post.kind === "reel" ? " · Reel" : ""}
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 text-sm text-muted-foreground">No posts are available to you from this member yet.</p>
+        )}
       </section>
       <Link to="/connect" className="mt-5 inline-flex text-sm font-medium">Back to Connect</Link>
     </main>
