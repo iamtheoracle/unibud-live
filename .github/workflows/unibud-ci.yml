@@ -63,6 +63,8 @@ jobs:
           src/lib/media/server.ts
           src/lib/media/share.ts
           src/lib/media/share.test.ts
+          src/lib/music/audio-policy.ts
+          src/lib/music/audio-policy.test.ts
           src/lib/social/server.ts
           src/lib/academic/server.ts
           src/lib/academic/session-policy.ts
@@ -84,6 +86,9 @@ jobs:
 
       - name: Quad privacy boundary tests
         run: node --experimental-strip-types --test src/lib/unibud/quad-privacy.test.ts
+
+      - name: Audio availability policy tests
+        run: node --experimental-strip-types --test src/lib/music/audio-policy.test.ts
 
       - name: Academic session lifecycle tests
         run: npm run test:academic
