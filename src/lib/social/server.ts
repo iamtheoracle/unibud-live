@@ -164,12 +164,22 @@ export const listMessages = createServerFn({ method: "GET" })
     const limit = Math.max(1, Math.min(100, Math.floor(data.limit ?? 50)));
     const sql = await getSql();
     const rows = await sql.query(
-      `select id, conversation_id, sender_id, body, created_at, edited_at
+      `select id, conversation_id, sender_id, body, created_at, edited_at, media_id, share_kind, share_json
        from social_messages where conversation_id = $1 and deleted_at is null
        order by created_at desc limit $2`,
       [data.conversationId, limit],
     );
-    return rows.reverse().map((r) => ({ id: String(r.id), conversationId: String(r.conversation_id), senderId: String(r.sender_id), body: String(r.body), createdAt: String(r.created_at), editedAt: r.edited_at == null ? null : String(r.edited_at) }));
+    return rows.reverse().map((r) => ({
+      id: String(r.id),
+      conversationId: String(r.conversation_id),
+      senderId: String(r.sender_id),
+      body: String(r.body),
+      createdAt: String(r.created_at),
+      editedAt: r.edited_at == null ? null : String(r.edited_at),
+      mediaId: r.media_id == null ? null : String(r.media_id),
+      shareKind: r.share_kind == null ? null : String(r.share_kind),
+      shareJson: r.share_json == null ? null : String(r.share_json),
+    }));
   });
 
 export const markConversationRead = createServerFn({ method: "POST" })
