@@ -68,9 +68,21 @@ export const reportMedia = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { mediaId?: string; audioId?: string; reason: string }) => input)
   .handler(async ({ context, data }) => {
+    const reason = (data.reason ?? "").trim().slice(0, 1000);
+    if (Boolean(data.mediaId) === Boolean(data.audioId)) {
+      throw new Error("Choose exactly one media item to report.");
+    }
+    if (reason.length < 3) throw new Error("Please provide a short reason for this report.");
     const sql = await getSql();
+    if (data.mediaId) {
+      const target = await sql`select id from media_assets where id = ${data.mediaId} and status <> ${"deleted"} limit 1`;
+      if (!target[0]) throw new Error("Media item not found.");
+    } else if (data.audioId) {
+      const target = await sql`select id from audio_tracks where id = ${data.audioId} limit 1`;
+      if (!target[0]) throw new Error("Audio item not found.");
+    }
     await sql`insert into media_reports (id, media_id, audio_id, reporter_id, reason)
-      values (${crypto.randomUUID()}, ${data.mediaId ?? null}, ${data.audioId ?? null}, ${context.userId}, ${data.reason})`;
+      values (${crypto.randomUUID()}, ${data.mediaId ?? null}, ${data.audioId ?? null}, ${context.userId}, ${reason})`;
     return { ok: true };
   });
 
