@@ -179,11 +179,24 @@ export const sendMessage = createServerFn({ method: "POST" })
     // FOR KEY SHARE makes a concurrent membership deletion wait until this
     // insert finishes, closing the authorization-check/insert race.
     const rows = await sql`
-      with authorized_member as (
-        select user_id
-        from social_conversation_members
-        where conversation_id = ${data.conversationId} and user_id = ${context.userId}
-        for key share
+      with current_community_member as (
+        select cm.user_id, cm.community_id
+        from community_members cm
+        join social_conversations community_chat on community_chat.community_id = cm.community_id
+        where community_chat.id = ${data.conversationId} and cm.user_id = ${context.userId}
+        for key share of cm
+      ),
+      authorized_member as (
+        select scm.user_id
+        from social_conversation_members scm
+        join social_conversations c on c.id = scm.conversation_id
+        where scm.conversation_id = ${data.conversationId}
+          and scm.user_id = ${context.userId}
+          and (c.kind <> 'community' or exists (
+            select 1 from current_community_member cm
+            where cm.community_id = c.community_id and cm.user_id = scm.user_id
+          ))
+        for key share of scm, c
       )
       insert into social_messages (id, conversation_id, sender_id, body, media_id, share_kind, share_json)
       select ${id}, ${data.conversationId}, authorized_member.user_id,
