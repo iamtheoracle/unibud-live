@@ -65,9 +65,11 @@ function objectRequest(config: S3Config, id: string, method: "GET" | "PUT" | "DE
   return { url, init: { method, headers: { Authorization: authorization, "x-amz-content-sha256": payloadHash, "x-amz-date": amzDate, ...(method === "PUT" ? { "Content-Type": "application/octet-stream" } : {}) }, ...(method === "PUT" ? { body } : {}) } as RequestInit };
 }
 
-async function objectStorageRequest(id: string, method: "GET" | "PUT" | "DELETE", bytes?: Buffer) {
+async function objectStorageRequest(id: string, method: "GET" | "PUT" | "DELETE", bytes?: Buffer): Promise<Buffer | null | undefined> {
   const config = s3Config();
-  if (!config) return null;
+  // undefined means object storage is not configured; null means a configured
+  // object store explicitly reported that the requested object is missing.
+  if (!config) return undefined;
   const { url, init } = objectRequest(config, id, method, bytes);
   const response = await fetch(url, init);
   if (method === "GET" && response.status === 404) return null;
@@ -78,7 +80,7 @@ async function objectStorageRequest(id: string, method: "GET" | "PUT" | "DELETE"
 
 export async function writeMediaBytes(id: string, bytes: Buffer) {
   const stored = await objectStorageRequest(id, "PUT", bytes);
-  if (stored !== null) return `s3://${process.env.MEDIA_S3_BUCKET}/${id}`;
+  if (stored !== undefined) return `s3://${process.env.MEDIA_S3_BUCKET}/${id}`;
   await mkdir(ROOT, { recursive: true });
   const filePath = path.join(ROOT, id);
   await writeFile(filePath, bytes);
@@ -87,14 +89,17 @@ export async function writeMediaBytes(id: string, bytes: Buffer) {
 
 export async function readMediaBytes(id: string) {
   const stored = await objectStorageRequest(id, "GET");
-  if (stored !== null) return stored;
-  if (process.env.NODE_ENV === "production") throw new Error("Media object was not found in configured durable storage.");
+  if (stored !== undefined) {
+    if (stored === null) throw new Error("Media object was not found in configured durable storage.");
+    return stored;
+  }
+  if (process.env.NODE_ENV === "production") throw new Error("Durable media storage is not configured.");
   return readFile(path.join(ROOT, id));
 }
 
 export async function removeMediaBytes(id: string) {
   const stored = await objectStorageRequest(id, "DELETE");
-  if (stored !== null) return;
+  if (stored !== undefined) return;
   try {
     await unlink(path.join(ROOT, id));
   } catch {
