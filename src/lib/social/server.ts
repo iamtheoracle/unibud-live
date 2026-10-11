@@ -277,11 +277,38 @@ export const createPost = createServerFn({ method: "POST" })
       }
       throw new Error("Join this community before posting.");
     }
-    const profile = await sql`select handle from student_profiles where user_id = ${context.userId} limit 1`;
-    if (!profile[0]) throw new Error("Finish setting up your UNIBUD profile before posting.");
     const id = `post_${crypto.randomUUID()}`;
-    await sql`insert into posts (id, community_id, author_handle, body, image, video, kind) values (${id}, ${communityId}, ${profile[0].handle}, ${body}, ${data.image ?? null}, ${data.video ?? null}, ${data.kind === "reel" ? "reel" : "post"})`;
-    return { id, communityId, body, handle: String(profile[0].handle) };
+    // Re-authorize membership, privacy, and campus scope in the same statement
+    // that creates the post. Row locks make concurrent membership removal or
+    // privacy changes wait until this write completes.
+    const created = await sql`
+      with authorized_member as (
+        select cm.user_id, sp.handle
+        from community_members cm
+        join communities c on c.id = cm.community_id
+        join student_profiles sp on sp.user_id = cm.user_id
+        where cm.user_id = ${context.userId}
+          and cm.community_id = ${communityId}
+          and c.privacy in ('public', 'campus', 'private')
+          and (c.privacy <> 'campus' or (
+            sp.university_id is not null
+            and c.university_id is not null
+            and sp.university_id = c.university_id
+          ))
+        for key share of cm, c
+      )
+      insert into posts (id, community_id, author_handle, body, image, video, kind)
+      select ${id}, ${communityId}, authorized_member.handle, ${body},
+        ${data.image ?? null}, ${data.video ?? null},
+        ${data.kind === "reel" ? "reel" : "post"}
+      from authorized_member
+      returning id
+    `;
+    if (!created[0]) {
+      throw new Error("You must have an active profile and current permission to post in this Quad.");
+    }
+    const profile = await sql`select handle from student_profiles where user_id = ${context.userId} limit 1`;
+    return { id, communityId, body, handle: String(profile[0]?.handle ?? "") };
   });
 
 export const joinCommunity = createServerFn({ method: "POST" })
