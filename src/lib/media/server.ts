@@ -195,7 +195,7 @@ export const sendRoomMessage = createServerFn({ method: "POST" })
     }
     if (data.shareJson) {
       try {
-        const share = JSON.parse(data.shareJson) as { kind?: unknown };
+        const share = JSON.parse(data.shareJson) as Record<string, unknown>;
         if (!share || typeof share !== "object" || Array.isArray(share) ||
           (share.kind !== undefined && (typeof share.kind !== "string" || !allowedShareKinds.has(share.kind))) ||
           (share.src !== undefined && (typeof share.src !== "string" || !isSafeShareSource(share.src)))) {
