@@ -70,6 +70,7 @@ export const createCampusRoom = createServerFn({ method: "POST" })
     if (data.kind === "class") throw new Error("Class rooms must be created through a verified course flow.");
     if (data.isPrivate) throw new Error("Private rooms are unavailable until room invitations are supported.");
     const sql = await getSql();
+    if (data.kind === "community" && !data.communityId) throw new Error("Community rooms must be linked to an existing Quad.");
     if (data.communityId) {
       const membership = await sql`select user_id from community_members where community_id = ${data.communityId} and user_id = ${context.userId} limit 1`;
       if (!membership[0]) throw new Error("Join the linked Quad before creating its room.");
@@ -119,8 +120,8 @@ export const listPersistentRoomMessages = createServerFn({ method: "GET" })
     await requireRoomMember(context.userId, roomId);
     const sql = await getSql();
     const rows = await sql`select id, sender_name, body, media_id, share_kind, share_json, created_at
-      from room_messages where room_id = ${roomId} order by created_at asc limit 200`;
-    return rows.map((row) => ({
+      from room_messages where room_id = ${roomId} order by created_at desc limit 200`;
+    return rows.reverse().map((row) => ({
       id: String(row.id),
       sender: String(row.sender_name),
       body: String(row.body),
