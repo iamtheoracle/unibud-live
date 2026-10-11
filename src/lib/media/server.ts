@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
+import { assertConversationMember } from "@/lib/social/server";
 import { parseDataUrl, removeMediaBytes, writeMediaBytes } from "./store.server";
 import { kindFromMime, MAX_UPLOAD_BYTES, type MediaKind } from "./types";
 import { BUD_MEDIA } from "./bud-media";
@@ -26,6 +27,12 @@ export const uploadMedia = createServerFn({ method: "POST" })
     }
     const mime = data.mime || parsed.mime;
     const kind = data.kind ?? kindFromMime(mime);
+    if (data.conversationId) {
+      await assertConversationMember(context.userId, data.conversationId);
+    }
+    if (data.conversationId && data.roomId) {
+      throw new Error("A media upload can belong to a conversation or a room, not both.");
+    }
     const id = crypto.randomUUID();
     const sql = await getSql();
     await sql`insert into media_assets (id, owner_id, kind, mime_type, file_name, file_size, storage_path, status, visibility, conversation_id, room_id)
