@@ -78,15 +78,35 @@ export const listConversations = createServerFn({ method: "GET" })
         (select count(*)::int from social_conversation_members cm where cm.conversation_id = c.id) as member_count
       from social_conversations c
       join social_conversation_members mine on mine.conversation_id = c.id and mine.user_id = ${context.userId}
+      left join community_members current_community_member
+        on current_community_member.community_id = c.community_id
+        and current_community_member.user_id = ${context.userId}
       left join lateral (
         select cm.user_id from social_conversation_members cm
         where cm.conversation_id = c.id and cm.user_id <> ${context.userId}
         order by cm.joined_at asc limit 1
       ) other on true
       left join student_profiles peer on peer.user_id = other.user_id
+      where (c.kind <> 'community' or (c.community_id is not null and current_community_member.user_id is not null))
       order by coalesce((select max(m.created_at) from social_messages m where m.conversation_id = c.id), c.updated_at) desc
       limit 100`;
-    return rows.map((r) => ({ id: String(r.id), kind: String(r.kind) as ConversationKind, title: String(r.title), peerHandle: String(r.peer_handle ?? ""), updatedAt: String(r.updated_at), lastBody: r.last_message == null ? "" : String(r.last_message), lastMessage: r.last_message == null ? null : String(r.last_message), lastMessageAt: r.last_message_at == null ? null : String(r.last_message_at), memberCount: Number(r.member_count) }));
+    const visible = [];
+    for (const row of rows) {
+      if (String(row.kind) === "class") {
+        const code = String(row.course_code ?? "");
+        const course = courseByCode(code);
+        if (!course) continue;
+        const [profileRows, enrollmentRows] = await Promise.all([
+          sql`select campus_role, handle from student_profiles where user_id = ${context.userId} limit 1`,
+          sql`select id from enrollments where user_id = ${context.userId} and course_code = ${code} limit 1`,
+        ]);
+        const profile = profileRows[0];
+        const assigned = Boolean(profile && canTeach(String(profile.campus_role) as CampusRole) && String(profile.handle) === course.lecturerHandle);
+        if (!assigned && !enrollmentRows[0]) continue;
+      }
+      visible.push(row);
+    }
+    return visible.map((r) => ({ id: String(r.id), kind: String(r.kind) as ConversationKind, title: String(r.title), peerHandle: String(r.peer_handle ?? ""), updatedAt: String(r.updated_at), lastBody: r.last_message == null ? "" : String(r.last_message), lastMessage: r.last_message == null ? null : String(r.last_message), lastMessageAt: r.last_message_at == null ? null : String(r.last_message_at), memberCount: Number(r.member_count) }));
   });
 
 export const sendMessage = createServerFn({ method: "POST" })
