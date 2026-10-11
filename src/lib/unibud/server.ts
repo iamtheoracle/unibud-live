@@ -17,14 +17,15 @@ import type { ListingCategory, ListingKind, StudentProfile } from "./types";
 import { canTeach, type CampusRole } from "./roles";
 import { COMMUNITIES, DISCOVERY, LISTINGS, PEOPLE, POSTS, UNIVERSITIES } from "./catalog";
 
+/** Production fallback when DB is unavailable — never surface fixture people/posts/communities. */
 function emptyCatalog() {
   return {
     universities: UNIVERSITIES,
-    people: PEOPLE,
-    listings: LISTINGS,
-    communities: COMMUNITIES,
-    posts: POSTS,
-    discovery: DISCOVERY,
+    people: [] as typeof PEOPLE,
+    listings: [] as typeof LISTINGS,
+    communities: [] as typeof COMMUNITIES,
+    posts: [] as typeof POSTS,
+    discovery: [] as typeof DISCOVERY,
     replies: [] as ReturnType<typeof mapPostReply>[],
   };
 }
@@ -144,7 +145,15 @@ export const upsertMyProfile = createServerFn({ method: "POST" })
     const program = data.program ?? existingProfile?.program ?? "";
     const year = data.year ?? existingProfile?.year ?? "";
     const bio = data.bio ?? existingProfile?.bio ?? "";
-    const campusRole = data.campusRole ?? existingProfile?.campusRole ?? "student";
+    // Privilege roles cannot be self-assigned. Lecturer/moderator require platform grant.
+    const requested = data.campusRole;
+    const existingRole = existingProfile?.campusRole ?? "student";
+    let campusRole = existingRole;
+    if (requested === "student" || requested === "governor") {
+      campusRole = requested;
+    } else if (requested === "lecturer" || requested === "moderator") {
+      campusRole = existingRole === "lecturer" || existingRole === "moderator" ? existingRole : "student";
+    }
     const onboardingDone = data.onboardingDone ?? existingProfile?.onboardingDone ?? false;
     if (existing[0]) {
       await sql`update student_profiles set display_name = ${displayName}, handle = ${handle},
@@ -316,4 +325,3 @@ export const toggleCommentLike = createServerFn({ method: "POST" })
     await sql`insert into comment_likes (user_id, reply_id) values (${context.userId}, ${replyId})`;
     return { liked: true };
   });
-

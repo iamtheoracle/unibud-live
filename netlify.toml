@@ -1,23 +1,18 @@
-# Netlify build configuration for UNIBUD (TanStack Start + Nitro).
-# Nitro emits the static client into dist/ and the SSR handler into
-# .netlify/functions-internal/. Netlify serves the handler automatically.
+# UNIBUD — Netlify (TanStack Start + Nitro SSR)
+# Server secrets (set in Netlify UI, never commit): OPENAI_API_KEY, XAI_API_KEY, DATABASE_URL
 
 [build]
-  command = "npm run build"
+  # Include devDependencies (nitro, vite plugins) — required for TanStack Start build.
+  command = "npm install --legacy-peer-deps --include=dev && npm run build:netlify"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
+  VITE_AUTH_ENABLED = "false"
+  NPM_CONFIG_LEGACY_PEER_DEPS = "true"
+  NPM_CONFIG_PRODUCTION = "false"
+  NODE_OPTIONS = "--max-old-space-size=4096"
 
-# Keep production explicit so the main branch is the deployable app.
-[context.production]
-  command = "npm run build"
-  publish = "dist"
-  environment = { NODE_VERSION = "22", NODE_ENV = "production" }
-
-# PR previews use the same production build/runtime shape. Secrets are still
-# supplied by Netlify and are never committed to this repository.
-[context.deploy-preview]
-  command = "npm run build"
-  publish = "dist"
-  environment = { NODE_VERSION = "22", NODE_ENV = "production" }
+# Runtime only — do not force NODE_ENV=production during npm install (omits devDeps).
+[context.production.environment]
+  VITE_AUTH_ENABLED = "false"

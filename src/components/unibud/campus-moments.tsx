@@ -13,6 +13,7 @@ type Cluster = {
   photos: [string, string];
 };
 
+/** DEMO_ONLY — local UI fixtures. Not real users, not live sessions, not shared activity. */
 const CLUSTERS: Cluster[] = [
   {
     id: "c-amaka",
@@ -83,7 +84,7 @@ export function CampusMoments({
 
   return (
     <>
-      <div className="flex gap-3 overflow-x-auto px-4 py-2">
+      <div className="flex gap-3 overflow-x-auto px-4 py-2" data-demo="stories">
         <button
           type="button"
           onClick={() => (mine.length ? setMineOpen(true) : onCreate())}
@@ -138,21 +139,17 @@ export function CampusMoments({
         <div className="fixed inset-0 z-50 flex flex-col bg-ink text-paper">
           <div className="flex gap-1 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
             {current.lines.map((_, i) => (
-              <span
-                key={i}
-                className={cn("h-0.5 flex-1 rounded-full", i <= seg ? "bg-paper" : "bg-paper/25")}
-              />
+              <span key={i} className={cn("h-0.5 flex-1 rounded-full", i <= seg ? "bg-paper" : "bg-paper/25")} />
             ))}
           </div>
-          <div className="flex items-center justify-between px-2">
-            <p className="px-3 text-sm font-medium">
+          <div className="flex items-center justify-between px-2 pt-2">
+            <p className="px-2 text-sm font-semibold">
               {personByHandle(current.handles[0])?.name ?? current.handles[0]}
-              <span className="ml-1 text-paper/50">@{current.handles[0]}</span>
             </p>
             <button
               type="button"
               className="grid size-11 place-items-center"
-              aria-label="Close moment"
+              aria-label="Close"
               onClick={() => closeCluster(current.id)}
             >
               <X className="size-5" />

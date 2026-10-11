@@ -197,99 +197,35 @@ type CampusState = {
   patchBudAtlas: (v: Partial<BudAtlas>) => void;
 };
 
-const SEED_NOTES: HumanNote[] = [
-  {
-    id: "n1",
-    kind: "social",
-    title: "Your post just got some love from Tunde.",
-    body: "He reacted to the hostel note you shared with campus.",
-    href: "/",
-    read: false,
-    createdAt: new Date(Date.now() - 8 * 60_000).toISOString(),
-  },
-  {
-    id: "n2",
-    kind: "social",
-    title: "Adaeze Okonkwo accepted your connection request.",
-    body: "You can message her without waiting on a request.",
-    href: "/connect",
-    read: false,
-    createdAt: new Date(Date.now() - 24 * 60_000).toISOString(),
-  },
-  {
-    id: "n3",
-    kind: "communities",
-    title: "UNN Engineering has new replies in a discussion you follow.",
-    body: "Twelve people jumped in since you last looked.",
-    href: "/communities/unn-eng",
-    read: false,
-    createdAt: new Date(Date.now() - 60 * 60_000).toISOString(),
-  },
-  {
-    id: "n4",
-    kind: "events",
-    title: "Reminder: Faculty night is tonight.",
-    body: "Doors from 19:30. Tickets are in Marketplace — Events.",
-    href: "/market",
-    read: true,
-    createdAt: new Date(Date.now() - 4 * 60 * 60_000).toISOString(),
-  },
-  {
-    id: "n5",
-    kind: "class",
-    title: "CSC 301 is live on UniBoard.",
-    body: "Dr. Okoro started Recursion. Joining now can count as live attendance.",
-    href: "/board/csc301",
-    read: false,
-    createdAt: new Date(Date.now() - 5 * 60_000).toISOString(),
-  },
-  {
-    id: "n6",
-    kind: "live",
-    title: "Late join is still live.",
-    body: "You can rejoin CSC 301 while the session is open. Recording later will not flip absence.",
-    href: "/board/csc301",
-    read: false,
-    createdAt: new Date(Date.now() - 3 * 60_000).toISOString(),
-  },
-  {
-    id: "n7",
-    kind: "news",
-    title: "Exam timetable is out.",
-    body: "Dates sit on UniBoard and Educational News — not Square.",
-    href: "/news",
-    read: false,
-    createdAt: new Date(Date.now() - 90 * 60_000).toISOString(),
-  },
-];
+const SEED_NOTES: HumanNote[] = [];
 
 export const useCampusStore = create<CampusState>()(
   persist(
     (set) => ({
       liked: {},
-      likeCounts: { p1: 28, p2: 14, p3: 41, p5: 63, p8: 9, sp1: 22, sp3: 31, sp6: 18 },
-      following: ["amaka", "adaeze"],
-      followers: ["tunde", "kemi"],
-      connections: ["amaka", "tunde"],
-      incoming: ["chinedu", "kemi", "fatima"],
-      outgoing: ["ibrahim"],
-      recentSearches: ["architecture society", "faculty night", "Adaeze Okonkwo"],
+      likeCounts: {},
+      following: [],
+      followers: [],
+      connections: [],
+      incoming: [],
+      outgoing: [],
+      recentSearches: [],
       localPosts: [],
       myStories: [],
       notes: SEED_NOTES,
       storiesSeen: [],
       showBud: true,
-      budShortcut: "bottom",
+      budShortcut: "top",
       role: "student",
       tutorMode: false,
       liveAttendance: {},
       livePresence: {},
       recordingWatched: {},
-      faculty: "Engineering",
-      department: "Computer Engineering",
-      programme: "Computer Engineering",
-      level: "200",
-      semester: "1",
+      faculty: "",
+      department: "",
+      programme: "",
+      level: "",
+      semester: "",
       profileVisibility: "public",
       academicVisibility: "connections",
       identityTags: [],
@@ -303,10 +239,10 @@ export const useCampusStore = create<CampusState>()(
       avatarDataUrl: "",
       legalName: "",
       postReplies: {},
-      spills: SEED_SPILLS,
+      spills: [],
       flaggedSpills: [],
       followedRiffs: [],
-      homeCampusId: "unilag",
+      homeCampusId: "",
       lifeStage: "student",
       hiddenPosts: [],
       savedPosts: [],
@@ -314,7 +250,7 @@ export const useCampusStore = create<CampusState>()(
       commentLikes: {},
       composeOpen: false,
       dropOpen: false,
-      originalAudios: SEED_ORIGINAL_AUDIO,
+      originalAudios: [],
       savedAudioIds: [],
       audioReports: [],
       squareView: "feed",
@@ -324,7 +260,7 @@ export const useCampusStore = create<CampusState>()(
       toggleLike: (id) =>
         set((s) => {
           const on = !s.liked[id];
-          const base = s.likeCounts[id] ?? 12;
+          const base = s.likeCounts[id] ?? 0;
           return {
             liked: { ...s.liked, [id]: on },
             likeCounts: { ...s.likeCounts, [id]: Math.max(0, base + (on ? 1 : -1)) },
@@ -368,7 +304,7 @@ export const useCampusStore = create<CampusState>()(
               authorHandle: handle,
               body,
               createdAt: new Date().toISOString(),
-              communityId: s.homeCampusId === "unn" ? "unn-eng" : "unilag-campus",
+              communityId: s.homeCampusId || undefined,
               image: media?.image,
               video: media?.video,
               kind: media?.video ? "reel" : "post",
@@ -386,7 +322,7 @@ export const useCampusStore = create<CampusState>()(
         set((s) => ({
           storiesSeen: s.storiesSeen.includes(handle) ? s.storiesSeen : [...s.storiesSeen, handle],
         })),
-      setShowBud: (v) => set({ showBud: v, budShortcut: v ? "bottom" : "hidden" }),
+      setShowBud: (v) => set({ showBud: v, budShortcut: v ? "top" : "hidden" }),
       setBudShortcut: (v) => set({ budShortcut: v, showBud: v !== "hidden" }),
       setRole: (v) => set({ role: v, tutorMode: v === "lecturer" }),
       setTutorMode: (v) =>
@@ -537,13 +473,16 @@ export const useCampusStore = create<CampusState>()(
           },
         })),
     }),
-    { name: "unibud-campus", merge: (persisted, current) => ({
-      ...current,
-      ...(persisted as object),
-      composeOpen: false,
-      dropOpen: false,
-      squareView: "feed" as const,
-    }) },
+    {
+      name: "unibud-campus",
+      merge: (persisted, current) => ({
+        ...current,
+        ...(persisted as object),
+        composeOpen: false,
+        dropOpen: false,
+        squareView: "feed" as const,
+      }),
+    },
   ),
 );
 
@@ -555,7 +494,7 @@ export function resolveBudShortcut(s: { budShortcut?: BudShortcut; showBud?: boo
   if (s.budShortcut === "top" || s.budShortcut === "bottom" || s.budShortcut === "hidden") {
     return s.budShortcut;
   }
-  return s.showBud === false ? "hidden" : "bottom";
+  return s.showBud === false ? "hidden" : "top";
 }
 
 export function connectLabel(handle: string, s: Pick<CampusState, "connections" | "outgoing">) {

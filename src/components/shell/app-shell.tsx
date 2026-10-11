@@ -3,6 +3,8 @@ import { Bell, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Wordmark } from "@/components/brand/logo";
 import { AskBudFab } from "@/components/unibud/ask-bud";
+import { SparkGate } from "@/components/shell/spark-gate";
+import { BudWave } from "@/components/shell/bud-wave";
 import { DropSheet } from "@/components/unibud/drop-sheet";
 import { StudioRoot } from "@/components/studio/studio-root";
 import { cn } from "@/lib/utils";
@@ -84,9 +86,9 @@ export function AppShell() {
               </Link>
             </div>
           </div>
-          {hideTabs || squareView === "peek" ? null : (
-            <PrimaryNav className="mx-auto mt-2 max-w-3xl" />
-          )}
+          <div className="mx-auto max-w-3xl border-t border-border/30">
+            <BudWave />
+          </div>
         </header>
       )}
 
@@ -96,14 +98,34 @@ export function AppShell() {
           hideTabs || squareView === "peek"
             ? ""
             : showPrimary
-              ? "pt-[calc(7.25rem+env(safe-area-inset-top))]"
-              : "pt-[calc(3rem+env(safe-area-inset-top))]",
+              ? "pt-[calc(3rem+3.25rem+env(safe-area-inset-top))] pb-[calc(4.5rem+env(safe-area-inset-bottom))]"
+              : "pt-[calc(3rem+3.25rem+env(safe-area-inset-top))]",
         )}
       >
         <Outlet />
       </div>
 
-      <AskBudFab menuOpen={drawer.open || hidden || composeOpen || dropOpen} />
+      {showPrimary ? (
+        <div
+          className={cn(
+            "fixed inset-x-0 bottom-0 z-30 border-t border-border/60 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm transition-transform duration-200",
+            hidden ? "translate-y-full" : "translate-y-0",
+          )}
+        >
+          <div className="mx-auto max-w-3xl px-2 pt-1">
+            <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <PrimaryNav />
+              </div>
+              <SparkGate className="shrink-0 pr-1" />
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {!showPrimary ? (
+        <AskBudFab menuOpen={drawer.open || hidden || composeOpen || dropOpen} />
+      ) : null}
       {dropOpen ? <DropSheet onClose={() => setDropOpen(false)} /> : null}
       <StudioRoot />
 

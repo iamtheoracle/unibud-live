@@ -40,20 +40,42 @@ export const sendBudMessage = createServerFn({ method: "POST" })
       .reverse()
       .map((r) => ({ role: r.role as "user" | "assistant", content: r.content }));
 
-    const apiKey = process.env.XAI_API_KEY;
+    const xaiKey = process.env.XAI_API_KEY?.trim();
+    const openaiKey = process.env.OPENAI_API_KEY?.trim();
     let reply: string;
-    if (!apiKey) {
+    if (!xaiKey && !openaiKey) {
       reply =
-        "Bud is offline in this environment. Browse Market for listings, Money for the demo ledger, or Studies for your semester — then ask again later.";
-    } else {
+        "Bud is offline in this environment. Browse Square, Connect, or Chat — then ask again when the model is connected.";
+    } else if (xaiKey) {
       const res = await fetch("https://api.x.ai/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${xaiKey}`,
         },
         body: JSON.stringify({
           model: "grok-4.5",
+          max_tokens: 500,
+          messages: [{ role: "system", content: SYSTEM }, ...messages],
+        }),
+      });
+      if (!res.ok) {
+        reply = "Bud hit a snag talking to the model. Try again in a moment.";
+      } else {
+        const body = (await res.json()) as {
+          choices?: { message?: { content?: string } }[];
+        };
+        reply = body.choices?.[0]?.message?.content?.trim() || "I went quiet. Ask me again.";
+      }
+    } else {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${openaiKey}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
           max_tokens: 500,
           messages: [{ role: "system", content: SYSTEM }, ...messages],
         }),
