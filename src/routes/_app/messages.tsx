@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/unibud/empty";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
 import { relativeTime } from "@/lib/unibud/format";
 import { createConversation, listChatPeople, listConversations, openConversation } from "@/lib/social/server";
-import { createCampusRoom, joinCampusRoom, listCampusRooms } from "@/lib/unibud/rooms.server";
+import { createCampusRoom, joinCampusRoom, listCampusRooms } from "@/lib/unibud/rooms";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/messages")({ component: ChatList });
