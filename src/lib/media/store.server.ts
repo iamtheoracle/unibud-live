@@ -1,5 +1,5 @@
 import { mkdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
-import { MAX_UPLOAD_BYTES } from "./types";
+import { MAX_UPLOAD_BYTES } from "./types.ts";
 import path from "node:path";
 import { createHash, createHmac } from "node:crypto";
 
