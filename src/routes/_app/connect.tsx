@@ -244,7 +244,7 @@ function Connect() {
           })}
         </ul>
       )}
-      {!relations.isLoading && !(tab === "discover" && directory.isLoading) && shown.length === 0 ? (
+      {!relations.isLoading && !relations.isError && !(tab === "discover" && (directory.isLoading || directory.isError)) && shown.length === 0 ? (
         <p className="py-12 text-center text-sm text-muted-foreground">
           {tab === "discover" ? "No registered profiles match that search yet." : "Nothing here yet."}
         </p>
