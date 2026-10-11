@@ -42,6 +42,11 @@ function titleFrom(prompt: string) {
 
 const inflight = new Map<string, number>();
 
+// Bound user-controlled payloads before they are persisted or sent to a provider.
+const MAX_BUD_PROMPT_CHARS = 20_000;
+const MAX_ATTACHMENT_EXCERPT_CHARS = 12_000;
+const MAX_MEDIA_SRC_CHARS = 2_048;
+
 async function backfillLegacy(sql: Awaited<ReturnType<typeof getSql>>, userId: string) {
   const orphans = await sql<{ id: string }>`select id from bud_messages where user_id = ${userId} and conversation_id is null limit 1`;
   if (!orphans.length) return;
@@ -108,6 +113,25 @@ export const askBud = createServerFn({ method: "POST" }).middleware([authMiddlew
 }) => input).handler(async ({ context, data }) => {
   const prompt = data.prompt.trim() || (data.media?.kind === "voice" ? "Voice note" : data.media ? `Sent ${data.media.kind}` : "");
   if (!prompt && !data.media) return { ok: false as const, error: "Say something first." };
+  if (prompt.length > MAX_BUD_PROMPT_CHARS) {
+    return { ok: false as const, error: "That message is too long. Keep it under 20,000 characters." };
+  }
+  if (data.attachment) {
+    if (data.attachment.name.length > 255 || data.attachment.kind.length > 80) {
+      return { ok: false as const, error: "Attachment details are too long." };
+    }
+    if ((data.attachment.excerpt?.length ?? 0) > MAX_ATTACHMENT_EXCERPT_CHARS) {
+      return { ok: false as const, error: "That attachment excerpt is too long. Attach the file and ask Bud to summarize a section." };
+    }
+  }
+  if (data.media) {
+    if ((data.media.name?.length ?? 0) > 255 || (data.media.mediaId?.length ?? 0) > 200) {
+      return { ok: false as const, error: "Media details are invalid or too long." };
+    }
+    if ((data.media.src?.length ?? 0) > MAX_MEDIA_SRC_CHARS) {
+      return { ok: false as const, error: "This media needs to finish uploading before you send it to Bud." };
+    }
+  }
   const sql = await getSql();
   let conversationId = data.conversationId;
   if (conversationId) {
