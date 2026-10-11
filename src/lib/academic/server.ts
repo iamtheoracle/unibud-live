@@ -296,8 +296,11 @@ export const listAttendance = createServerFn({ method: "GET" })
     for (const r of rows) {
       const uid = String(r.user_id);
       const cur = byUser.get(uid) ?? {};
-      if (String(r.kind) === "join" && !cur.joined) cur.joined = String(r.created_at);
-      if (String(r.kind) === "leave") cur.left = String(r.created_at);
+      if (String(r.kind) === "join") {
+        if (!cur.joined) cur.joined = String(r.created_at);
+        delete cur.left;
+      }
+      if (String(r.kind) === "leave" && cur.joined) cur.left = String(r.created_at);
       byUser.set(uid, cur);
     }
     return [...byUser.entries()].map(([userId, v]) => ({ userId, ...v }));
