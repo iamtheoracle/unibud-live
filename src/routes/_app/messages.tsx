@@ -23,7 +23,6 @@ function ChatList() {
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [roomTitle, setRoomTitle] = useState("");
   const [roomKind, setRoomKind] = useState<"group" | "study">("study");
-  const [roomPrivate, setRoomPrivate] = useState(false);
   const convos = useQuery({
     queryKey: ["convos"],
     queryFn: () => listConversations(),
@@ -104,11 +103,10 @@ function ChatList() {
             <option value="study">Study room</option><option value="group">Group room</option>
           </select>
         </div>
-        <label className="mt-3 flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={roomPrivate} onChange={(event) => setRoomPrivate(event.target.checked)} /> Private room (invite access not yet available)</label>
         <button type="button" disabled={roomTitle.trim().length < 2} onClick={async () => {
           try {
-            const created = await createCampusRoom({ data: { title: roomTitle, kind: roomKind, isPrivate: roomPrivate } });
-            setRoomTitle(""); setRoomPrivate(false);
+            const created = await createCampusRoom({ data: { title: roomTitle, kind: roomKind } });
+            setRoomTitle("");
             await qc.invalidateQueries({ queryKey: ["persistent-campus-rooms"] });
             nav({ to: "/messages/$id", params: { id: created.id } });
           } catch (error) { toast.error(error instanceof Error ? error.message : "Could not create room."); }
