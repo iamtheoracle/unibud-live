@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseDataUrl } from "./store.server.ts";
+import { parseDataUrl, readMediaBytes } from "./store.server.ts";
 
 test("parses valid Base64 media data URLs", () => {
   const parsed = parseDataUrl("data:text/plain;base64,aGVsbG8=");
@@ -27,4 +27,38 @@ test("rejects malformed Base64 before decoding", () => {
 test("accepts empty Base64 payloads as valid encoding", () => {
   const parsed = parseDataUrl("data:application/octet-stream;base64,");
   assert.equal(parsed.bytes.length, 0);
+});
+
+
+test("does not fall back to local files when configured object storage reports a missing object", async () => {
+  const keys = [
+    "MEDIA_S3_ENDPOINT",
+    "MEDIA_S3_BUCKET",
+    "MEDIA_S3_REGION",
+    "MEDIA_S3_ACCESS_KEY_ID",
+    "MEDIA_S3_SECRET_ACCESS_KEY",
+  ] as const;
+  const previousEnv = new Map(keys.map((key) => [key, process.env[key]]));
+  const previousFetch = globalThis.fetch;
+
+  process.env.MEDIA_S3_ENDPOINT = "https://storage.example.test";
+  process.env.MEDIA_S3_BUCKET = "unibud-media";
+  process.env.MEDIA_S3_REGION = "auto";
+  process.env.MEDIA_S3_ACCESS_KEY_ID = "test-access-key";
+  process.env.MEDIA_S3_SECRET_ACCESS_KEY = "test-secret-key";
+  globalThis.fetch = async () => new Response(null, { status: 404 });
+
+  try {
+    await assert.rejects(
+      readMediaBytes("definitely-missing-object-storage-test"),
+      /not found in configured durable storage/,
+    );
+  } finally {
+    globalThis.fetch = previousFetch;
+    for (const key of keys) {
+      const value = previousEnv.get(key);
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
 });
