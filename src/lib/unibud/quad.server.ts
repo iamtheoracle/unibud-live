@@ -42,9 +42,12 @@ export const createQuad = createServerFn({ method: "POST" })
       }
     }
 
-    const profile = await sql<{ university_id: string }>`select university_id from student_profiles where user_id = ${context.userId} limit 1`;
+    const profile = await sql<{ university_id: string | null }>`select university_id from student_profiles where user_id = ${context.userId} limit 1`;
     if (!profile[0]) throw new Error("Complete your campus profile before creating a Quad.");
-    const universityId = String(profile[0].university_id);
+    if (privacy === "campus" && !profile[0].university_id) {
+      throw new Error("Add your university to your campus profile before creating a campus-only Quad.");
+    }
+    const universityId = profile[0].university_id == null ? null : String(profile[0].university_id);
     const id = `q_${crypto.randomUUID().slice(0, 10)}`;
     // Fail closed: never fall back to a schema that silently drops privacy or
     // ownership fields. A failed write must not create a public room by accident.
