@@ -6,6 +6,7 @@ import { parseDataUrl, removeMediaBytes, writeMediaBytes } from "./store.server"
 import { kindFromMime, MAX_UPLOAD_BYTES, type MediaKind } from "./types";
 import { BUD_MEDIA } from "./bud-media";
 import { REVENUE_POLICY } from "@/lib/music/monetization";
+import { campusRoomById } from "@/lib/unibud/chat-rooms";
 
 async function ensureBudSeed() {
   const sql = await getSql();
@@ -32,6 +33,10 @@ export const uploadMedia = createServerFn({ method: "POST" })
     }
     if (data.conversationId && data.roomId) {
       throw new Error("A media upload can belong to a conversation or a room, not both.");
+    }
+    if (data.roomId) {
+      const room = campusRoomById(data.roomId);
+      if (!room || !room.members.includes(context.userId)) throw new Error("Room not found or access denied.");
     }
     const id = crypto.randomUUID();
     const sql = await getSql();
@@ -102,7 +107,9 @@ export const attachBudFile = createServerFn({ method: "POST" })
 export const listRoomMessages = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .validator((roomId: string) => roomId)
-  .handler(async ({ data: roomId }) => {
+  .handler(async ({ context, data: roomId }) => {
+    const room = campusRoomById(roomId);
+    if (!room || !room.members.includes(context.userId)) throw new Error("Room not found or access denied.");
     const sql = await getSql();
     const rows = await sql`select * from room_messages where room_id = ${roomId} order by created_at asc`;
     return rows.map((r) => ({
@@ -120,6 +127,13 @@ export const sendRoomMessage = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { roomId: string; body: string; senderName: string; mediaId?: string; shareKind?: string; shareJson?: string }) => input)
   .handler(async ({ context, data }) => {
+    const room = campusRoomById(data.roomId);
+    if (!room || !room.members.includes(context.userId)) throw new Error("Room not found or access denied.");
+    if (data.mediaId) {
+      const mediaSql = await getSql();
+      const media = await mediaSql`select id from media_assets where id = ${data.mediaId} and owner_id = ${context.userId} and room_id = ${data.roomId} and status = ${"ready"} limit 1`;
+      if (!media[0]) throw new Error("Room attachment not found or access denied.");
+    }
     const sql = await getSql();
     const id = crypto.randomUUID();
     await sql`insert into room_messages (id, room_id, user_id, sender_name, body, media_id, share_kind, share_json)
