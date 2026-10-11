@@ -23,7 +23,8 @@ test('serverless runtime rejects PGlite even when explicitly requested', async (
   process.env.NETLIFY = 'true';
   process.env.USE_PGLITE = 'true';
   try {
-    const db = await import('./db.ts?serverless-test');
+    const modulePath = './db.ts?serverless-test';
+    const db = await import(modulePath);
     await assert.rejects(db.getSql(), /PGlite cannot run on Netlify\/Lambda/i);
   } finally {
     for (const key of keys) {
