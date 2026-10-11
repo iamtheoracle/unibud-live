@@ -18,14 +18,13 @@ test("rejects unknown, malformed, and null privacy values instead of making a Qu
   }
 });
 
-test("rejects unknown or missing stored privacy instead of treating it as public", async () => {
+test("rejects unknown or missing stored privacy instead of treating it as public", () => {
   for (const value of [undefined, null, "unknown", "", "Campus", 0, {}, true]) {
     assert.throws(() => resolveStoredQuadPrivacy(value), /invalid privacy setting/);
   }
 });
 
-test("accepts only valid stored privacy values", async () => {
-  const { resolveStoredQuadPrivacy } = await import("./quad-privacy.ts");
+test("accepts only valid stored privacy values", () => {
   assert.equal(resolveStoredQuadPrivacy("public"), "public");
   assert.equal(resolveStoredQuadPrivacy("campus"), "campus");
   assert.equal(resolveStoredQuadPrivacy("private"), "private");
