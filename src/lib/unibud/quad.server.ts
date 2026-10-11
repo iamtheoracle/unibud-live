@@ -118,13 +118,18 @@ export const leaveQuad = createServerFn({ method: "POST" })
       `;
       if (!otherOwners[0]) throw new Error("Transfer Quad ownership before leaving.");
     }
-    // Only decrement when this request actually removes a membership. A
-    // recount-then-set can overwrite concurrent joins or leaves with stale data.
-    const removed = await sql`delete from community_members
-      where user_id = ${context.userId} and community_id = ${communityId}
-      returning user_id`;
-    if (removed.length > 0) {
-      await sql`update communities set members = greatest(coalesce(members, 0) - 1, 0) where id = ${communityId}`;
-    }
+    // Delete membership and decrement the denormalized count atomically.
+    // The CTE produces a row only when a membership was actually removed.
+    await sql`
+      with removed as (
+        delete from community_members
+        where user_id = ${context.userId} and community_id = ${communityId}
+        returning community_id
+      )
+      update communities c
+      set members = greatest(coalesce(c.members, 0) - 1, 0)
+      from removed
+      where c.id = removed.community_id
+    `;
     return { left: true as const };
   });
