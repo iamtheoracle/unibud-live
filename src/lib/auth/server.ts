@@ -40,6 +40,7 @@ import { emailAndPasswordEnabled } from "./email-password";
 import { GATE_PROVIDER_ID, gateIdentitySessions } from "./gate-session.server";
 import { GROK_PROVIDERS } from "./providers";
 import { pgliteDialect } from "./pglite-dialect";
+import { hasProductionAuthConfiguration } from "./auth-policy";
 import { databaseConfigured, resolveDatabaseUrl } from "../database-url";
 import {
   GROK_ISSUER_DEFAULT,
@@ -90,8 +91,14 @@ export const authConfigured =
   !authDisabled &&
   databaseConfigured() &&
   Boolean(grokClientId && grokClientSecret) &&
-  (!isProduction ||
-    Boolean(explicitGrokIssuer && explicitGrokClientId && explicitGrokClientSecret && explicitBaseURL && env("BETTER_AUTH_SECRET")));
+  hasProductionAuthConfiguration({
+    isProduction,
+    issuer: explicitGrokIssuer,
+    clientId: explicitGrokClientId,
+    clientSecret: explicitGrokClientSecret,
+    baseURL: explicitBaseURL,
+    secret: env("BETTER_AUTH_SECRET"),
+  });
 
 // This app's own Better Auth origin. When deployed the deployer injects the
 // public URL. In the sandbox live preview there's no fixed URL (each preview gets
