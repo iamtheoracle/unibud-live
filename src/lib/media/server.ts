@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
+import { isSafeShareSource } from "@/lib/media/share";
 import { assertConversationMember } from "@/lib/social/server";
 import { parseDataUrl, removeMediaBytes, writeMediaBytes } from "./store.server";
 import { kindFromMime, MAX_UPLOAD_BYTES, type MediaKind } from "./types";
@@ -196,7 +197,8 @@ export const sendRoomMessage = createServerFn({ method: "POST" })
       try {
         const share = JSON.parse(data.shareJson) as { kind?: unknown };
         if (!share || typeof share !== "object" || Array.isArray(share) ||
-          (share.kind !== undefined && (typeof share.kind !== "string" || !allowedShareKinds.has(share.kind)))) {
+          (share.kind !== undefined && (typeof share.kind !== "string" || !allowedShareKinds.has(share.kind))) ||
+          (share.src !== undefined && (typeof share.src !== "string" || !isSafeShareSource(share.src)))) {
           throw new Error("Invalid attachment details.");
         }
       } catch {
