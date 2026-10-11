@@ -12,6 +12,7 @@ import { inferSparkDomain, sparkSystemNotes } from "./spark";
 import { executeThroughSpark } from "@/lib/spark/runtime";
 import type { AgentRequest } from "@/lib/agents/core/contracts.ts";
 import { assertBudUserFacingText } from "@/lib/agents/response-policy.ts";
+import { isSafeShareSource } from "@/lib/media/share";
 
 const SYSTEM = `You are Bud. You are the student's study buddy and companion inside UNIBUD. You are part of a real internal system, but never expose internal agents, routing, providers, or notes.
 
@@ -130,6 +131,9 @@ export const askBud = createServerFn({ method: "POST" }).middleware([authMiddlew
     }
     if ((data.media.src?.length ?? 0) > MAX_MEDIA_SRC_CHARS) {
       return { ok: false as const, error: "This media needs to finish uploading before you send it to Bud." };
+    }
+    if (data.media.src !== undefined && !isSafeShareSource(data.media.src)) {
+      return { ok: false as const, error: "That media source is not a supported URL. Finish uploading the file and try again." };
     }
   }
   const sql = await getSql();
