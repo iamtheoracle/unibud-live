@@ -32,7 +32,7 @@ import { useBudVoice } from "@/components/bud/use-bud-voice";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { listBudMedia, uploadMedia } from "@/lib/media/server";
 import { fileToDataUrl } from "@/lib/media/client";
-import { mediaUrl } from "@/lib/media/types";
+import { mediaUrl, MAX_UPLOAD_BYTES } from "@/lib/media/types";
 import { recordAudioEvent } from "@/lib/music/events";
 import { listEnrollments } from "@/lib/academic/server";
 import { courseByCode } from "@/lib/unibud/academic";
@@ -227,6 +227,18 @@ export function BudWorkspace() {
 
   async function onFile(file: File | undefined) {
     if (!file) return null;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      toast.error("That file is over the 8 MiB upload limit.");
+      const failed = { name: file.name, kind: file.type || "file", media: { kind: "file" as const, name: file.name, status: "failed" as const } };
+      setAttachment(failed);
+      return failed;
+    }
+    if (file.size === 0) {
+      toast.error("That file is empty.");
+      const failed = { name: file.name, kind: file.type || "file", media: { kind: "file" as const, name: file.name, status: "failed" as const } };
+      setAttachment(failed);
+      return failed;
+    }
     let excerpt: string | undefined;
     if (file.type.startsWith("text/") && file.size < 80_000) {
       excerpt = (await file.text()).slice(0, 2000);
