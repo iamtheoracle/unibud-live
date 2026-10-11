@@ -150,7 +150,12 @@ export async function readMediaBytes(id: string) {
     return stored;
   }
   if (process.env.NODE_ENV === "production") throw new Error("Durable media storage is not configured.");
-  const filePath = path.join(ROOT, id);\n  const info = await stat(filePath);\n  if (info.size > MAX_UPLOAD_BYTES) throw new Error("Media object exceeds the configured size limit.");\n  const bytes = await readFile(filePath);\n  if (bytes.length > MAX_UPLOAD_BYTES) throw new Error("Media object exceeds the configured size limit.");\n  return bytes;
+  const filePath = path.join(ROOT, id);
+  const info = await stat(filePath);
+  if (info.size > MAX_UPLOAD_BYTES) throw new Error("Media object exceeds the configured size limit.");
+  const bytes = await readFile(filePath);
+  if (bytes.length > MAX_UPLOAD_BYTES) throw new Error("Media object exceeds the configured size limit.");
+  return bytes;
 }
 
 export async function removeMediaBytes(id: string) {
