@@ -52,5 +52,8 @@ jobs:
           npm run test:agents
           node --experimental-strip-types --test src/lib/unibud/profile-role.test.ts
 
+      - name: Media payload parser tests
+        run: npm run test:media
+
       - name: Production-bundle build check
         run: npm run build:netlify
