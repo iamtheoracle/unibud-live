@@ -49,7 +49,7 @@ export const Route = createFileRoute("/api/media/$id")({
 
         try {
           const bytes = await readMediaBytes(id);
-          return new Response(bytes, {
+          return new Response(new Uint8Array(bytes), {
             headers: {
               "Content-Type": String(row.mime_type),
               "Cache-Control": "private, no-store",
