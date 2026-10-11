@@ -397,3 +397,11 @@ test("accepts bounded object-storage response bodies", async () => {
   const response = new Response(new Uint8Array([1, 2, 3]));
   assert.deepEqual(await readBoundedResponseBytes(response, 3), Buffer.from([1, 2, 3]));
 });
+
+
+test("rejects oversized media before attempting any storage write", async () => {
+  await assert.rejects(
+    writeMediaBytes("8e8e63b4-7d6f-4f38-a9ac-0c6f4ab30f8c", Buffer.alloc(8 * 1024 * 1024 + 1)),
+    /configured size limit/,
+  );
+});
