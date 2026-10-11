@@ -53,3 +53,27 @@ test("conversation visibility without a conversation id falls back to owner-only
     userId: ownerId,
   }), true);
 });
+
+
+test("conversation visibility cannot be authorized through room membership", async () => {
+  const options = access({ visibility: "conversation", room_id: "room-1" });
+  assert.equal(await canReadMedia(options), false);
+  assert.equal(await canReadMedia({
+    ...options,
+    userId: ownerId,
+  }), false);
+});
+
+test("room visibility cannot be authorized through conversation membership", async () => {
+  assert.equal(await canReadMedia(access({
+    visibility: "room",
+    conversation_id: "conversation-1",
+  })), false);
+});
+
+test("room membership lookup errors fail closed", async () => {
+  assert.equal(await canReadMedia({
+    ...access({ visibility: "room", room_id: "room-1" }),
+    isRoomMember: async () => { throw new Error("membership lookup failed"); },
+  }), false);
+});
