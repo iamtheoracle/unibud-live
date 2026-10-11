@@ -57,7 +57,7 @@ function PublicProfile() {
       <dl className="mt-5 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
         <div className="rounded-2xl bg-card p-3 ring-1 ring-border">
           <dt className="text-xs text-muted-foreground">University</dt>
-          <dd className="mt-1 font-medium">{university?.name ?? person.universityId || "Not added"}</dd>
+          <dd className="mt-1 font-medium">{university?.name || person.universityId || "Not added"}</dd>
         </div>
         <div className="rounded-2xl bg-card p-3 ring-1 ring-border">
           <dt className="text-xs text-muted-foreground">Programme</dt>
