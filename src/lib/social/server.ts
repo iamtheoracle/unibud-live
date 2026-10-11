@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
-import { isSafeShareSource } from "@/lib/media/share";
+import { parseShareJson } from "@/lib/media/share";
 import { courseByCode } from "@/lib/unibud/academic";
 import { canTeach, type CampusRole } from "@/lib/unibud/roles";
 
@@ -122,17 +122,8 @@ export const sendMessage = createServerFn({ method: "POST" })
     if ((!body && !data.mediaId && !data.shareJson) || body.length > 10000) throw new Error("Message must contain text or an attachment, up to 10,000 characters.");
     const allowedShareKinds = new Set(["audio", "video", "photo", "bud", "file"]);
     if (data.shareKind && !allowedShareKinds.has(data.shareKind)) throw new Error("Unsupported attachment type.");
-    if (data.shareJson) {
-      try {
-        const share = JSON.parse(data.shareJson) as Record<string, unknown>;
-        if (!share || typeof share !== "object" || Array.isArray(share) ||
-          (share.kind !== undefined && (typeof share.kind !== "string" || !allowedShareKinds.has(share.kind))) ||
-          (share.src !== undefined && (typeof share.src !== "string" || !isSafeShareSource(share.src)))) {
-          throw new Error("Invalid attachment details.");
-        }
-      } catch {
-        throw new Error("Invalid attachment details.");
-      }
+    if (data.shareJson && !parseShareJson(data.shareJson)) {
+      throw new Error("Invalid attachment details.");
     }
     await requireMember(context.userId, data.conversationId);
     const sql = await getSql();
