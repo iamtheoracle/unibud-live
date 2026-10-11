@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/unibud/empty";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
 import { relativeTime } from "@/lib/unibud/format";
 import { createConversation, listChatPeople, listConversations, openConversation } from "@/lib/social/server";
+import { createCampusRoom, joinCampusRoom, listCampusRooms } from "@/lib/unibud/rooms.server";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/messages")({ component: ChatList });
@@ -20,9 +21,17 @@ function ChatList() {
   const [tab, setTab] = useState<Tab>("direct");
   const [groupTitle, setGroupTitle] = useState("");
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [roomTitle, setRoomTitle] = useState("");
+  const [roomKind, setRoomKind] = useState<"group" | "study">("study");
+  const [roomPrivate, setRoomPrivate] = useState(false);
   const convos = useQuery({
     queryKey: ["convos"],
     queryFn: () => listConversations(),
+    enabled: Boolean(user),
+  });
+  const persistentRooms = useQuery({
+    queryKey: ["persistent-campus-rooms"],
+    queryFn: () => listCampusRooms(),
     enabled: Boolean(user),
   });
   const people = useQuery({
@@ -85,6 +94,43 @@ function ChatList() {
           </button>
         ))}
       </div>
+
+      <section className="mt-5 rounded-2xl border border-border bg-card p-4">
+        <h2 className="text-sm font-semibold">Persistent rooms</h2>
+        <p className="mt-1 text-xs text-muted-foreground">Rooms are stored in the database. Join a public room or create a group/study room.</p>
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_120px]">
+          <input value={roomTitle} onChange={(event) => setRoomTitle(event.target.value)} maxLength={100} placeholder="New room name" className="h-10 min-w-0 rounded-xl border border-border bg-background px-3 text-sm" />
+          <select value={roomKind} onChange={(event) => setRoomKind(event.target.value as "group" | "study")} className="h-10 rounded-xl border border-border bg-background px-3 text-sm">
+            <option value="study">Study room</option><option value="group">Group room</option>
+          </select>
+        </div>
+        <label className="mt-3 flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={roomPrivate} onChange={(event) => setRoomPrivate(event.target.checked)} /> Private room (invite access not yet available)</label>
+        <button type="button" disabled={roomTitle.trim().length < 2} onClick={async () => {
+          try {
+            const created = await createCampusRoom({ data: { title: roomTitle, kind: roomKind, isPrivate: roomPrivate } });
+            setRoomTitle(""); setRoomPrivate(false);
+            await qc.invalidateQueries({ queryKey: ["persistent-campus-rooms"] });
+            nav({ to: "/messages/$id", params: { id: created.id } });
+          } catch (error) { toast.error(error instanceof Error ? error.message : "Could not create room."); }
+        }} className="mt-3 h-10 w-full rounded-full bg-ink px-4 text-sm font-medium text-paper disabled:opacity-40">Create room</button>
+        <div className="mt-3 space-y-2">
+          {(persistentRooms.data ?? []).filter((r) => r.kind === tab || tab === "direct" || tab === "group" && r.kind === "study").map((room) => (
+            <div key={room.id} className="flex items-center gap-3 rounded-xl bg-secondary/60 p-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{room.title}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{room.kind} · {room.memberCount} members · {room.lastBody || "No messages yet"}</p>
+              </div>
+              {room.isMember ? <Link to="/messages/$id" params={{ id: room.id }} className="rounded-full bg-ink px-3 py-2 text-xs font-medium text-paper">Open</Link> : <button type="button" onClick={async () => {
+                try { await joinCampusRoom({ data: room.id }); await qc.invalidateQueries({ queryKey: ["persistent-campus-rooms"] }); toast.success("Joined room."); }
+                catch (error) { toast.error(error instanceof Error ? error.message : "Could not join room."); }
+              }} className="rounded-full border border-border px-3 py-2 text-xs font-medium">Join</button>}
+            </div>
+          ))}
+          {persistentRooms.isLoading ? <p className="py-3 text-sm text-muted-foreground">Loading rooms…</p> : null}
+          {persistentRooms.isError ? <p className="py-3 text-sm text-muted-foreground">Rooms could not load. Check that migration 0025 is applied to the configured database.</p> : null}
+          {!persistentRooms.isLoading && !persistentRooms.isError && !(persistentRooms.data ?? []).length ? <p className="py-3 text-sm text-muted-foreground">No rooms yet. Create the first study or group room.</p> : null}
+        </div>
+      </section>
 
       {tab === "direct" ? (
         <>
