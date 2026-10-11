@@ -305,3 +305,43 @@ test("rejects object storage endpoint URLs containing embedded credentials", asy
     }
   }
 });
+
+
+test("does not follow redirects for signed object-storage requests", async () => {
+  const keys = [
+    "MEDIA_S3_ENDPOINT",
+    "MEDIA_S3_BUCKET",
+    "MEDIA_S3_REGION",
+    "MEDIA_S3_ACCESS_KEY_ID",
+    "MEDIA_S3_SECRET_ACCESS_KEY",
+  ] as const;
+  const previousEnv = new Map(keys.map((key) => [key, process.env[key]]));
+  const previousFetch = globalThis.fetch;
+  let calls = 0;
+
+  process.env.MEDIA_S3_ENDPOINT = "https://storage.example.test";
+  process.env.MEDIA_S3_BUCKET = "unibud-media";
+  process.env.MEDIA_S3_REGION = "auto";
+  process.env.MEDIA_S3_ACCESS_KEY_ID = "test-access-key";
+  process.env.MEDIA_S3_SECRET_ACCESS_KEY = "test-secret-key";
+  globalThis.fetch = async (_input, init) => {
+    calls += 1;
+    assert.equal(init?.redirect, "error", "signed requests must fail rather than follow redirects");
+    return new Response(null, { status: 307, headers: { Location: "https://other.example.test/collect" } });
+  };
+
+  try {
+    await assert.rejects(
+      readMediaBytes("dce29b55-9a11-4a83-81f0-0d24e6c12d20"),
+      /Media object storage GET failed with status 307/,
+    );
+    assert.equal(calls, 1, "the request must not be retried at the redirect destination");
+  } finally {
+    globalThis.fetch = previousFetch;
+    for (const key of keys) {
+      const value = previousEnv.get(key);
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
