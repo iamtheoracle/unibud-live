@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { shouldRejectDisabledAuth } from "./auth-policy.ts";
+import { hasProductionAuthConfiguration, shouldRejectDisabledAuth } from "./auth-policy.ts";
 
 test("allows the shared development identity only in local no-database development", () => {
   assert.equal(shouldRejectDisabledAuth({
@@ -31,5 +31,33 @@ test("allows the explicitly enabled verified gate identity", () => {
     databaseConfigured: true,
     isProduction: true,
     gateIdentityEnabled: true,
+  }), false);
+});
+
+
+test("allows preview auth defaults only outside production", () => {
+  assert.equal(hasProductionAuthConfiguration({ isProduction: false }), true);
+});
+
+test("requires per-app issuer, client credentials, stable URL, and secret in production", () => {
+  assert.equal(hasProductionAuthConfiguration({ isProduction: true }), false);
+  assert.equal(hasProductionAuthConfiguration({
+    isProduction: true,
+    issuer: "https://auth.example.test",
+    clientId: "app-client",
+    clientSecret: "client-secret",
+    baseURL: "https://unibud.example.test",
+    secret: "stable-better-auth-secret",
+  }), true);
+});
+
+test("rejects incomplete or whitespace-only production auth configuration", () => {
+  assert.equal(hasProductionAuthConfiguration({
+    isProduction: true,
+    issuer: "https://auth.example.test",
+    clientId: "app-client",
+    clientSecret: "client-secret",
+    baseURL: "https://unibud.example.test",
+    secret: "  ",
   }), false);
 });
