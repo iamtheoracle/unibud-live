@@ -254,9 +254,10 @@ export const logAttendance = createServerFn({ method: "POST" })
       throw new Error("Invalid attendance event key.");
     }
     if (eventKey) {
+      const scopedEventKey = `${data.kind}:${eventKey}`;
       await sql`
         insert into attendance_events (id, session_id, user_id, kind, event_key)
-        values (${crypto.randomUUID()}, ${data.sessionId}, ${context.userId}, ${data.kind}, `${data.kind}:${eventKey}`)
+        values (${crypto.randomUUID()}, ${data.sessionId}, ${context.userId}, ${data.kind}, ${scopedEventKey})
         on conflict (session_id, user_id, event_key) where event_key is not null do nothing`;
     } else {
       await sql`insert into attendance_events (id, session_id, user_id, kind)
