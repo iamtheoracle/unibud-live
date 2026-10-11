@@ -139,6 +139,8 @@ export const sendMessage = createServerFn({ method: "POST" })
         where id = ${data.mediaId}
           and owner_id = ${context.userId}
           and conversation_id = ${data.conversationId}
+          and room_id is null
+          and visibility = ${"conversation"}
           and status = ${"ready"}
         limit 1`;
       if (!media[0]) throw new Error("Attachment is not ready, not owned by you, or does not belong to this conversation.");
