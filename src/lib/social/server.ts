@@ -310,32 +310,31 @@ export const openCommunityConversation = createServerFn({ method: "POST" })
         throw new Error("This Quad is limited to its university community.");
       }
     }
-    const inserted = await sql`
-      insert into social_conversations (id, kind, title, created_by, community_id)
-      values (${crypto.randomUUID()}, 'community', ${String(access[0].name)}, ${context.userId}, ${communityId})
-      on conflict (community_id) where kind = 'community' and community_id is not null do nothing
-      returning id
+    // Create-or-load the unique Quad conversation and synchronize current
+    // members in one statement. If membership synchronization fails, the chat
+    // operation rolls back instead of leaving a partially initialized room.
+    // Removed members are not re-added, so revocation remains effective.
+    const opened = await sql`
+      with community_conversation as (
+        insert into social_conversations (id, kind, title, created_by, community_id)
+        values (${crypto.randomUUID()}, 'community', ${String(access[0].name)}, ${context.userId}, ${communityId})
+        on conflict (community_id) where kind = 'community' and community_id is not null
+        do update set title = excluded.title
+        returning id
+      ),
+      synchronized_members as (
+        insert into social_conversation_members (conversation_id, user_id)
+        select community_conversation.id, cm.user_id
+        from community_conversation
+        cross join community_members cm
+        where cm.community_id = ${communityId}
+        on conflict (conversation_id, user_id) do nothing
+        returning user_id
+      )
+      select id from community_conversation limit 1
     `;
-    let conversationId = inserted[0] ? String(inserted[0].id) : "";
-    if (!conversationId) {
-      const existing = await sql`
-        select id from social_conversations
-        where kind = 'community' and community_id = ${communityId}
-        limit 1
-      `;
-      if (!existing[0]) throw new Error("Could not open this Quad chat. Please retry.");
-      conversationId = String(existing[0].id);
-    }
-    // Synchronize current members when the room is opened. Removed members are
-    // not re-added, so membership revocation remains effective.
-    await sql`
-      insert into social_conversation_members (conversation_id, user_id)
-      select ${conversationId}, cm.user_id
-      from community_members cm
-      where cm.community_id = ${communityId}
-      on conflict (conversation_id, user_id) do nothing
-    `;
-    return { id: conversationId };
+    if (!opened[0]) throw new Error("Could not open this Quad chat. Please retry.");
+    return { id: String(opened[0].id) };
   });
 
 export const myCommunities = createServerFn({ method: "GET" })
