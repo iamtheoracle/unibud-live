@@ -105,6 +105,45 @@ export const markConversationRead = createServerFn({ method: "POST" })
   });
 
 
+/** Create a persistent community post using the signed-in user's profile. */
+export const createPost = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { communityId: string; body: string; image?: string; video?: string; kind?: string }) => input)
+  .handler(async ({ context, data }) => {
+    const communityId = data.communityId.trim();
+    const body = data.body.trim();
+    if (!communityId || !body || body.length > 10000) throw new Error("A post needs a community and text up to 10,000 characters.");
+    const sql = await getSql();
+    const community = await sql`select id from communities where id = ${communityId} limit 1`;
+    if (!community[0]) throw new Error("Community not found.");
+    const profile = await sql`select handle from student_profiles where user_id = ${context.userId} limit 1`;
+    if (!profile[0]) throw new Error("Finish setting up your UNIBUD profile before posting.");
+    const id = `post_${crypto.randomUUID()}`;
+    await sql`insert into posts (id, community_id, author_handle, body, image) values (${id}, ${communityId}, ${profile[0].handle}, ${body}, ${data.image ?? data.video ?? null})`;
+    return { id, communityId, body, handle: String(profile[0].handle) };
+  });
+
+export const joinCommunity = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((communityId: string) => communityId)
+  .handler(async ({ context, data: communityId }) => {
+    const sql = await getSql();
+    const exists = await sql`select id from communities where id = ${communityId} limit 1`;
+    if (!exists[0]) throw new Error("Community not found.");
+    await sql`insert into community_members (user_id, community_id) values (${context.userId}, ${communityId}) on conflict do nothing`;
+    const count = await sql`select count(*)::int as count from community_members where community_id = ${communityId}`;
+    await sql`update communities set members = ${Number(count[0]?.count ?? 0)} where id = ${communityId}`;
+    return { joined: true, communityId };
+  });
+
+export const myCommunities = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .handler(async ({ context }) => {
+    const sql = await getSql();
+    const rows = await sql`select community_id from community_members where user_id = ${context.userId} order by created_at desc`;
+    return rows.map((row) => String(row.community_id));
+  });
+
 /** Real, registered profiles for the direct-message picker. Never suggest fictional directory entries. */
 export const listChatPeople = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
@@ -126,7 +165,7 @@ export const listChatPeople = createServerFn({ method: "GET" })
 /** Compatibility adapters for the existing Chat screens. */
 export const openConversation = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((input: { handle: string }) => input)
+  .validator((input: { handle: string; listingId?: string; seed?: string }) => input)
   .handler(async ({ context, data }) => {
     const handle = typeof data.handle === "string" ? data.handle.trim().toLowerCase() : "";
     if (!/^[a-z0-9_]{2,32}$/.test(handle)) throw new Error("Choose a valid user handle.");
@@ -142,10 +181,24 @@ export const openConversation = createServerFn({ method: "POST" })
       where c.kind = 'direct'
         and (select count(*) from social_conversation_members x where x.conversation_id = c.id) = 2
       limit 1`;
-    if (found[0]) return { id: String(found[0].id) };
+    if (found[0]) {
+      const id = String(found[0].id);
+      if (data.seed?.trim()) {
+        const prior = await sql`select id from social_messages where conversation_id = ${id} and sender_id = ${context.userId} and body = ${data.seed.trim()} limit 1`;
+        if (!prior[0]) {
+          await sql`insert into social_messages (id, conversation_id, sender_id, body) values (${crypto.randomUUID()}, ${id}, ${context.userId}, ${data.seed.trim().slice(0, 10000)})`;
+          await sql`update social_conversations set updated_at = now() where id = ${id}`;
+        }
+      }
+      return { id };
+    }
     const conversationId = crypto.randomUUID();
     await sql`insert into social_conversations (id, kind, title, created_by) values (${conversationId}, 'direct', '', ${context.userId})`;
     await sql`insert into social_conversation_members (conversation_id, user_id) values (${conversationId}, ${context.userId}), (${conversationId}, ${peerId})`;
+    if (data.seed?.trim()) {
+      await sql`insert into social_messages (id, conversation_id, sender_id, body) values (${crypto.randomUUID()}, ${conversationId}, ${context.userId}, ${data.seed.trim().slice(0, 10000)})`;
+      await sql`update social_conversations set updated_at = now() where id = ${conversationId}`;
+    }
     return { id: conversationId };
   });
 
