@@ -245,6 +245,9 @@ export const logAttendance = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { sessionId: string; kind: "join" | "leave"; eventKey?: string }) => input)
   .handler(async ({ context, data }) => {
+    if (data.kind !== "join" && data.kind !== "leave") {
+      throw new Error("Attendance event must be a join or leave.");
+    }
     const { sql } = await requireSessionAccess(context.userId, data.sessionId, "attend");
     const eventKey = data.eventKey?.trim();
     if (eventKey && (eventKey.length > 120 || !/^[a-zA-Z0-9:_-]+$/.test(eventKey))) {
@@ -253,7 +256,7 @@ export const logAttendance = createServerFn({ method: "POST" })
     if (eventKey) {
       await sql`
         insert into attendance_events (id, session_id, user_id, kind, event_key)
-        values (${crypto.randomUUID()}, ${data.sessionId}, ${context.userId}, ${data.kind}, ${eventKey})
+        values (${crypto.randomUUID()}, ${data.sessionId}, ${context.userId}, ${data.kind}, `${data.kind}:${eventKey}`)
         on conflict (session_id, user_id, event_key) where event_key is not null do nothing`;
     } else {
       await sql`insert into attendance_events (id, session_id, user_id, kind)
