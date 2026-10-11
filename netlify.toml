@@ -8,11 +8,11 @@
 
 [build.environment]
   NODE_VERSION = "22"
-  VITE_AUTH_ENABLED = "false"
+  VITE_AUTH_ENABLED = "true"
   NPM_CONFIG_LEGACY_PEER_DEPS = "true"
   NPM_CONFIG_PRODUCTION = "false"
   NODE_OPTIONS = "--max-old-space-size=4096"
 
 # Runtime only — do not force NODE_ENV=production during npm install (omits devDeps).
 [context.production.environment]
-  VITE_AUTH_ENABLED = "false"
+  VITE_AUTH_ENABLED = "true"
