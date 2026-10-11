@@ -256,6 +256,10 @@ export const joinCommunity = createServerFn({ method: "POST" })
     const exists = await sql`select id, privacy from communities where id = ${communityId} limit 1`;
     if (!exists[0]) throw new Error("Community not found.");
     const privacy = String(exists[0].privacy ?? "public");
+    // Fail closed if a legacy or corrupted record contains an unknown privacy value.
+    if (!["public", "campus", "private"].includes(privacy)) {
+      throw new Error("Community privacy settings are invalid; joining is disabled.");
+    }
     if (privacy === "campus") {
       const [profile, community] = await Promise.all([
         sql`select university_id from student_profiles where user_id = ${context.userId} limit 1`,
