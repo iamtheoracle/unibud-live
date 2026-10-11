@@ -1,14 +1,24 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { BOARD_SESSIONS } from "@/lib/unibud/board-data";
 import { courseByCode, boardIdFor, COURSE_CATALOGUE } from "@/lib/unibud/academic";
 import { EDU_PODCASTS } from "@/lib/unibud/podcast-data";
 import { BUD_MEDIA } from "@/lib/media/bud-media";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { canTeach } from "@/lib/unibud/roles";
-import { askInClass, listAnnouncements, listAttendance, listClassQuestions, logAttendance, openCourseConversation, postAnnouncement } from "@/lib/academic/server";
+import {
+  askInClass,
+  createBoardSession,
+  getMySessionAttendance,
+  listAnnouncements,
+  listAttendance,
+  listBoardSessions,
+  listClassQuestions,
+  logAttendance,
+  openCourseConversation,
+  postAnnouncement,
+  setBoardSessionStatus,
+} from "@/lib/academic/server";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -19,36 +29,36 @@ function UniBoard() {
   const navigate = useNavigate();
   const course = COURSE_CATALOGUE.find((c) => boardIdFor(c.code) === id) ?? courseByCode(id);
   const role = useCampusStore((s) => s.role ?? "student");
-  const liveAttendance = useCampusStore((s) => s.liveAttendance);
-  const livePresence = useCampusStore((s) => s.livePresence);
-  const markLivePresent = useCampusStore((s) => s.markLivePresent);
-  const leaveLive = useCampusStore((s) => s.leaveLive);
-  const rejoinLive = useCampusStore((s) => s.rejoinLive);
   const lecturer = canTeach(role);
   const [q, setQ] = useState("");
   const [annTitle, setAnnTitle] = useState("");
   const [annBody, setAnnBody] = useState("");
-  const [inClass, setInClass] = useState(false);
   const qc = useQueryClient();
 
-  if (!course) {
-    return (
-      <main className="px-5 py-10">
-        <p className="text-sm text-muted-foreground">That UniBoard is not in the catalogue.</p>
-        <Link to="/board" className="mt-3 inline-block text-sm font-medium">Back to Board</Link>
-      </main>
-    );
-  }
-
-  const session = BOARD_SESSIONS.find((s) => s.id === course.boardSessionId || s.course === course.code);
-  const present = session ? liveAttendance[session.id] === "present" : false;
-  const inRoom = session ? livePresence[session.id] === "in" : false;
-  const pods = EDU_PODCASTS.filter((p) => p.course === course.code);
-  const budMedia = BUD_MEDIA.filter((m) => m.title.includes(course.code));
+  const sessionsQuery = useQuery({
+    queryKey: ["board-sessions", course?.code],
+    queryFn: () => listBoardSessions({ data: course!.code }),
+    enabled: Boolean(course),
+  });
+  const sessions = sessionsQuery.data ?? [];
+  const session = sessions.find((item) => item.status === "live")
+    ?? sessions.find((item) => item.status === "scheduled")
+    ?? sessions[0];
+  const myAttendance = useQuery({
+    queryKey: ["my-attendance", session?.id],
+    queryFn: () => getMySessionAttendance({ data: session!.id }),
+    enabled: Boolean(session),
+  });
+  const attendanceEvents = myAttendance.data ?? [];
+  const present = attendanceEvents.some((event) => event.kind === "join");
+  const inRoom = [...attendanceEvents].reverse().find((event) => event.kind === "join" || event.kind === "leave")?.kind === "join";
+  const pods = EDU_PODCASTS.filter((p) => p.course === course?.code);
+  const budMedia = BUD_MEDIA.filter((m) => m.title.includes(course?.code ?? ""));
 
   const anns = useQuery({
-    queryKey: ["anns", course.code],
-    queryFn: () => listAnnouncements({ data: course.code }),
+    queryKey: ["anns", course?.code],
+    queryFn: () => listAnnouncements({ data: course!.code }),
+    enabled: Boolean(course),
   });
   const questions = useQuery({
     queryKey: ["q", session?.id],
@@ -62,33 +72,90 @@ function UniBoard() {
   });
 
   const sendQ = useMutation({
-    mutationFn: () => askInClass({ data: { sessionId: session!.id, body: q } }),
+    mutationFn: () => {
+      if (!session) throw new Error("No class session is available.");
+      return askInClass({ data: { sessionId: session.id, body: q } });
+    },
     onSuccess: (d) => {
       setQ("");
       qc.setQueryData(["q", session?.id], d);
     },
+    onError: (error: unknown) => toast.error(error instanceof Error ? error.message : "Could not send your question."),
   });
   const sendAnn = useMutation({
-    mutationFn: () => postAnnouncement({ data: { courseCode: course.code, title: annTitle, body: annBody } }),
+    mutationFn: () => {
+      if (!course) throw new Error("Course not found.");
+      return postAnnouncement({ data: { courseCode: course.code, title: annTitle, body: annBody } });
+    },
     onSuccess: (d) => {
       setAnnTitle("");
       setAnnBody("");
-      qc.setQueryData(["anns", course.code], d);
+      qc.setQueryData(["anns", course?.code], d);
     },
+    onError: (error: unknown) => toast.error(error instanceof Error ? error.message : "Could not post announcement."),
+  });
+  const startLive = useMutation({
+    mutationFn: async () => {
+      if (!course) throw new Error("Course not found.");
+      let target = session;
+      if (!target || (target.status !== "scheduled" && target.status !== "live")) {
+        target = await createBoardSession({
+          data: { courseCode: course.code, title: `${course.code} live class`, topic: course.title, durationMinutes: 60 },
+        });
+      }
+      if (target.status === "scheduled") {
+        await setBoardSessionStatus({ data: { sessionId: target.id, status: "live" } });
+      } else if (target.status !== "live") {
+        throw new Error("This session cannot be started from its current state.");
+      }
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["board-sessions", course?.code] });
+      toast.success("Class session is live.");
+    },
+    onError: (error: unknown) => toast.error(error instanceof Error ? error.message : "Could not start the class."),
+  });
+  const endLive = useMutation({
+    mutationFn: async () => {
+      if (!session || session.status !== "live") throw new Error("There is no live session to end.");
+      await setBoardSessionStatus({ data: { sessionId: session.id, status: "ended" } });
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["board-sessions", course?.code] });
+      await qc.invalidateQueries({ queryKey: ["att", session?.id] });
+      toast.success("Class session ended.");
+    },
+    onError: (error: unknown) => toast.error(error instanceof Error ? error.message : "Could not end the class."),
   });
 
   async function join() {
     if (!session) return;
-    if (present) rejoinLive(session.id);
-    else markLivePresent(session.id);
-    await logAttendance({ data: { sessionId: session.id, kind: "join" } });
-    setInClass(true);
+    try {
+      await logAttendance({ data: { sessionId: session.id, kind: "join" } });
+      await qc.invalidateQueries({ queryKey: ["my-attendance", session.id] });
+      await qc.invalidateQueries({ queryKey: ["att", session.id] });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not record attendance.");
+    }
   }
   async function leave() {
     if (!session) return;
-    leaveLive(session.id);
-    await logAttendance({ data: { sessionId: session.id, kind: "leave" } });
-    setInClass(false);
+    try {
+      await logAttendance({ data: { sessionId: session.id, kind: "leave" } });
+      await qc.invalidateQueries({ queryKey: ["my-attendance", session.id] });
+      await qc.invalidateQueries({ queryKey: ["att", session.id] });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not record leaving the class.");
+    }
+  }
+
+  if (!course) {
+    return (
+      <main className="px-5 py-10">
+        <p className="text-sm text-muted-foreground">That UniBoard is not in the catalogue.</p>
+        <Link to="/board" className="mt-3 inline-block text-sm font-medium">Back to Board</Link>
+      </main>
+    );
   }
 
   const late = present && session?.status === "live";
@@ -112,14 +179,14 @@ function UniBoard() {
       {session?.status === "live" ? (
         <section className="mt-6 rounded-3xl bg-ink px-5 py-5 text-paper">
           <p className="text-[11px] font-semibold tracking-[0.16em] uppercase text-paper/60">Live class</p>
-          <p className="mt-1 font-display text-2xl">{session.topic}</p>
-          <p className="mt-1 text-sm text-paper/70">{session.lecturer} is in session · {session.durationMin} min</p>
+          <p className="mt-1 font-display text-2xl">{session.topic || course.title}</p>
+          <p className="mt-1 text-sm text-paper/70">{course.lecturer} is in session · {session.durationMinutes} min</p>
           <p className="mt-3 text-xs text-paper/60">
-            Your attendance: {present ? (inRoom || inClass ? "Present" : "Left early") : "Not marked"}
+            Your attendance: {present ? (inRoom ? "Present" : "Left early") : "Not marked"}
             {late && !inRoom ? " · you can rejoin" : ""}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            {!inRoom && !inClass ? (
+            {!inRoom ? (
               <Button size="sm" onClick={() => void join()}>{present ? "Rejoin" : "Join class"}</Button>
             ) : (
               <Button size="sm" variant="outline" className="border-paper/30 text-paper" onClick={() => void leave()}>
@@ -128,7 +195,7 @@ function UniBoard() {
             )}
             <Link to="/bud" className="grid h-9 place-items-center rounded-full px-3 text-sm">Ask Bud privately</Link>
           </div>
-          {(inRoom || inClass) ? (
+          {(inRoom) ? (
             <form
               className="mt-4 flex gap-2"
               onSubmit={(e) => {
@@ -143,7 +210,7 @@ function UniBoard() {
         </section>
       ) : (
         <p className="mt-6 text-sm text-muted-foreground">
-          {session?.status === "scheduled" ? `Next class ${session.topic}.` : "No live class right now."}
+          {session?.status === "scheduled" ? `Next class ${session.topic || course.title}.` : "No live class right now."}
         </p>
       )}
 
@@ -244,13 +311,15 @@ function UniBoard() {
               <li key={item.id}>{item.body}</li>
             ))}
           </ul>
-          <Button
-            size="sm"
-            className="mt-3"
-            onClick={() => toast.message(session.status === "live" ? "This session is already live." : "Go live from Tutor Mode when a stream is connected.")}
-          >
-            Start live class
-          </Button>
+          {session.status !== "live" ? (
+            <Button size="sm" className="mt-3" disabled={startLive.isPending} onClick={() => startLive.mutate()}>
+              {startLive.isPending ? "Starting…" : "Start live class"}
+            </Button>
+          ) : (
+            <Button size="sm" variant="outline" className="mt-3" disabled={endLive.isPending} onClick={() => endLive.mutate()}>
+              {endLive.isPending ? "Ending…" : "End live class"}
+            </Button>
+          )}
         </section>
       ) : null}
 
