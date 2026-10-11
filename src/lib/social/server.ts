@@ -116,7 +116,17 @@ export const createPost = createServerFn({ method: "POST" })
     const sql = await getSql();
     const community = await sql`select id, privacy from communities where id = ${communityId} limit 1`;
     if (!community[0]) throw new Error("Community not found.");
-    if (String(community[0].privacy ?? "public") === "private") {
+    const privacy = String(community[0].privacy ?? "public");
+    if (privacy === "campus") {
+      const [memberProfile, communityUniversity] = await Promise.all([
+        sql`select university_id from student_profiles where user_id = ${context.userId} limit 1`,
+        sql`select university_id from communities where id = ${communityId} limit 1`,
+      ]);
+      if (!memberProfile[0] || !communityUniversity[0]?.university_id || String(memberProfile[0].university_id) !== String(communityUniversity[0].university_id)) {
+        throw new Error("This Quad is limited to its university community.");
+      }
+    }
+    if (privacy === "private") {
       const membership = await sql`select user_id from community_members where user_id = ${context.userId} and community_id = ${communityId} limit 1`;
       if (!membership[0]) throw new Error("You must be invited to this private community before posting.");
     }
@@ -135,6 +145,15 @@ export const joinCommunity = createServerFn({ method: "POST" })
     const exists = await sql`select id, privacy from communities where id = ${communityId} limit 1`;
     if (!exists[0]) throw new Error("Community not found.");
     const privacy = String(exists[0].privacy ?? "public");
+    if (privacy === "campus") {
+      const [profile, community] = await Promise.all([
+        sql`select university_id from student_profiles where user_id = ${context.userId} limit 1`,
+        sql`select university_id from communities where id = ${communityId} limit 1`,
+      ]);
+      if (!profile[0] || !community[0]?.university_id || String(profile[0].university_id) !== String(community[0].university_id)) {
+        throw new Error("This Quad is limited to its university community.");
+      }
+    }
     if (privacy === "private") {
       const membership = await sql`select user_id from community_members where user_id = ${context.userId} and community_id = ${communityId} limit 1`;
       if (!membership[0]) throw new Error("This community is private. Ask an admin to invite you.");
