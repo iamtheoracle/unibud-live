@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Avatar } from "@/components/unibud/person";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
-import { personByHandle } from "@/lib/unibud/catalog";
 import { getConversation, sendMessage } from "@/lib/social/server";
 import { persistAudioEvent, listRoomMessages, sendRoomMessage, uploadMedia } from "@/lib/media/server";
 import { fileToDataUrl } from "@/lib/media/client";
@@ -68,7 +67,6 @@ function DirectThread({ id }: { id: string }) {
       </main>
     );
   }
-  const person = personByHandle(q.data?.conversation.peerHandle ?? "");
   if (q.isLoading) return <div className="m-4 h-40 animate-pulse rounded-2xl bg-secondary" />;
   if (q.isError || !q.data) {
     return (
@@ -91,15 +89,16 @@ function DirectThread({ id }: { id: string }) {
     );
   }
 
+  const peerName = q.data.conversation.peerName || q.data.conversation.peerHandle || "Student";
   return (
     <main className="flex min-h-[calc(100dvh-3.5rem)] flex-col bg-card">
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-        <Avatar name={person?.name ?? "Student"} className="size-11" />
+        <Avatar name={peerName} className="size-11" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{person?.name ?? q.data?.conversation.peerHandle}</p>
-          <p className="text-xs text-success">Active now · Direct</p>
+          <p className="truncate text-sm font-semibold">{peerName}</p>
+          <p className="text-xs text-muted-foreground">@{q.data.conversation.peerHandle}</p>
         </div>
-        <CallButtons group={false} peer={person?.name ?? "them"} />
+        <CallButtons group={false} peer={peerName} />
       </div>
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-5">
         <p className="text-center text-xs text-muted-foreground">Today</p>
@@ -129,7 +128,7 @@ function DirectThread({ id }: { id: string }) {
       <Composer
         body={body}
         setBody={setBody}
-        placeholder={`Message ${person?.name.split(" ")[0] ?? ""}…`}
+        placeholder={`Message ${peerName.split(" ")[0]}…`}
         onSend={() => {
           if (body.trim()) mut.mutate();
         }}
