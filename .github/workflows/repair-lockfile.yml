@@ -1,4 +1,5 @@
 name: Repair dependency lockfile
+# Triggered by an explicit tagged commit on the approved development branch.
 
 on:
   push:
