@@ -89,7 +89,9 @@ async function objectStorageRequest(id: string, method: "GET" | "PUT" | "DELETE"
   // object store explicitly reported that the requested object is missing.
   if (!config) return undefined;
   const { url, init } = objectRequest(config, id, method, bytes);
-  const response = await fetch(url, init);
+  // Signed S3 requests must never follow redirects: a redirect changes the signed host/path
+  // and risks sending authenticated storage traffic to an unintended endpoint.
+  const response = await fetch(url, { ...init, redirect: "error" });
   if (method === "GET" && response.status === 404) return null;
   if (method === "DELETE" && (response.ok || response.status === 404)) return Buffer.alloc(0);
   if (!response.ok) throw new Error(`Media object storage ${method} failed with status ${response.status}.`);
