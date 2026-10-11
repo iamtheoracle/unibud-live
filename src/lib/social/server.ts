@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
-import { parseShareJson } from "@/lib/media/share";
+import { isSafeShareSource, parseShareJson } from "@/lib/media/share";
 import { courseByCode } from "@/lib/unibud/academic";
 import { canTeach, type CampusRole } from "@/lib/unibud/roles";
 
@@ -209,6 +209,12 @@ export const createPost = createServerFn({ method: "POST" })
     const communityId = data.communityId.trim();
     const body = data.body.trim();
     if (!communityId || !body || body.length > 10000) throw new Error("A post needs a community and text up to 10,000 characters.");
+    if (data.image !== undefined && (data.image.length > 2048 || !isSafeShareSource(data.image))) {
+      throw new Error("Post image must be a supported web URL or uploaded media path.");
+    }
+    if (data.video !== undefined && (data.video.length > 2048 || !isSafeShareSource(data.video))) {
+      throw new Error("Post video must be a supported web URL or uploaded media path.");
+    }
     const sql = await getSql();
     const community = await sql`select id, privacy from communities where id = ${communityId} limit 1`;
     if (!community[0]) throw new Error("Community not found.");
