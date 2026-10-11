@@ -7,6 +7,7 @@ import { assertConversationMember } from "@/lib/social/server";
 import { parseDataUrl, removeMediaBytes, writeMediaBytes } from "./store.server";
 import { resolveMediaKind, MAX_UPLOAD_BYTES, type MediaKind } from "./types";
 import { REVENUE_POLICY } from "@/lib/music/monetization";
+import { canRecordAudioEvent, isAudioAvailableForSharing } from "@/lib/music/audio-policy";
 
 export const uploadMedia = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
@@ -249,8 +250,8 @@ export const sendRoomMessage = createServerFn({ method: "POST" })
       if (!budMedia[0]) throw new Error("Bud attachment not found or access denied.");
     }
     if (shared?.audioId) {
-      const audio = await sql`select audio_id from audio_objects where audio_id = ${shared.audioId} limit 1`;
-      if (!audio[0]) throw new Error("Audio attachment not found or access denied.");
+      const audio = await sql`select audio_id, status from audio_objects where audio_id = ${shared.audioId} limit 1`;
+      if (!audio[0] || !isAudioAvailableForSharing(audio[0].status)) throw new Error("Audio attachment not found or is unavailable.");
     }
     const profile = await sql`select handle, display_name from student_profiles where user_id = ${context.userId} limit 1`;
     const senderName = String(profile[0]?.display_name ?? profile[0]?.handle ?? "UNIBUD member").slice(0, 80);
@@ -289,8 +290,8 @@ export const persistAudioEvent = createServerFn({ method: "POST" })
     }
     const sql = await getSql();
     if (data.audioId) {
-      const rows = await sql`select audio_id from audio_objects where audio_id = ${data.audioId} limit 1`;
-      if (!rows[0]) throw new Error("Audio item not found or access denied.");
+      const rows = await sql`select audio_id, status from audio_objects where audio_id = ${data.audioId} limit 1`;
+      if (!rows[0] || !canRecordAudioEvent(rows[0].status, data.kind.trim())) throw new Error("Audio item not found or is unavailable.");
     }
     if (data.budMediaId) {
       const rows = await sql`select id from bud_media where id = ${data.budMediaId} and owner_id = ${context.userId} and status = ${"ready"} and media_id is not null limit 1`;
