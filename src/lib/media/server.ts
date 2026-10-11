@@ -47,7 +47,12 @@ export const uploadMedia = createServerFn({ method: "POST" })
     }
     const kind = data.kind ?? kindFromMime(mime);
     const fileName = (data.fileName || "upload")
-      .replace(/[\u0000-\u001f\u007f]/g, "")
+      .split("")
+      .filter((character) => {
+        const code = character.charCodeAt(0);
+        return code > 0x1f && code !== 0x7f;
+      })
+      .join("")
       .replace(/[\\/\\\\]/g, "_")
       .trim()
       .slice(0, 255) || "upload";
