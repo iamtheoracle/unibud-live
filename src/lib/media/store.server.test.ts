@@ -405,3 +405,15 @@ test("rejects oversized media before attempting any storage write", async () => 
     /configured size limit/,
   );
 });
+
+test("rejects oversized encoded data URLs before running the payload parser", () => {
+  assert.throws(
+    () => parseDataUrl("x".repeat(1024), 3),
+    /exceeds the 3-byte limit/,
+  );
+  assert.throws(
+    () => parseDataUrl(null as unknown as string, 3),
+    /Invalid media payload/,
+  );
+});
+
