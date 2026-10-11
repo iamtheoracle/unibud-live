@@ -198,15 +198,25 @@ export const sendMessage = createServerFn({ method: "POST" })
           ))
         for key share of scm, c
       )
-      insert into social_messages (id, conversation_id, sender_id, body, media_id, share_kind, share_json)
-      select ${id}, ${data.conversationId}, authorized_member.user_id,
-        ${body || data.shareKind || "Attachment"}, ${data.mediaId ?? null},
-        ${data.shareKind ?? null}, ${data.shareJson ?? null}
-      from authorized_member
-      returning id, conversation_id, sender_id, body, created_at, media_id, share_kind, share_json
+      inserted_message as (
+        insert into social_messages (id, conversation_id, sender_id, body, media_id, share_kind, share_json)
+        select ${id}, ${data.conversationId}, authorized_member.user_id,
+          ${body || data.shareKind || "Attachment"}, ${data.mediaId ?? null},
+          ${data.shareKind ?? null}, ${data.shareJson ?? null}
+        from authorized_member
+        returning id, conversation_id, sender_id, body, created_at, media_id, share_kind, share_json
+      ),
+      updated_conversation as (
+        update social_conversations c
+        set updated_at = now()
+        from inserted_message m
+        where c.id = m.conversation_id
+        returning c.id
+      )
+      select m.* from inserted_message m
+      join updated_conversation c on c.id = m.conversation_id
     `;
     if (!rows[0]) throw new Error("You are no longer a member of this conversation.");
-    await sql`update social_conversations set updated_at = now() where id = ${data.conversationId}`;
     const r = rows[0];
     return { id: String(r.id), conversationId: String(r.conversation_id), senderId: String(r.sender_id), body: String(r.body), createdAt: String(r.created_at), mediaId: r.media_id == null ? null : String(r.media_id), shareKind: r.share_kind == null ? null : String(r.share_kind), shareJson: r.share_json == null ? null : String(r.share_json) };
   });
