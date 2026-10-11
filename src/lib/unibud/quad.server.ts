@@ -3,7 +3,7 @@ import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
 import { mapCommunity } from "./map";
 import type { CampusRole } from "./roles";
-import { resolveQuadPrivacy, type QuadPrivacy } from "./quad-privacy";
+import { resolveQuadPrivacy, resolveStoredQuadPrivacy, type QuadPrivacy } from "./quad-privacy";
 
 export type { QuadPrivacy } from "./quad-privacy";
 
@@ -69,7 +69,7 @@ export const joinQuad = createServerFn({ method: "POST" })
     const sql = await getSql();
     const room = await sql<{ privacy?: string; university_id?: string | null }>`select privacy, university_id from communities where id = ${communityId} limit 1`;
     if (!room[0]) throw new Error("That Quad was not found.");
-    const privacy = room[0].privacy ?? "public";
+    const privacy = resolveStoredQuadPrivacy(room[0].privacy);
     if (privacy === "campus") {
       const profile = await sql<{ university_id: string }>`select university_id from student_profiles where user_id = ${context.userId} limit 1`;
       if (!profile[0] || !room[0].university_id || String(profile[0].university_id) !== String(room[0].university_id)) {
