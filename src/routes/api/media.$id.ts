@@ -3,7 +3,7 @@ import { getSql } from "@/lib/db";
 import { requireUserId } from "@/lib/auth/verify.server";
 import { assertConversationMember } from "@/lib/social/server";
 import { canReadMedia } from "@/lib/media/access.server";
-import { readMediaBytes } from "@/lib/media/store.server";
+import { mediaStorageErrorStatus, readMediaBytes } from "@/lib/media/store.server";
 
 export const Route = createFileRoute("/api/media/$id")({
   server: {
@@ -56,8 +56,15 @@ export const Route = createFileRoute("/api/media/$id")({
               "Content-Security-Policy": "default-src 'none'; sandbox",
             },
           });
-        } catch {
-          return new Response("Missing file", { status: 404 });
+        } catch (error) {
+          const status = mediaStorageErrorStatus(error);
+          return new Response(status === 404 ? "Missing file" : "Media storage temporarily unavailable", {
+            status,
+            headers: {
+              "Cache-Control": "private, no-store",
+              ...(status === 503 ? { "Retry-After": "30" } : {}),
+            },
+          });
         }
       },
     },
