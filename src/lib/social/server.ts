@@ -114,7 +114,10 @@ export const openConversation = createServerFn({ method: "POST" })
         and (select count(*) from social_conversation_members x where x.conversation_id = c.id) = 2
       limit 1`;
     if (found[0]) return { id: String(found[0].id) };
-    return createConversation({ data: { memberIds: [peerId], kind: "direct" } });
+    const conversationId = crypto.randomUUID();
+    await sql`insert into social_conversations (id, kind, title, created_by) values (${conversationId}, 'direct', '', ${context.userId})`;
+    await sql`insert into social_conversation_members (conversation_id, user_id) values (${conversationId}, ${context.userId}), (${conversationId}, ${peerId})`;
+    return { id: conversationId };
   });
 
 export const getConversation = createServerFn({ method: "GET" })
