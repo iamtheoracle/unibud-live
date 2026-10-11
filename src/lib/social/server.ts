@@ -6,6 +6,10 @@ import { canTeach, type CampusRole } from "@/lib/unibud/roles";
 
 type ConversationKind = "direct" | "group" | "class" | "study" | "community";
 
+export async function assertConversationMember(userId: string, conversationId: string) {
+  await requireMember(userId, conversationId);
+}
+
 async function requireMember(userId: string, conversationId: string) {
   const sql = await getSql();
   const rows = await sql`
