@@ -77,3 +77,21 @@ test("room membership lookup errors fail closed", async () => {
     isRoomMember: async () => { throw new Error("membership lookup failed"); },
   }), false);
 });
+
+
+test("owners cannot bypass inconsistent protected-scope metadata", async () => {
+  assert.equal(await canReadMedia({
+    ...access({
+      visibility: "conversation",
+      conversation_id: "conversation-1",
+      room_id: "room-1",
+    }),
+    userId: ownerId,
+  }), false);
+});
+
+test("unknown visibility values remain owner-only even when room metadata exists", async () => {
+  const options = access({ visibility: "unexpected", room_id: "room-1" });
+  assert.equal(await canReadMedia(options), false);
+  assert.equal(await canReadMedia({ ...options, userId: ownerId }), true);
+});
