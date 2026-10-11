@@ -146,7 +146,7 @@ export const upsertMyProfile = createServerFn({ method: "POST" })
     const program = data.program ?? existingProfile?.program ?? "";
     const year = data.year ?? existingProfile?.year ?? "";
     const bio = data.bio ?? existingProfile?.bio ?? "";
-    const campusRole = resolveProfileRole(data.campusRole, existingProfile?.campusRole ?? "student");
+    const campusRole = resolveProfileRole(data.campusRole as CampusRole | undefined, existingProfile?.campusRole ?? "student");
     const onboardingDone = data.onboardingDone ?? existingProfile?.onboardingDone ?? false;
     if (existing[0]) {
       await sql`update student_profiles set display_name = ${displayName}, handle = ${handle},
