@@ -80,22 +80,22 @@ export const openCourseConversation = createServerFn({ method: "POST" })
     if (!course) throw new Error("Course not found.");
     await requireCourseAccess(context.userId, course.code, "read");
     const sql = await getSql();
-    const lecturer = await sql\`select user_id from student_profiles where handle = \${course.lecturerHandle} limit 1\`;
-    const inserted = await sql\`insert into social_conversations (id, kind, title, created_by, course_code)
-      values (\${crypto.randomUUID()}, 'class', \${course.code + " · " + course.title}, \${context.userId}, \${course.code})
-      on conflict (course_code) where kind = 'class' and course_code is not null do nothing returning id\`;
+    const lecturer = await sql`select user_id from student_profiles where handle = ${course.lecturerHandle} limit 1`;
+    const inserted = await sql`insert into social_conversations (id, kind, title, created_by, course_code)
+      values (${crypto.randomUUID()}, 'class', ${course.code + " · " + course.title}, ${context.userId}, ${course.code})
+      on conflict (course_code) where kind = 'class' and course_code is not null do nothing returning id`;
     let id = inserted[0] ? String(inserted[0].id) : "";
     if (!id) {
-      const found = await sql\`select id from social_conversations where kind = 'class' and course_code = \${course.code} limit 1\`;
+      const found = await sql`select id from social_conversations where kind = 'class' and course_code = ${course.code} limit 1`;
       if (!found[0]) throw new Error("Could not open class chat. Please retry.");
       id = String(found[0].id);
     }
-    await sql\`insert into social_conversation_members (conversation_id, user_id)
-      select \${id}, e.user_id from enrollments e where e.course_code = \${course.code}
-      on conflict (conversation_id, user_id) do nothing\`;
+    await sql`insert into social_conversation_members (conversation_id, user_id)
+      select ${id}, e.user_id from enrollments e where e.course_code = ${course.code}
+      on conflict (conversation_id, user_id) do nothing`;
     if (lecturer[0]) {
-      await sql\`insert into social_conversation_members (conversation_id, user_id)
-        values (\${id}, \${String(lecturer[0].user_id)}) on conflict do nothing\`;
+      await sql`insert into social_conversation_members (conversation_id, user_id)
+        values (${id}, ${String(lecturer[0].user_id)}) on conflict do nothing`;
     }
     return { id };
   });
