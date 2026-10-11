@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
-import { isSafeShareSource } from "@/lib/media/share";
+import { parseShareJson } from "@/lib/media/share";
 import { assertConversationMember } from "@/lib/social/server";
 import { parseDataUrl, removeMediaBytes, writeMediaBytes } from "./store.server";
 import { kindFromMime, MAX_UPLOAD_BYTES, type MediaKind } from "./types";
@@ -193,17 +193,8 @@ export const sendRoomMessage = createServerFn({ method: "POST" })
     if (data.shareKind && !allowedShareKinds.has(data.shareKind)) {
       throw new Error("Unsupported attachment type.");
     }
-    if (data.shareJson) {
-      try {
-        const share = JSON.parse(data.shareJson) as Record<string, unknown>;
-        if (!share || typeof share !== "object" || Array.isArray(share) ||
-          (share.kind !== undefined && (typeof share.kind !== "string" || !allowedShareKinds.has(share.kind))) ||
-          (share.src !== undefined && (typeof share.src !== "string" || !isSafeShareSource(share.src)))) {
-          throw new Error("Invalid attachment details.");
-        }
-      } catch {
-        throw new Error("Invalid attachment details.");
-      }
+    if (data.shareJson && !parseShareJson(data.shareJson)) {
+      throw new Error("Invalid attachment details.");
     }
     const sql = await getSql();
     const room = await sql`select r.id, r.community_id from campus_rooms r join campus_room_members m on m.room_id = r.id and m.user_id = ${context.userId} where r.id = ${data.roomId} limit 1`;
