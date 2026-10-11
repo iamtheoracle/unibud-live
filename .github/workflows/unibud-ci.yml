@@ -29,7 +29,17 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Authentication invariant
-        run: npm run check:auth
+        run: |
+          npm run dev > /tmp/unibud-dev.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8080/__app-env > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          npm run check:auth
 
       - name: Typecheck
         run: npm run typecheck
