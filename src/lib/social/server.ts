@@ -122,14 +122,19 @@ export const sendMessage = createServerFn({ method: "POST" })
     if ((!body && !data.mediaId && !data.shareJson) || body.length > 10000) throw new Error("Message must contain text or an attachment, up to 10,000 characters.");
     const allowedShareKinds = new Set(["audio", "video", "photo", "bud", "file"]);
     if (data.shareKind && !allowedShareKinds.has(data.shareKind)) throw new Error("Unsupported attachment type.");
-    if (data.shareJson && !parseShareJson(data.shareJson)) {
+    const shared = data.shareJson ? parseShareJson(data.shareJson) : undefined;
+    if (data.shareJson && !shared) {
       throw new Error("Invalid attachment details.");
+    }
+    if (shared && data.shareKind && shared.kind !== data.shareKind) {
+      throw new Error("Attachment type does not match its details.");
     }
     await requireMember(context.userId, data.conversationId);
     const sql = await getSql();
-    if (data.mediaId) {
+    const conversationMediaIds = [data.mediaId, shared?.mediaId].filter((id): id is string => Boolean(id));
+    for (const mediaId of new Set(conversationMediaIds)) {
       const media = await sql`select id from media_assets
-        where id = ${data.mediaId}
+        where id = ${mediaId}
           and owner_id = ${context.userId}
           and conversation_id = ${data.conversationId}
           and room_id is null
@@ -137,6 +142,18 @@ export const sendMessage = createServerFn({ method: "POST" })
           and status = ${"ready"}
         limit 1`;
       if (!media[0]) throw new Error("Attachment is not ready, not owned by you, or does not belong to this conversation.");
+    }
+    if (shared?.budMediaId) {
+      const budMedia = await sql`select id from bud_media where id = ${shared.budMediaId}
+        and owner_id = ${context.userId}
+        and status = ${"ready"}
+        and media_id is not null
+        limit 1`;
+      if (!budMedia[0]) throw new Error("Bud attachment not found or access denied.");
+    }
+    if (shared?.audioId) {
+      const audio = await sql`select audio_id from audio_objects where audio_id = ${shared.audioId} limit 1`;
+      if (!audio[0]) throw new Error("Audio attachment not found or access denied.");
     }
     const id = crypto.randomUUID();
     const rows = await sql`insert into social_messages (id, conversation_id, sender_id, body, media_id, share_kind, share_json)
