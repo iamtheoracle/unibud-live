@@ -48,7 +48,7 @@ export function RelationActions({ handle }: { handle: string }) {
     onSuccess: async (_result, following) => { toast.success(following ? "Following." : "Unfollowed."); await refresh(); },
     onError: (error: unknown) => toast.error(error instanceof Error ? error.message : "Could not update follow state."),
   });
-  const busy = request.isPending || cancel.isPending || respond.isPending || remove.isPending || follow.isPending;
+  const busy = state.isLoading || state.isError || request.isPending || cancel.isPending || respond.isPending || remove.isPending || follow.isPending;
   const connected = Boolean(state.data?.connections.some((person) => person.handle === handle));
   const incoming = Boolean(state.data?.incoming.some((person) => person.handle === handle));
   const outgoing = Boolean(state.data?.outgoing.some((person) => person.handle === handle));
@@ -56,6 +56,9 @@ export function RelationActions({ handle }: { handle: string }) {
 
   if (!user) {
     return <Link to="/welcome" className="text-xs font-medium">Sign in to connect</Link>;
+  }
+  if (state.isError) {
+    return <p className="text-xs text-muted-foreground">Connection actions are temporarily unavailable.</p>;
   }
 
   async function message() {
