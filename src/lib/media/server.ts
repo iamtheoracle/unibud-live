@@ -23,10 +23,18 @@ export const uploadMedia = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const parsed = parseDataUrl(data.dataUrl);
     if (parsed.bytes.length > MAX_UPLOAD_BYTES) {
-      return { ok: false as const, error: "That file is over 8 MB." };
+      return { ok: false as const, error: "That file is over 8 MiB." };
     }
-    const mime = data.mime || parsed.mime;
+    const mime = (data.mime || parsed.mime).trim().slice(0, 160);
+    if (!mime || !/^[\w.+-]+\/[\w.+-]+$/.test(mime)) {
+      throw new Error("Unsupported file type.");
+    }
     const kind = data.kind ?? kindFromMime(mime);
+    const fileName = (data.fileName || "upload")
+      .replace(/[\\u0000-\\u001f\\u007f]/g, "")
+      .replace(/[\\/\\\\]/g, "_")
+      .trim()
+      .slice(0, 255) || "upload";
     if (data.conversationId) {
       await assertConversationMember(context.userId, data.conversationId);
     }
@@ -44,7 +52,7 @@ export const uploadMedia = createServerFn({ method: "POST" })
     }
     const id = crypto.randomUUID();
     await sql`insert into media_assets (id, owner_id, kind, mime_type, file_name, file_size, storage_path, status, visibility, conversation_id, room_id)
-      values (${id}, ${context.userId}, ${kind}, ${mime}, ${data.fileName}, ${parsed.bytes.length}, ${id}, ${"processing"}, ${data.roomId ? "room" : data.conversationId ? "conversation" : "private"}, ${data.conversationId ?? null}, ${data.roomId ?? null})`;
+      values (${id}, ${context.userId}, ${kind}, ${mime}, ${fileName}, ${parsed.bytes.length}, ${id}, ${"processing"}, ${data.roomId ? "room" : data.conversationId ? "conversation" : "private"}, ${data.conversationId ?? null}, ${data.roomId ?? null})`;
     try {
       await writeMediaBytes(id, parsed.bytes);
       await sql`update media_assets set status = ${"ready"}, updated_at = now() where id = ${id}`;
