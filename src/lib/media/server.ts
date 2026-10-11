@@ -5,7 +5,7 @@ import { parseShareJson } from "@/lib/media/share";
 import { canReadMedia } from "@/lib/media/access.server";
 import { assertConversationMember } from "@/lib/social/server";
 import { parseDataUrl, removeMediaBytes, writeMediaBytes } from "./store.server";
-import { isMediaKind, kindFromMime, MAX_UPLOAD_BYTES, type MediaKind } from "./types";
+import { resolveMediaKind, MAX_UPLOAD_BYTES, type MediaKind } from "./types";
 import { BUD_MEDIA } from "./bud-media";
 import { REVENUE_POLICY } from "@/lib/music/monetization";
 
@@ -46,14 +46,7 @@ export const uploadMedia = createServerFn({ method: "POST" })
     if (!mime || !/^[\w.+-]+\/[\w.+-]+$/.test(mime)) {
       throw new Error("Unsupported file type.");
     }
-    if (data.kind !== undefined && !isMediaKind(data.kind)) {
-      throw new Error("Unsupported media kind.");
-    }
-    const inferredKind = kindFromMime(mime.toLowerCase());
-    if (data.kind && inferredKind !== "file" && data.kind !== inferredKind) {
-      throw new Error("File type does not match the selected media kind.");
-    }
-    const kind = data.kind ?? inferredKind;
+    const kind = resolveMediaKind(data.kind, mime);
     const fileName = (data.fileName || "upload")
       .split("")
       .filter((character) => {
