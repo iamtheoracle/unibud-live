@@ -427,6 +427,17 @@ function Composer({
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function sendFile(file: File, kind: ChatShare["kind"]) {
+    // Reject oversized files before FileReader creates a second, Base64-expanded
+    // copy in memory. Larger media will use the direct object-storage upload flow.
+    const maxUploadBytes = 8 * 1024 * 1024;
+    if (file.size > maxUploadBytes) {
+      toast.message("This chat upload is limited to 8 MiB for now. Larger media uploads are being added through direct storage.");
+      return;
+    }
+    if (file.size === 0) {
+      toast.message("That file is empty.");
+      return;
+    }
     setBusy(true);
     try {
       const dataUrl = await fileToDataUrl(file);
