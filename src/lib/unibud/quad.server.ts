@@ -3,8 +3,9 @@ import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
 import { mapCommunity } from "./map";
 import type { CampusRole } from "./roles";
+import { resolveQuadPrivacy, type QuadPrivacy } from "./quad-privacy";
 
-export type QuadPrivacy = "public" | "campus" | "private";
+export type { QuadPrivacy } from "./quad-privacy";
 
 export const createQuad = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
@@ -24,14 +25,15 @@ export const createQuad = createServerFn({ method: "POST" })
     if (!["Study", "Interest", "Class", "University", "Faculty"].includes(kind)) {
       throw new Error("Choose a supported Quad type.");
     }
-    const privacy: QuadPrivacy =
-      data.privacy === "private" || data.privacy === "campus" ? data.privacy : "public";
+    // TypeScript types do not validate requests at runtime. Reject explicitly
+    // supplied unknown values instead of silently creating a public Quad.
+    const privacy = resolveQuadPrivacy(data.privacy);
     const sql = await getSql();
 
     // Class-room creation is a privileged action and must be enforced server-side,
     // not just by the button's visibility or client-side role state.
     if (kind === "Class") {
-      const rows = await sql<{ campus_role?: string }>`
+      const rows = await sql<{ campus_role?: string }>` 
         select campus_role from student_profiles where user_id = ${context.userId} limit 1
       `;
       const role = String(rows[0]?.campus_role ?? "student") as CampusRole;
