@@ -140,7 +140,14 @@ export const attachBudFile = createServerFn({ method: "POST" })
   .validator((input: { budId: string; mediaId: string }) => input)
   .handler(async ({ context, data }) => {
     const sql = await getSql();
-    const owned = await sql`select id from media_assets where id = ${data.mediaId} and owner_id = ${context.userId} and status = ${"ready"}`;
+    const owned = await sql`select id from media_assets
+      where id = ${data.mediaId}
+        and owner_id = ${context.userId}
+        and status = ${"ready"}
+        and visibility = ${"private"}
+        and conversation_id is null
+        and room_id is null
+      limit 1`;
     if (!owned[0]) throw new Error("Media not ready");
     const target = await sql`select id, owner_id from bud_media where id = ${data.budId} limit 1`;
     if (!target[0] || String(target[0].owner_id) !== context.userId) {
