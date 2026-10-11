@@ -24,10 +24,10 @@ async function requireMember(userId: string, conversationId: string) {
     const code = String(rows[0].course_code ?? "");
     const course = courseByCode(code);
     if (!course) throw new Error("Course conversation is no longer available.");
-    const profiles = await sql\`select campus_role, handle from student_profiles where user_id = \${userId} limit 1\`;
+    const profiles = await sql`select campus_role, handle from student_profiles where user_id = ${userId} limit 1\`;
     const profile = profiles[0];
     const assigned = Boolean(profile && canTeach(String(profile.campus_role) as CampusRole) && String(profile.handle) === course.lecturerHandle);
-    const enrollment = await sql\`select id from enrollments where user_id = \${userId} and course_code = \${code} limit 1\`;
+    const enrollment = await sql`select id from enrollments where user_id = ${userId} and course_code = ${code} limit 1\`;
     if (!assigned && !enrollment[0]) throw new Error("You must be enrolled in this course to access its class chat.");
   }
 }
