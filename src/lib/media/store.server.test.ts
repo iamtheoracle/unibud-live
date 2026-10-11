@@ -226,3 +226,82 @@ test("rejects non-UUID media ids before accessing local or object storage", asyn
     /Invalid media id/,
   );
 });
+
+
+test("rejects plain HTTP object storage endpoints in production before network access", async () => {
+  const keys = [
+    "MEDIA_S3_ENDPOINT",
+    "MEDIA_S3_BUCKET",
+    "MEDIA_S3_REGION",
+    "MEDIA_S3_ACCESS_KEY_ID",
+    "MEDIA_S3_SECRET_ACCESS_KEY",
+    "NODE_ENV",
+  ] as const;
+  const previousEnv = new Map(keys.map((key) => [key, process.env[key]]));
+  const previousFetch = globalThis.fetch;
+  let fetchCalled = false;
+
+  process.env.NODE_ENV = "production";
+  process.env.MEDIA_S3_ENDPOINT = "http://storage.example.test";
+  process.env.MEDIA_S3_BUCKET = "unibud-media";
+  process.env.MEDIA_S3_REGION = "auto";
+  process.env.MEDIA_S3_ACCESS_KEY_ID = "test-access-key";
+  process.env.MEDIA_S3_SECRET_ACCESS_KEY = "test-secret-key";
+  globalThis.fetch = async () => {
+    fetchCalled = true;
+    return new Response(null, { status: 200 });
+  };
+
+  try {
+    await assert.rejects(
+      readMediaBytes("f4b8c5b4-08aa-4d6d-91e7-0e11a85d3210"),
+      /endpoint must use HTTPS/,
+    );
+    assert.equal(fetchCalled, false, "insecure endpoint must be rejected before sending credentials");
+  } finally {
+    globalThis.fetch = previousFetch;
+    for (const key of keys) {
+      const value = previousEnv.get(key);
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
+
+test("rejects object storage endpoint URLs containing embedded credentials", async () => {
+  const keys = [
+    "MEDIA_S3_ENDPOINT",
+    "MEDIA_S3_BUCKET",
+    "MEDIA_S3_REGION",
+    "MEDIA_S3_ACCESS_KEY_ID",
+    "MEDIA_S3_SECRET_ACCESS_KEY",
+  ] as const;
+  const previousEnv = new Map(keys.map((key) => [key, process.env[key]]));
+  const previousFetch = globalThis.fetch;
+  let fetchCalled = false;
+
+  process.env.MEDIA_S3_ENDPOINT = "https://user:password@storage.example.test";
+  process.env.MEDIA_S3_BUCKET = "unibud-media";
+  process.env.MEDIA_S3_REGION = "auto";
+  process.env.MEDIA_S3_ACCESS_KEY_ID = "test-access-key";
+  process.env.MEDIA_S3_SECRET_ACCESS_KEY = "test-secret-key";
+  globalThis.fetch = async () => {
+    fetchCalled = true;
+    return new Response(null, { status: 200 });
+  };
+
+  try {
+    await assert.rejects(
+      readMediaBytes("dce29b55-9a11-4a83-81f0-0d24e6c12d20"),
+      /must not contain credentials/,
+    );
+    assert.equal(fetchCalled, false, "credential-bearing endpoint must be rejected before network access");
+  } finally {
+    globalThis.fetch = previousFetch;
+    for (const key of keys) {
+      const value = previousEnv.get(key);
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
