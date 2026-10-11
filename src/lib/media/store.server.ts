@@ -83,7 +83,7 @@ function objectRequest(config: S3Config, id: string, method: "GET" | "PUT" | "DE
 
 export async function readBoundedResponseBytes(response: Response, maxBytes = MAX_UPLOAD_BYTES): Promise<Buffer> {
   const declaredLength = response.headers.get("content-length");
-  if (declaredLength !== null && /^\\d+$/.test(declaredLength) && Number(declaredLength) > maxBytes) {
+  if (declaredLength !== null && /^\d+$/.test(declaredLength) && Number(declaredLength) > maxBytes) {
     try { await response.body?.cancel(); } catch { /* preserve the size-limit error */ }
     throw new Error("Media object exceeds the configured size limit.");
   }
