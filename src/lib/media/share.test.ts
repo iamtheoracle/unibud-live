@@ -18,6 +18,7 @@ test("rejects executable, data, and protocol-relative media URLs", () => {
     "data:text/html,<script>alert(1)</script>",
     "vbscript:msgbox(1)",
     "//evil.example.test/media.mp4",
+    "/\\\\evil.example.test/media.mp4",
     "",
   ]) {
     assert.equal(isSafeShareSource(src), false, src);
