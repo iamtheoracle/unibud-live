@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
 import { courseByCode } from "@/lib/unibud/academic";
+import { canTeach, type CampusRole } from "@/lib/unibud/roles";
 import { notify } from "@/lib/unibud/server";
 
 async function loadEnrollments(userId: string) {
@@ -46,14 +47,42 @@ export const dropCourse = createServerFn({ method: "POST" })
     return loadEnrollments(context.userId);
   });
 
+async function requireCourseAccess(userId: string, courseCode: string, mode: "read" | "teach") {
+  const course = courseByCode(courseCode);
+  if (!course) throw new Error("Course not found.");
+
+  const sql = await getSql();
+  const profiles = await sql<{ campus_role: string; handle: string }>`
+    select campus_role, handle from student_profiles where user_id = ${userId} limit 1`;
+  const profile = profiles[0];
+  if (!profile) throw new Error("Complete your campus profile first.");
+
+  const role = profile.campus_role as CampusRole;
+  const isAssignedLecturer = canTeach(role) && profile.handle === course.lecturerHandle;
+  if (mode === "teach" && !isAssignedLecturer) {
+    throw new Error("Only the assigned lecturer can publish course announcements.");
+  }
+  if (mode === "read" && !isAssignedLecturer) {
+    const enrollments = await sql`
+      select id from enrollments
+      where user_id = ${userId} and course_code = ${course.code}
+      limit 1`;
+    if (!enrollments[0]) throw new Error("Enroll in this course to access its announcements.");
+  }
+}
+
 export const postAnnouncement = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { courseCode: string; title: string; body: string }) => input)
   .handler(async ({ context, data }) => {
+    await requireCourseAccess(context.userId, data.courseCode, "teach");
+    const title = data.title.trim();
+    const body = data.body.trim();
+    if (!title || !body) throw new Error("Announcement title and body are required.");
     const sql = await getSql();
     await sql`insert into board_announcements (id, course_code, author_id, title, body)
-      values (${crypto.randomUUID()}, ${data.courseCode}, ${context.userId}, ${data.title.trim()}, ${data.body.trim()})`;
-    await notify(context.userId, "class", data.title.trim(), data.body.trim(), `/board/${data.courseCode.toLowerCase().replace(/\s+/g, "")}`);
+      values (${crypto.randomUUID()}, ${data.courseCode}, ${context.userId}, ${title}, ${body})`;
+    await notify(context.userId, "class", title, body, `/board/${data.courseCode.toLowerCase().replace(/\s+/g, "")}`);
     const rows = await sql`select * from board_announcements where course_code = ${data.courseCode} order by created_at desc`;
     return rows.map((r) => ({
       id: String(r.id),
@@ -66,7 +95,8 @@ export const postAnnouncement = createServerFn({ method: "POST" })
 export const listAnnouncements = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .validator((courseCode: string) => courseCode)
-  .handler(async ({ data: courseCode }) => {
+  .handler(async ({ context, data: courseCode }) => {
+    await requireCourseAccess(context.userId, courseCode, "read");
     const sql = await getSql();
     const rows = await sql`select * from board_announcements where course_code = ${courseCode} order by created_at desc`;
     return rows.map((r) => ({
