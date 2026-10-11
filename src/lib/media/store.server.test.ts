@@ -62,3 +62,67 @@ test("does not fall back to local files when configured object storage reports a
     }
   }
 });
+
+
+test("does not fall back to local files when configured object storage returns a server error", async () => {
+  const keys = [
+    "MEDIA_S3_ENDPOINT",
+    "MEDIA_S3_BUCKET",
+    "MEDIA_S3_REGION",
+    "MEDIA_S3_ACCESS_KEY_ID",
+    "MEDIA_S3_SECRET_ACCESS_KEY",
+  ] as const;
+  const previousEnv = new Map(keys.map((key) => [key, process.env[key]]));
+  const previousFetch = globalThis.fetch;
+
+  process.env.MEDIA_S3_ENDPOINT = "https://storage.example.test";
+  process.env.MEDIA_S3_BUCKET = "unibud-media";
+  process.env.MEDIA_S3_REGION = "auto";
+  process.env.MEDIA_S3_ACCESS_KEY_ID = "test-access-key";
+  process.env.MEDIA_S3_SECRET_ACCESS_KEY = "test-secret-key";
+  globalThis.fetch = async () => new Response("upstream failure", { status: 503 });
+
+  try {
+    await assert.rejects(
+      readMediaBytes("object-storage-error-test"),
+      /Media object storage GET failed with status 503/,
+    );
+  } finally {
+    globalThis.fetch = previousFetch;
+    for (const key of keys) {
+      const value = previousEnv.get(key);
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
+
+test("rejects incomplete object storage configuration instead of silently using local storage", async () => {
+  const keys = [
+    "MEDIA_S3_ENDPOINT",
+    "MEDIA_S3_BUCKET",
+    "MEDIA_S3_REGION",
+    "MEDIA_S3_ACCESS_KEY_ID",
+    "MEDIA_S3_SECRET_ACCESS_KEY",
+  ] as const;
+  const previousEnv = new Map(keys.map((key) => [key, process.env[key]]));
+
+  process.env.MEDIA_S3_ENDPOINT = "https://storage.example.test";
+  process.env.MEDIA_S3_BUCKET = "unibud-media";
+  process.env.MEDIA_S3_REGION = "auto";
+  process.env.MEDIA_S3_ACCESS_KEY_ID = "test-access-key";
+  delete process.env.MEDIA_S3_SECRET_ACCESS_KEY;
+
+  try {
+    await assert.rejects(
+      readMediaBytes("incomplete-object-storage-config-test"),
+      /Media object storage configuration is incomplete/,
+    );
+  } finally {
+    for (const key of keys) {
+      const value = previousEnv.get(key);
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
