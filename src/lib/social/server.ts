@@ -332,6 +332,7 @@ export const listConnectPeople = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .validator((input: { query?: string }) => input)
   .handler(async ({ context, data }) => {
+    if (data.query !== undefined && typeof data.query !== "string") throw new Error("Invalid profile search query.");
     const query = (data.query ?? "").trim().slice(0, 100);
     const sql = await getSql();
     const rows = await sql`
