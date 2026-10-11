@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
 import {
   askBud,
@@ -208,6 +209,10 @@ export function BudWorkspace() {
 
   function send(text: string) {
     const t = text.trim();
+    if (attachment?.media?.status === "failed") {
+      toast.error("This file was not uploaded. Remove it and try again before sending.");
+      return;
+    }
     if ((!t && !attachment?.media) || ask.isPending) return;
     const tagged = !t ? (attachment?.media?.kind === "voice" ? "Voice note" : "Sent media") : purpose === "learn" ? t : `[${purpose}] ${t}`;
     setPendingUser(tagged);
@@ -237,14 +242,20 @@ export function BudWorkspace() {
     try {
       const dataUrl = await fileToDataUrl(file);
       const up = await uploadMedia({ data: { dataUrl, fileName: file.name, mime: file.type } });
-      media = {
-        kind,
-        name: file.name,
-        status: "ready",
-        mediaId: up.ok ? up.id : undefined,
-        src: up.ok ? mediaUrl(up.id) : dataUrl,
-      };
-    } catch {
+      if (!up.ok) {
+        toast.error(up.error);
+        media = { kind, name: file.name, status: "failed" };
+      } else {
+        media = {
+          kind,
+          name: file.name,
+          status: "ready",
+          mediaId: up.id,
+          src: mediaUrl(up.id),
+        };
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "File upload failed.");
       media = { kind, name: file.name, status: "failed" };
     }
     const next = { name: file.name, kind: file.type || "file", excerpt, media };
