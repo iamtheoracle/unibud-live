@@ -105,7 +105,14 @@ export const askBud = createServerFn({ method: "POST" }).middleware([authMiddlew
   if (!prompt && !data.media) return { ok: false as const, error: "Say something first." };
   const sql = await getSql();
   let conversationId = data.conversationId;
-  if (!conversationId) {
+  if (conversationId) {
+    // A caller must own the target conversation before any message is written.
+    // Without this check, a user could attach their message rows to another user's conversation ID.
+    const ownedConversation = await sql<{ id: string }>`select id from bud_conversations where id = ${conversationId} and user_id = ${context.userId} limit 1`;
+    if (!ownedConversation.length) {
+      return { ok: false as const, error: "Conversation not found.", conversationId };
+    }
+  } else {
     conversationId = crypto.randomUUID();
     await sql`insert into bud_conversations (id, user_id, title) values (${conversationId}, ${context.userId}, ${titleFrom(prompt)})`;
   }
