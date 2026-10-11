@@ -4,6 +4,7 @@ import { authMiddleware } from "@/lib/auth/middleware";
 import { isSafeShareSource, parseShareJson } from "@/lib/media/share";
 import { courseByCode } from "@/lib/unibud/academic";
 import { canTeach, type CampusRole } from "@/lib/unibud/roles";
+import { resolveStoredQuadPrivacy } from "@/lib/unibud/quad-privacy";
 
 type ConversationKind = "direct" | "group" | "class" | "study" | "community";
 
@@ -221,11 +222,7 @@ export const createPost = createServerFn({ method: "POST" })
     const sql = await getSql();
     const community = await sql`select id, privacy from communities where id = ${communityId} limit 1`;
     if (!community[0]) throw new Error("Community not found.");
-    const privacy = String(community[0].privacy ?? "public");
-    // Unknown or corrupted privacy values must never fall through to public posting.
-    if (!["public", "campus", "private"].includes(privacy)) {
-      throw new Error("Community privacy settings are invalid; posting is disabled.");
-    }
+    const privacy = resolveStoredQuadPrivacy(community[0].privacy);
     if (privacy === "campus") {
       const [memberProfile, communityUniversity] = await Promise.all([
         sql`select university_id from student_profiles where user_id = ${context.userId} limit 1`,
@@ -255,11 +252,7 @@ export const joinCommunity = createServerFn({ method: "POST" })
     const sql = await getSql();
     const exists = await sql`select id, privacy from communities where id = ${communityId} limit 1`;
     if (!exists[0]) throw new Error("Community not found.");
-    const privacy = String(exists[0].privacy ?? "public");
-    // Fail closed if a legacy or corrupted record contains an unknown privacy value.
-    if (!["public", "campus", "private"].includes(privacy)) {
-      throw new Error("Community privacy settings are invalid; joining is disabled.");
-    }
+    const privacy = resolveStoredQuadPrivacy(exists[0].privacy);
     if (privacy === "campus") {
       const [profile, community] = await Promise.all([
         sql`select university_id from student_profiles where user_id = ${context.userId} limit 1`,
@@ -294,10 +287,7 @@ export const openCommunityConversation = createServerFn({ method: "POST" })
       limit 1
     `;
     if (!access[0]) throw new Error("Join this Quad before opening its chat.");
-    const privacy = String(access[0].privacy ?? "public");
-    if (!["public", "campus", "private"].includes(privacy)) {
-      throw new Error("Community privacy settings are invalid; chat access is disabled.");
-    }
+    const privacy = resolveStoredQuadPrivacy(access[0].privacy);
     if (privacy === "campus") {
       const profile = await sql`select university_id from student_profiles where user_id = ${context.userId} limit 1`;
       if (!profile[0]?.university_id || !access[0].university_id ||
@@ -439,7 +429,7 @@ export const listPublicProfilePosts = createServerFn({ method: "GET" })
       join communities c on c.id = p.community_id
       where lower(p.author_handle) = ${handle}
         and (
-          coalesce(c.privacy, 'public') = 'public'
+          c.privacy = 'public'
           or (
             c.privacy = 'campus'
             and exists (
