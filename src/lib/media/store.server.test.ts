@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { mediaStorageErrorStatus, parseDataUrl, readMediaBytes, removeMediaBytes, writeMediaBytes } from "./store.server.ts";
-import { isMediaKind, kindFromMime } from "./types.ts";
+import { isMediaKind, kindFromMime, resolveMediaKind } from "./types.ts";
 
 test("accepts only the supported media kind values", () => {
   for (const kind of ["photo", "video", "audio", "file"]) {
@@ -17,6 +17,16 @@ test("infers media kind from MIME types without case sensitivity at the upload b
   assert.equal(kindFromMime("video/mp4"), "video");
   assert.equal(kindFromMime("audio/mpeg"), "audio");
   assert.equal(kindFromMime("application/pdf"), "file");
+});
+
+test("resolves explicit media kinds safely and rejects mismatched image, video, or audio types", () => {
+  assert.equal(resolveMediaKind(undefined, "IMAGE/PNG"), "photo");
+  assert.equal(resolveMediaKind("video", "application/octet-stream"), "video");
+  assert.equal(resolveMediaKind("file", "application/pdf"), "file");
+  assert.throws(() => resolveMediaKind("video", "image/png"), /does not match/);
+  assert.throws(() => resolveMediaKind("audio", "video/mp4"), /does not match/);
+  assert.throws(() => resolveMediaKind("unknown", "application/octet-stream"), /Unsupported media kind/);
+  assert.throws(() => resolveMediaKind({ toString: () => "video" }, "application/octet-stream"), /Unsupported media kind/);
 });
 
 test("maps missing local or durable objects to 404", () => {
