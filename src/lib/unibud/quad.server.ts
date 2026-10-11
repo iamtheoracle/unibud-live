@@ -65,7 +65,7 @@ export const joinQuad = createServerFn({ method: "POST" })
   .validator((communityId: string) => communityId)
   .handler(async ({ context, data: communityId }) => {
     const sql = await getSql();
-    const room = await sql<{ privacy?: string }>`select privacy, university_id from communities where id = ${communityId} limit 1`;
+    const room = await sql<{ privacy?: string; university_id?: string | null }>`select privacy, university_id from communities where id = ${communityId} limit 1`;
     if (!room[0]) throw new Error("That Quad was not found.");
     const privacy = room[0].privacy ?? "public";
     if (privacy === "campus") {
