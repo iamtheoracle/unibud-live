@@ -48,15 +48,20 @@ export const createQuad = createServerFn({ method: "POST" })
     const id = `q_${crypto.randomUUID().slice(0, 10)}`;
     // Fail closed: never fall back to a schema that silently drops privacy or
     // ownership fields. A failed write must not create a public room by accident.
-    await sql`
-      insert into communities (id, name, kind, university_id, description, cover, members, privacy, created_by)
-      values (${id}, ${name}, ${kind}, ${privacy === "campus" ? universityId : null}, ${description}, ${data.cover ?? null}, ${1}, ${privacy}, ${context.userId})
-    `;
-    await sql`
+    // Create the Quad and its owner membership in one SQL statement. If either
+    // insert fails, PostgreSQL rolls back both instead of leaving an orphaned Quad.
+    const created = await sql`
+      with new_quad as (
+        insert into communities (id, name, kind, university_id, description, cover, members, privacy, created_by)
+        values (${id}, ${name}, ${kind}, ${privacy === "campus" ? universityId : null}, ${description}, ${data.cover ?? null}, ${1}, ${privacy}, ${context.userId})
+        returning id
+      )
       insert into community_members (user_id, community_id, role)
-      values (${context.userId}, ${id}, ${"owner"})
+      select ${context.userId}, id, ${"owner"} from new_quad
       on conflict (user_id, community_id) do update set role = ${"owner"}
+      returning community_id
     `;
+    if (!created[0]) throw new Error("Quad could not be created. Please try again.");
     const rows = await sql`select * from communities where id = ${id} limit 1`;
     if (!rows[0]) throw new Error("Quad was created but could not be loaded. Refresh and check your Quads.");
     return mapCommunity(rows[0]);
