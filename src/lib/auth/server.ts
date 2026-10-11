@@ -71,20 +71,27 @@ const env = (key: string): string | undefined => {
   return value ? value : undefined;
 };
 
-// Explicit off-switch. The deployer sets `VITE_AUTH_ENABLED=true` when it
-// provisions auth; set it to "false" to force auth off everywhere (dev user).
+// Explicit off-switch is supported for local/demo work only. Production auth
+// must use the app's provisioned broker client and stable origin/secret, never
+// the shared live-preview OAuth credentials.
 const authDisabled = env("VITE_AUTH_ENABLED") === "false";
+const isProduction = process.env.NODE_ENV === "production";
+const explicitBaseURL = env("BETTER_AUTH_URL");
+const explicitGrokIssuer = env("GROK_AUTH_ISSUER");
+const explicitGrokClientId = env("GROK_AUTH_CLIENT_ID");
+const explicitGrokClientSecret = env("GROK_AUTH_CLIENT_SECRET");
 
-// Broker federation creds: the deployer injects a per-app client when deployed;
-// otherwise fall back to the shared live-preview client, which the broker accepts
-// for any `*.grok-sandbox.com` callback (see `./preview`).
-const grokIssuer = env("GROK_AUTH_ISSUER") ?? GROK_ISSUER_DEFAULT;
-const grokClientId = env("GROK_AUTH_CLIENT_ID") ?? PREVIEW_CLIENT_ID;
-const grokClientSecret = env("GROK_AUTH_CLIENT_SECRET") ?? PREVIEW_CLIENT_SECRET;
+const grokIssuer = explicitGrokIssuer ?? GROK_ISSUER_DEFAULT;
+const grokClientId = explicitGrokClientId ?? (isProduction ? undefined : PREVIEW_CLIENT_ID);
+const grokClientSecret = explicitGrokClientSecret ?? (isProduction ? undefined : PREVIEW_CLIENT_SECRET);
 
-/** True when federated sign-in is active (real auth is enforced). */
+/** True only when the real database and appropriate auth configuration exist. */
 export const authConfigured =
-  !authDisabled && databaseConfigured() && Boolean(grokClientId && grokClientSecret);
+  !authDisabled &&
+  databaseConfigured() &&
+  Boolean(grokClientId && grokClientSecret) &&
+  (!isProduction ||
+    Boolean(explicitGrokIssuer && explicitGrokClientId && explicitGrokClientSecret && explicitBaseURL && env("BETTER_AUTH_SECRET")));
 
 // This app's own Better Auth origin. When deployed the deployer injects the
 // public URL. In the sandbox live preview there's no fixed URL (each preview gets
@@ -92,7 +99,6 @@ export const authConfigured =
 // it derives the origin per-request from the (proxied) host, validated against the
 // preview allowlist, which makes the OAuth `redirect_uri` the concrete preview URL
 // the broker's preview client accepts.
-const explicitBaseURL = env("BETTER_AUTH_URL");
 // Explicit `string[]` (not a readonly tuple) — Better Auth's DynamicBaseURLConfig
 // requires a mutable `allowedHosts: string[]`.
 const previewAllowedHosts: string[] = [...PREVIEW_ALLOWED_HOSTS];
