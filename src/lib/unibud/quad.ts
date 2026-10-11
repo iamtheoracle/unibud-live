@@ -113,6 +113,9 @@ export const leaveQuad = createServerFn({ method: "POST" })
   .validator((communityId: string) => communityId)
   .handler(async ({ context, data: communityId }) => {
     const sql = await getSql();
+    // Serialize leave operations per Quad. Without this lock, two owners can
+    // both observe the other's membership and leave concurrently, orphaning the Quad.
+    await sql`select id from communities where id = ${communityId} for update`;
     const mem = await sql<{ role?: string }>`
       select role from community_members where user_id = ${context.userId} and community_id = ${communityId}
     `;
