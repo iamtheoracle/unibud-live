@@ -352,6 +352,33 @@ export const listConnectPeople = createServerFn({ method: "GET" })
     return rows.map((row) => connectProfile(row as Record<string, unknown>));
   });
 
+/** Load a profile from the real registered-member directory, never from fixture people. */
+export const getPublicProfile = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .validator((handle: string) => handle)
+  .handler(async ({ context, data: rawHandle }) => {
+    if (typeof rawHandle !== "string") throw new Error("Choose a valid user handle.");
+    const handle = rawHandle.trim().toLowerCase();
+    if (!/^[a-z0-9_]{2,32}$/.test(handle)) throw new Error("Choose a valid user handle.");
+    const sql = await getSql();
+    const rows = await sql`
+      select user_id, handle, display_name, university_id, program, year, bio, campus_role
+      from student_profiles where lower(handle) = ${handle} limit 1`;
+    if (!rows[0]) return null;
+    const profile = rows[0] as Record<string, unknown>;
+    return {
+      userId: String(profile.user_id),
+      handle: String(profile.handle),
+      name: String(profile.display_name ?? profile.handle),
+      universityId: String(profile.university_id ?? ""),
+      program: String(profile.program ?? ""),
+      year: String(profile.year ?? ""),
+      bio: String(profile.bio ?? ""),
+      role: String(profile.campus_role ?? "student"),
+      isSelf: String(profile.user_id) === context.userId,
+    };
+  });
+
 /** Durable incoming/outgoing requests, accepted connections, follows and followers. */
 export const getMyConnectState = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
