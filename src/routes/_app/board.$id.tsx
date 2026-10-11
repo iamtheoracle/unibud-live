@@ -1,13 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { BOARD_SESSIONS } from "@/lib/unibud/board-data";
 import { courseByCode, boardIdFor, COURSE_CATALOGUE } from "@/lib/unibud/academic";
 import { EDU_PODCASTS } from "@/lib/unibud/podcast-data";
 import { BUD_MEDIA } from "@/lib/media/bud-media";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { canTeach } from "@/lib/unibud/roles";
-import { askInClass, listAnnouncements, listAttendance, listClassQuestions, logAttendance, postAnnouncement } from "@/lib/academic/server";
+import { askInClass, listAnnouncements, listAttendance, listClassQuestions, logAttendance, openCourseConversation, postAnnouncement } from "@/lib/academic/server";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -15,6 +16,7 @@ export const Route = createFileRoute("/_app/board/$id")({ component: UniBoard })
 
 function UniBoard() {
   const { id } = Route.useParams();
+  const navigate = useNavigate();
   const course = COURSE_CATALOGUE.find((c) => boardIdFor(c.code) === id) ?? courseByCode(id);
   const role = useCampusStore((s) => s.role ?? "student");
   const liveAttendance = useCampusStore((s) => s.liveAttendance);
@@ -99,6 +101,13 @@ function UniBoard() {
         {course.title} · {course.lecturer} · {course.programme}
       </p>
       <p className="mt-3 max-w-xl text-sm leading-relaxed">{course.description}</p>
+      <div className="mt-4">
+        <Button size="sm" variant="outline" onClick={() => {
+          void openCourseConversation({ data: course.code })
+            .then(({ id: conversationId }) => navigate({ to: "/messages/$id", params: { id: conversationId } }))
+            .catch((error: unknown) => toast.error(error instanceof Error ? error.message : "Could not open class chat."));
+        }}>Open class chat</Button>
+      </div>
 
       {session?.status === "live" ? (
         <section className="mt-6 rounded-3xl bg-ink px-5 py-5 text-paper">
