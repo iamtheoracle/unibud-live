@@ -45,3 +45,14 @@ test("accepts valid shared media payloads", () => {
     src: "https://cdn.example.test/lecture.mp4",
   });
 });
+
+test("rejects shared-media JSON above the input size limit", () => {
+  assert.equal(parseShareJson(JSON.stringify({ kind: "file", title: "x".repeat(12_001) })), undefined);
+});
+
+test("rejects oversized shared-media URLs and metadata fields", () => {
+  assert.equal(parseShareJson(JSON.stringify({ kind: "file", src: `https://example.test/${"x".repeat(2_100)}` })), undefined);
+  assert.equal(parseShareJson(JSON.stringify({ kind: "file", title: "x".repeat(256) })), undefined);
+  assert.equal(parseShareJson(JSON.stringify({ kind: "audio", audioId: "x".repeat(201) })), undefined);
+  assert.equal(parseShareJson(JSON.stringify({ kind: "audio", duration: "x".repeat(51) })), undefined);
+});
