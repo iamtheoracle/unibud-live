@@ -78,7 +78,7 @@ function Communities() {
             void createQuad({
               data: { name: name.trim(), kind: createKind, description: "", privacy: "public" },
             })
-              .then(() => {
+              .then(async () => {
                 toast.success("Quad created.");
                 setCreating(false);
                 setName("");
