@@ -33,7 +33,7 @@ export const createQuad = createServerFn({ method: "POST" })
     // Class-room creation is a privileged action and must be enforced server-side,
     // not just by the button's visibility or client-side role state.
     if (kind === "Class") {
-      const rows = await sql<{ campus_role?: string }>` 
+      const rows = await sql<{ campus_role?: string }>`
         select campus_role from student_profiles where user_id = ${context.userId} limit 1
       `;
       const role = String(rows[0]?.campus_role ?? "student") as CampusRole;
@@ -115,6 +115,6 @@ export const leaveQuad = createServerFn({ method: "POST" })
     }
     await sql`delete from community_members where user_id = ${context.userId} and community_id = ${communityId}`;
     const count = await sql`select count(*)::int as count from community_members where community_id = ${communityId}`;
-    await sql`update communities set members = ${Number(count[0]?.count ?? 0)} where id = ${communityId}`;
+    await sql`update communities set members = ${Number(count[0]?.count ?? 0)} where community_id = ${communityId}`;
     return { left: true as const };
   });
