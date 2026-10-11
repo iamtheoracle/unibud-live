@@ -7,12 +7,11 @@ import { EmptyState } from "@/components/unibud/empty";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
 import { relativeTime } from "@/lib/unibud/format";
 import { listChatPeople, listConversations, openConversation } from "@/lib/social/server";
-import { CAMPUS_ROOMS, type RoomKind } from "@/lib/unibud/chat-rooms";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/messages")({ component: ChatList });
 
-type Tab = "direct" | RoomKind;
+type Tab = "direct" | "group" | "class" | "study" | "community";
 
 function ChatList() {
   const { user, isPending } = useAuthReady();
@@ -51,7 +50,7 @@ function ChatList() {
     }
   }
 
-  const rooms = CAMPUS_ROOMS.filter((r) => (tab === "direct" ? false : r.kind === tab));
+  const rooms = (convos.data ?? []).filter((conversation) => conversation.kind === tab);
 
   return (
     <main className="safe-bottom px-5 pt-6">
@@ -145,22 +144,28 @@ function ChatList() {
         </>
       ) : (
         <ul className="mt-5 space-y-2">
-          {rooms.map((r) => (
-            <li key={r.id}>
+          {rooms.map((conversation) => (
+            <li key={conversation.id}>
               <Link
                 to="/messages/$id"
-                params={{ id: r.id }}
+                params={{ id: conversation.id }}
                 className="block rounded-2xl bg-card p-4 ring-1 ring-border"
               >
-                <p className="text-[11px] font-semibold tracking-wide text-bud uppercase">{r.kind}</p>
-                <p className="mt-1 text-sm font-semibold">{r.title}</p>
-                <p className="text-xs text-muted-foreground">{r.subtitle}</p>
-                <p className="mt-2 truncate text-sm text-muted-foreground">{r.lastBody}</p>
+                <p className="text-[11px] font-semibold tracking-wide text-bud uppercase">{conversation.kind}</p>
+                <p className="mt-1 text-sm font-semibold">{conversation.title || (conversation.peerHandle ? `@${conversation.peerHandle}` : `Untitled ${conversation.kind} chat`)}</p>
+                <p className="mt-2 truncate text-sm text-muted-foreground">{conversation.lastBody || "No messages yet"}</p>
+                <p className="mt-2 text-xs text-muted-foreground">{conversation.memberCount} members · {relativeTime(conversation.updatedAt)}</p>
               </Link>
             </li>
           ))}
-          {rooms.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">No {tab} chats yet.</p>
+          {convos.isLoading ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">Loading your conversations…</p>
+          ) : null}
+          {!convos.isLoading && rooms.length === 0 ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">No {tab} conversations yet. Open a chat from its course or Quad once you have access.</p>
+          ) : null}
+          {convos.isError ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">Could not load conversations. Refresh and try again.</p>
           ) : null}
         </ul>
       )}
