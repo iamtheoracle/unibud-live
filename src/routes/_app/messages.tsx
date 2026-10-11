@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Avatar } from "@/components/unibud/person";
 import { EmptyState } from "@/components/unibud/empty";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
-import { PEOPLE, personByHandle } from "@/lib/unibud/catalog";
+import { listChatPeople } from "@/lib/social/server";
 import { relativeTime } from "@/lib/unibud/format";
 import { listConversations, openConversation } from "@/lib/social/server";
 import { CAMPUS_ROOMS, type RoomKind } from "@/lib/unibud/chat-rooms";
@@ -23,6 +24,11 @@ function ChatList() {
     queryFn: () => listConversations(),
     enabled: Boolean(user),
   });
+  const people = useQuery({
+    queryKey: ["chat-people"],
+    queryFn: () => listChatPeople(),
+    enabled: Boolean(user) && tab === "direct",
+  });
 
   if (isPending) return <div className="m-4 h-40 animate-pulse rounded-2xl bg-secondary" />;
   if (!user) {
@@ -38,8 +44,12 @@ function ChatList() {
   }
 
   async function start(handle: string) {
-    const c = await openConversation({ data: { handle } });
-    nav({ to: "/messages/$id", params: { id: c.id } });
+    try {
+      const c = await openConversation({ data: { handle } });
+      nav({ to: "/messages/$id", params: { id: c.id } });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not start this conversation.");
+    }
   }
 
   const rooms = CAMPUS_ROOMS.filter((r) => (tab === "direct" ? false : r.kind === tab));
@@ -79,7 +89,7 @@ function ChatList() {
         <>
           <div className="mt-5 space-y-1">
             {(convos.data ?? []).map((c) => {
-              const person = personByHandle(c.peerHandle);
+              const person = people.data?.find((p) => p.handle.toLowerCase() === c.peerHandle.toLowerCase());
               return (
                 <Link
                   key={c.id}
@@ -107,7 +117,7 @@ function ChatList() {
           ) : null}
           <h2 className="mt-8 text-sm font-medium">Suggested</h2>
           <ul className="mt-2">
-            {PEOPLE.filter((p) => p.role !== "lecturer").slice(0, 6).map((p) => (
+            {(people.data ?? []).map((p) => (
               <li key={p.handle}>
                 <button
                   type="button"
@@ -122,6 +132,16 @@ function ChatList() {
                 </button>
               </li>
             ))}
+            {!people.isLoading && !people.data?.length ? (
+              <li className="py-4 text-sm text-muted-foreground">
+                No other student profiles are available yet.
+              </li>
+            ) : null}
+            {people.isError ? (
+              <li className="py-4 text-sm text-muted-foreground">
+                Could not load people. Try refreshing this page.
+              </li>
+            ) : null}
           </ul>
         </>
       ) : (
