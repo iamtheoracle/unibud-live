@@ -102,8 +102,19 @@ export async function removeMediaBytes(id: string) {
   }
 }
 
-export function parseDataUrl(dataUrl: string): { mime: string; bytes: Buffer } {
-  const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl);
+export function parseDataUrl(dataUrl: string, maxBytes?: number): { mime: string; bytes: Buffer } {
+  const m = /^data:([^;,]+);base64,([A-Za-z0-9+/]*={0,2})$/.exec(dataUrl);
   if (!m) throw new Error("Invalid media payload");
-  return { mime: m[1], bytes: Buffer.from(m[2], "base64") };
+  // Estimate decoded size before allocating a Buffer. This keeps oversized
+  // Base64 requests from forcing an unnecessary second large memory allocation.
+  const encoded = m[2];
+  const estimatedBytes = Math.floor((encoded.length * 3) / 4) - (encoded.endsWith("==") ? 2 : encoded.endsWith("=") ? 1 : 0);
+  if (maxBytes !== undefined && estimatedBytes > maxBytes) {
+    throw new Error(`Media payload exceeds the ${maxBytes}-byte limit.`);
+  }
+  const bytes = Buffer.from(encoded, "base64");
+  if (maxBytes !== undefined && bytes.length > maxBytes) {
+    throw new Error(`Media payload exceeds the ${maxBytes}-byte limit.`);
+  }
+  return { mime: m[1], bytes };
 }
