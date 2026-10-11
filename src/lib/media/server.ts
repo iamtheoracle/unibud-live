@@ -274,9 +274,30 @@ export const persistAudioEvent = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { kind: string; audioId?: string; budMediaId?: string; providerId?: string; surface: string }) => input)
   .handler(async ({ context, data }) => {
+    const bounded = (value: unknown, max: number): value is string =>
+      typeof value === "string" && value.trim().length > 0 && value.length <= max;
+    if (!bounded(data.kind, 64) || !bounded(data.surface, 80)) {
+      throw new Error("Invalid audio event details.");
+    }
+    for (const [name, value] of [["audioId", data.audioId], ["budMediaId", data.budMediaId], ["providerId", data.providerId]] as const) {
+      if (value !== undefined && (!bounded(value, 200) || /[\\u0000-\\u001f]/.test(value))) {
+        throw new Error(`Invalid audio event ${name}.`);
+      }
+    }
+    if (data.audioId && data.budMediaId) {
+      throw new Error("An audio event cannot reference two media records.");
+    }
     const sql = await getSql();
+    if (data.audioId) {
+      const rows = await sql`select audio_id from audio_objects where audio_id = ${data.audioId} limit 1`;
+      if (!rows[0]) throw new Error("Audio item not found or access denied.");
+    }
+    if (data.budMediaId) {
+      const rows = await sql`select id from bud_media where id = ${data.budMediaId} and owner_id = ${context.userId} and status = ${"ready"} and media_id is not null limit 1`;
+      if (!rows[0]) throw new Error("Audio item not found or access denied.");
+    }
     await sql`insert into audio_events (id, kind, user_id, audio_id, bud_media_id, provider_id, surface)
-      values (${crypto.randomUUID()}, ${data.kind}, ${context.userId}, ${data.audioId ?? null}, ${data.budMediaId ?? null}, ${data.providerId ?? null}, ${data.surface})`;
+      values (${crypto.randomUUID()}, ${data.kind.trim()}, ${context.userId}, ${data.audioId ?? null}, ${data.budMediaId ?? null}, ${data.providerId?.trim() ?? null}, ${data.surface.trim()})`;
     return { ok: true };
   });
 
@@ -284,8 +305,15 @@ export const recordPartnerClick = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { provider: string; trackId?: string; surface?: string }) => input)
   .handler(async ({ context, data }) => {
+    const bounded = (value: unknown, max: number): value is string =>
+      typeof value === "string" && value.trim().length > 0 && value.length <= max;
+    if (!bounded(data.provider, 100) ||
+        (data.trackId !== undefined && (!bounded(data.trackId, 200) || /[\\u0000-\\u001f]/.test(data.trackId))) ||
+        (data.surface !== undefined && !bounded(data.surface, 80))) {
+      throw new Error("Invalid partner click details.");
+    }
     const sql = await getSql();
     await sql`insert into partner_clicks (id, user_id, provider, track_id, surface, revenue_kobo)
-      values (${crypto.randomUUID()}, ${context.userId}, ${data.provider}, ${data.trackId ?? null}, ${data.surface ?? null}, ${REVENUE_POLICY.revenueKobo})`;
+      values (${crypto.randomUUID()}, ${context.userId}, ${data.provider.trim()}, ${data.trackId?.trim() ?? null}, ${data.surface?.trim() ?? null}, ${REVENUE_POLICY.revenueKobo})`;
     return { ok: true, revenueKobo: 0 };
   });
