@@ -78,7 +78,7 @@ export const reportMedia = createServerFn({ method: "POST" })
       const target = await sql`select id from media_assets where id = ${data.mediaId} and status <> ${"deleted"} limit 1`;
       if (!target[0]) throw new Error("Media item not found.");
     } else if (data.audioId) {
-      const target = await sql`select id from audio_tracks where id = ${data.audioId} limit 1`;
+      const target = await sql`select audio_id from audio_objects where audio_id = ${data.audioId} limit 1`;
       if (!target[0]) throw new Error("Audio item not found.");
     }
     await sql`insert into media_reports (id, media_id, audio_id, reporter_id, reason)
