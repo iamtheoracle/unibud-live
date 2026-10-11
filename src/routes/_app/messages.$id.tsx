@@ -55,13 +55,10 @@ function PersistentRoomThread({ id }: { id: string }) {
     <div className="flex-1 space-y-3 overflow-y-auto px-4 py-5">
       {messages.isLoading ? <p className="py-8 text-center text-sm text-muted-foreground">Loading messages…</p> : null}
       {messages.isError ? <div className="rounded-xl border border-border p-4 text-sm text-muted-foreground">Messages could not load. Check the database migration and room membership.</div> : null}
-      {(messages.data ?? []).map((m) => <div key={m.id} className={cn("max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed", m.sender === "You" ? "ml-auto bg-ink text-paper" : "bg-secondary text-foreground")}><p className="mb-1 text-[10px] font-semibold opacity-70">{m.sender}</p>{m.body}{m.mediaId ? <p className="mt-1 text-xs opacity-70">Attachment included</p> : null}</div>)}
+      {(messages.data ?? []).map((m) => <div key={m.id} className={cn("max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed", m.sender === "You" ? "ml-auto bg-ink text-paper" : "bg-secondary text-foreground")}><p className="mb-1 text-[10px] font-semibold opacity-70">{m.sender}</p>{m.body}{m.shareJson || m.mediaId ? <ShareCard share={parseShareJson(m.shareJson ?? undefined) ?? { kind: (m.shareKind as ChatShare["kind"]) ?? "file", mediaId: m.mediaId ?? undefined, title: m.body }} /> : null}</div>)}
       {!messages.isLoading && !messages.isError && !(messages.data ?? []).length ? <p className="py-12 text-center text-sm text-muted-foreground">This room is ready. Send the first message.</p> : null}
     </div>
-    <form className="flex items-end gap-2 border-t border-border p-3" onSubmit={(event) => { event.preventDefault(); if (body.trim() && !send.isPending) send.mutate(); }}>
-      <textarea value={body} onChange={(event) => setBody(event.target.value)} maxLength={10000} rows={2} placeholder="Write a message…" className="min-h-11 flex-1 resize-y rounded-2xl border border-border bg-background px-3 py-2 text-sm" />
-      <button type="submit" disabled={!body.trim() || send.isPending} className="h-11 rounded-full bg-ink px-4 text-sm font-medium text-paper disabled:opacity-40">{send.isPending ? "Sending…" : "Send"}</button>
-    </form>
+    <Composer body={body} setBody={setBody} placeholder="Write a message…" pending={send.isPending} roomId={id} onSend={() => { if (body.trim() && !send.isPending) send.mutate(); }} onShare={(share) => { void send.mutateAsync({ body: share.title ?? "", mediaId: share.mediaId, shareKind: share.kind, shareJson: JSON.stringify(share) }); }} />
   </main>;
 }
 
