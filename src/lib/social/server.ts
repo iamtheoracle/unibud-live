@@ -119,7 +119,7 @@ export const createPost = createServerFn({ method: "POST" })
     const profile = await sql`select handle from student_profiles where user_id = ${context.userId} limit 1`;
     if (!profile[0]) throw new Error("Finish setting up your UNIBUD profile before posting.");
     const id = `post_${crypto.randomUUID()}`;
-    await sql`insert into posts (id, community_id, author_handle, body, image) values (${id}, ${communityId}, ${profile[0].handle}, ${body}, ${data.image ?? data.video ?? null})`;
+    await sql`insert into posts (id, community_id, author_handle, body, image, video, kind) values (${id}, ${communityId}, ${profile[0].handle}, ${body}, ${data.image ?? null}, ${data.video ?? null}, ${data.kind === "reel" ? "reel" : "post"})`;
     return { id, communityId, body, handle: String(profile[0].handle) };
   });
 
