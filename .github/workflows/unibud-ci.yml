@@ -41,6 +41,9 @@ jobs:
           done
           npm run check:auth
 
+      - name: Authentication policy tests
+        run: npm run test:auth-policy
+
       - name: Typecheck
         run: npm run typecheck
 
