@@ -128,6 +128,7 @@ async function objectStorageRequest(id: string, method: "GET" | "PUT" | "DELETE"
 }
 
 export async function writeMediaBytes(id: string, bytes: Buffer) {
+  if (bytes.length > MAX_UPLOAD_BYTES) throw new Error("Media object exceeds the configured size limit.");
   const stored = await objectStorageRequest(id, "PUT", bytes);
   if (stored !== undefined) return `s3://${process.env.MEDIA_S3_BUCKET}/${id}`;
   await mkdir(ROOT, { recursive: true });
