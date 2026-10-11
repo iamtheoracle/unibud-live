@@ -115,6 +115,6 @@ export const leaveQuad = createServerFn({ method: "POST" })
     }
     await sql`delete from community_members where user_id = ${context.userId} and community_id = ${communityId}`;
     const count = await sql`select count(*)::int as count from community_members where community_id = ${communityId}`;
-    await sql`update communities set members = ${Number(count[0]?.count ?? 0)} where community_id = ${communityId}`;
+    await sql`update communities set members = ${Number(count[0]?.count ?? 0)} where id = ${communityId}`;
     return { left: true as const };
   });
