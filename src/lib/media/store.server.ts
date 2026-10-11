@@ -1,4 +1,5 @@
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
+import { MAX_UPLOAD_BYTES } from "./types";
 import path from "node:path";
 import { createHash, createHmac } from "node:crypto";
 
@@ -80,6 +81,34 @@ function objectRequest(config: S3Config, id: string, method: "GET" | "PUT" | "DE
   return { url, init: { method, headers: { Authorization: authorization, "x-amz-content-sha256": payloadHash, "x-amz-date": amzDate, ...(method === "PUT" ? { "Content-Type": "application/octet-stream" } : {}) }, ...(method === "PUT" ? { body } : {}) } as RequestInit };
 }
 
+export async function readBoundedResponseBytes(response: Response, maxBytes = MAX_UPLOAD_BYTES): Promise<Buffer> {
+  const declaredLength = response.headers.get("content-length");
+  if (declaredLength !== null && /^\\d+$/.test(declaredLength) && Number(declaredLength) > maxBytes) {
+    try { await response.body?.cancel(); } catch { /* preserve the size-limit error */ }
+    throw new Error("Media object exceeds the configured size limit.");
+  }
+  if (!response.body) return Buffer.alloc(0);
+
+  const reader = response.body.getReader();
+  const chunks: Buffer[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        try { await reader.cancel(); } catch { /* preserve the size-limit error */ }
+        throw new Error("Media object exceeds the configured size limit.");
+      }
+      chunks.push(Buffer.from(value));
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return Buffer.concat(chunks, total);
+}
+
 async function objectStorageRequest(id: string, method: "GET" | "PUT" | "DELETE", bytes?: Buffer): Promise<Buffer | null | undefined> {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
     throw new Error("Invalid media id.");
@@ -95,7 +124,7 @@ async function objectStorageRequest(id: string, method: "GET" | "PUT" | "DELETE"
   if (method === "GET" && response.status === 404) return null;
   if (method === "DELETE" && (response.ok || response.status === 404)) return Buffer.alloc(0);
   if (!response.ok) throw new Error(`Media object storage ${method} failed with status ${response.status}.`);
-  return method === "GET" ? Buffer.from(await response.arrayBuffer()) : Buffer.alloc(0);
+  return method === "GET" ? await readBoundedResponseBytes(response) : Buffer.alloc(0);
 }
 
 export async function writeMediaBytes(id: string, bytes: Buffer) {
@@ -121,7 +150,7 @@ export async function readMediaBytes(id: string) {
     return stored;
   }
   if (process.env.NODE_ENV === "production") throw new Error("Durable media storage is not configured.");
-  return readFile(path.join(ROOT, id));
+  const filePath = path.join(ROOT, id);\n  const info = await stat(filePath);\n  if (info.size > MAX_UPLOAD_BYTES) throw new Error("Media object exceeds the configured size limit.");\n  const bytes = await readFile(filePath);\n  if (bytes.length > MAX_UPLOAD_BYTES) throw new Error("Media object exceeds the configured size limit.");\n  return bytes;
 }
 
 export async function removeMediaBytes(id: string) {
