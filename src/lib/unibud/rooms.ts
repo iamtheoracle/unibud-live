@@ -71,11 +71,7 @@ export const createCampusRoom = createServerFn({ method: "POST" })
     if (data.kind === "community") throw new Error("Create community-linked rooms through the authorized Quad management flow.");
     if (data.isPrivate) throw new Error("Private rooms are unavailable until room invitations are supported.");
     const sql = await getSql();
-    if (data.kind === "community" && !data.communityId) throw new Error("Community rooms must be linked to an existing Quad.");
-    if (data.communityId) {
-      const membership = await sql`select user_id from community_members where community_id = ${data.communityId} and user_id = ${context.userId} limit 1`;
-      if (!membership[0]) throw new Error("Join the linked Quad before creating its room.");
-    }
+    if (data.communityId) throw new Error("Community-linked rooms must be created through the authorized Quad management flow.");
     const id = `room_${crypto.randomUUID()}`;
     await sql`insert into campus_rooms (id, kind, title, subtitle, created_by, community_id, is_private)
       values (${id}, ${data.kind}, ${title}, ${subtitle}, ${context.userId}, ${data.communityId ?? null}, ${Boolean(data.isPrivate)})`;
