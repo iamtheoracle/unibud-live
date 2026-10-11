@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { getSql } from "@/lib/db";
 import { requireUserId } from "@/lib/auth/verify.server";
 import { assertConversationMember } from "@/lib/social/server";
+import { canReadMedia } from "@/lib/media/access.server";
 import { readMediaBytes } from "@/lib/media/store.server";
 
 export const Route = createFileRoute("/api/media/$id")({
@@ -27,25 +28,23 @@ export const Route = createFileRoute("/api/media/$id")({
           return new Response("Not ready", { status: 409 });
         }
 
-        // Media is private by default. Conversation attachments require current
-        // membership, including revalidation of class and community access.
-        if (String(row.visibility) === "conversation" && row.conversation_id) {
-          try {
-            await assertConversationMember(userId, String(row.conversation_id));
-          } catch {
-            return new Response("Forbidden", { status: 403 });
-          }
-        } else if (String(row.visibility) === "room" || row.room_id) {
-          if (!row.room_id) return new Response("Forbidden", { status: 403 });
-          const membership = await sql`select r.id, r.community_id from campus_rooms r join campus_room_members m on m.room_id = r.id and m.user_id = ${userId} where r.id = ${String(row.room_id)} limit 1`;
-          if (!membership[0]) return new Response("Forbidden", { status: 403 });
-          if (membership[0].community_id) {
-            const communityMember = await sql`select user_id from community_members where community_id = ${String(membership[0].community_id)} and user_id = ${userId} limit 1`;
-            if (!communityMember[0]) return new Response("Forbidden", { status: 403 });
-          }
-        } else if (String(row.owner_id) !== userId) {
-          return new Response("Forbidden", { status: 403 });
-        }
+        // Recheck current membership on every read. Inconsistent scope metadata
+        // is denied by the shared policy helper.
+        const allowed = await canReadMedia({
+          userId,
+          row,
+          assertConversationMember,
+          isRoomMember: async (memberId, roomId) => {
+            const membership = await sql`select r.id, r.community_id from campus_rooms r join campus_room_members m on m.room_id = r.id and m.user_id = ${memberId} where r.id = ${roomId} limit 1`;
+            if (!membership[0]) return false;
+            if (membership[0].community_id) {
+              const communityMember = await sql`select user_id from community_members where community_id = ${String(membership[0].community_id)} and user_id = ${memberId} limit 1`;
+              if (!communityMember[0]) return false;
+            }
+            return true;
+          },
+        });
+        if (!allowed) return new Response("Forbidden", { status: 403 });
 
         try {
           const bytes = await readMediaBytes(id);
