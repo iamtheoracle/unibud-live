@@ -197,7 +197,7 @@ export const sendMessage = createServerFn({ method: "POST" })
             where cm.community_id = c.community_id and cm.user_id = scm.user_id
           ))
         for key share of scm, c
-      )
+      ),
       inserted_message as (
         insert into social_messages (id, conversation_id, sender_id, body, media_id, share_kind, share_json)
         select ${id}, ${data.conversationId}, authorized_member.user_id,
