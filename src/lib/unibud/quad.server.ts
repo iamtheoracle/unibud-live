@@ -88,16 +88,20 @@ export const joinQuad = createServerFn({ method: "POST" })
       if (!already[0]) throw new Error("This Quad is private. Ask an admin to invite you.");
       return { joined: true as const };
     }
-    const inserted = await sql`
-      insert into community_members (user_id, community_id, role)
-      values (${context.userId}, ${communityId}, ${"member"})
-      on conflict (user_id, community_id) do nothing
-      returning user_id
+    // Insert membership and increment the denormalized count in one statement.
+    // The count changes only when this request actually creates a membership.
+    await sql`
+      with inserted as (
+        insert into community_members (user_id, community_id, role)
+        values (${context.userId}, ${communityId}, ${"member"})
+        on conflict (user_id, community_id) do nothing
+        returning community_id
+      )
+      update communities c
+      set members = coalesce(c.members, 0) + 1
+      from inserted
+      where c.id = inserted.community_id
     `;
-    if (inserted[0]) {
-      const count = await sql`select count(*)::int as count from community_members where community_id = ${communityId}`;
-      await sql`update communities set members = ${Number(count[0]?.count ?? 0)} where id = ${communityId}`;
-    }
     return { joined: true as const };
   });
 
