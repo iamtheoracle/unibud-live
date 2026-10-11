@@ -50,6 +50,24 @@ jobs:
       - name: Lint agent and integration layer
         run: npx eslint src/lib/agents src/lib/spark src/lib/bud/server.ts src/lib/bud/spark.ts
 
+      - name: Lint changed Board, media, chat, and auth surfaces
+        run: >-
+          npx eslint
+          src/routes/_app/board.tsx
+          'src/routes/_app/board.$id.tsx'
+          src/routes/_app/podcasts.tsx
+          src/components/bud/workspace.tsx
+          src/lib/media/server.ts
+          src/lib/media/share.ts
+          src/lib/media/share.test.ts
+          src/lib/social/server.ts
+          src/lib/academic/server.ts
+          src/lib/academic/session-policy.ts
+          src/lib/academic/session-policy.test.ts
+          src/lib/auth/verify.server.ts
+          src/lib/auth/auth-policy.ts
+          src/lib/auth/auth-policy.test.ts
+
       - name: Agent, Spark, and profile-role tests
         run: |
           npm run test:agents
