@@ -165,6 +165,9 @@ export const createMoneyRequest = createServerFn({ method: "POST" })
     if (!Array.isArray(data.handles) || data.handles.length === 0 || data.handles.length > 100) {
       throw new Error("Choose between 1 and 100 people.");
     }
+    if (typeof data.note !== "string" || data.note.length > 500) {
+      throw new Error("Demo request note must be 500 characters or fewer.");
+    }
     const handles = [...new Set(data.handles
       .filter((h): h is string => typeof h === "string")
       .map((h) => h.replace(/^@/, "").trim().toLowerCase())
@@ -219,9 +222,16 @@ export const saveFundingNotes = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { program: string; status: string; notes: string }) => input)
   .handler(async ({ context, data }) => {
+    if (
+      typeof data.program !== "string" || !data.program.trim() || data.program.length > 80 ||
+      typeof data.status !== "string" || !data.status.trim() || data.status.length > 80 ||
+      typeof data.notes !== "string" || data.notes.length > 4_000
+    ) {
+      throw new Error("Funding notes must have a program and status under 80 characters and notes under 4,000 characters.");
+    }
     const sql = await getSql();
     await sql`insert into funding_notes (user_id, program, status, notes, updated_at)
-      values (${context.userId}, ${data.program}, ${data.status}, ${data.notes}, now())
-      on conflict (user_id) do update set program = ${data.program}, status = ${data.status}, notes = ${data.notes}, updated_at = now()`;
+      values (${context.userId}, ${data.program.trim()}, ${data.status.trim()}, ${data.notes}, now())
+      on conflict (user_id) do update set program = ${data.program.trim()}, status = ${data.status.trim()}, notes = ${data.notes}, updated_at = now()`;
     return loadWallet(context.userId);
   });
