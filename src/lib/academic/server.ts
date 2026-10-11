@@ -4,7 +4,7 @@ import { authMiddleware } from "@/lib/auth/middleware";
 import { courseByCode } from "@/lib/unibud/academic";
 import { canTeach, type CampusRole } from "@/lib/unibud/roles";
 import { notify } from "@/lib/unibud/server";
-import { attendanceEventAction, canTransitionBoardSessionStatus, type BoardSessionStatus } from "./session-policy";
+import { attendanceEventAction, canTransitionBoardSessionStatus, summarizeAttendanceEvents, type BoardSessionStatus } from "./session-policy";
 
 async function loadEnrollments(userId: string) {
   const sql = await getSql();
@@ -292,18 +292,11 @@ export const listAttendance = createServerFn({ method: "GET" })
   .handler(async ({ context, data: sessionId }) => {
     const { sql } = await requireSessionAccess(context.userId, sessionId, "manage");
     const rows = await sql`select user_id, kind, created_at from attendance_events where session_id = ${sessionId} order by created_at`;
-    const byUser = new Map<string, { joined?: string; left?: string }>();
-    for (const r of rows) {
-      const uid = String(r.user_id);
-      const cur = byUser.get(uid) ?? {};
-      if (String(r.kind) === "join") {
-        if (!cur.joined) cur.joined = String(r.created_at);
-        delete cur.left;
-      }
-      if (String(r.kind) === "leave" && cur.joined) cur.left = String(r.created_at);
-      byUser.set(uid, cur);
-    }
-    return [...byUser.entries()].map(([userId, v]) => ({ userId, ...v }));
+    return summarizeAttendanceEvents(rows.map((row) => ({
+      userId: String(row.user_id),
+      kind: String(row.kind),
+      createdAt: String(row.created_at),
+    })));
   });
 
 /** Return only the signed-in user's attendance events for a session. */
