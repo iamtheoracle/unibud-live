@@ -112,7 +112,16 @@ export const postAnnouncement = createServerFn({ method: "POST" })
     const sql = await getSql();
     await sql`insert into board_announcements (id, course_code, author_id, title, body)
       values (${crypto.randomUUID()}, ${data.courseCode}, ${context.userId}, ${title}, ${body})`;
-    await notify(context.userId, "class", title, body, `/board/${data.courseCode.toLowerCase().replace(/\s+/g, "")}`);
+    const recipients = await sql`
+      select user_id from enrollments
+      where course_code = ${data.courseCode} and user_id <> ${context.userId}`;
+    const href = `/board/${data.courseCode.toLowerCase().replace(/\\s+/g, "")}`;
+    const deliveries = await Promise.allSettled(
+      recipients.map((recipient) => notify(String(recipient.user_id), "class", title, body, href)),
+    );
+    if (deliveries.some((delivery) => delivery.status === "rejected")) {
+      console.error("[academic] Some announcement notifications could not be saved.");
+    }
     const rows = await sql`select * from board_announcements where course_code = ${data.courseCode} order by created_at desc`;
     return rows.map((r) => ({
       id: String(r.id),
