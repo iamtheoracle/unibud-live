@@ -56,6 +56,7 @@ jobs:
           src/routes/_app/board.tsx
           'src/routes/_app/board.$id.tsx'
           src/routes/_app/podcasts.tsx
+          src/routes/_app/connect.tsx
           src/components/bud/workspace.tsx
           src/lib/media/server.ts
           src/lib/media/share.ts
