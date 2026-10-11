@@ -51,7 +51,7 @@ function Square() {
   const connections = useCampusStore((s) => s.connections);
   const interests = useCampusStore((s) => s.interests);
   const likeCounts = useCampusStore((s) => s.likeCounts);
-  const searches = useCampusStore((s) => s.searches);
+  const searches: string[] = [];
   const setComposeOpen = useCampusStore((s) => s.setComposeOpen);
   const setDropOpen = useCampusStore((s) => s.setDropOpen);
   const setSquareView = useCampusStore((s) => s.setSquareView);
