@@ -4,7 +4,7 @@ import { authMiddleware } from "@/lib/auth/middleware";
 import { courseByCode } from "@/lib/unibud/academic";
 import { canTeach, type CampusRole } from "@/lib/unibud/roles";
 import { notify } from "@/lib/unibud/server";
-import { canTransitionBoardSessionStatus, type BoardSessionStatus } from "./session-policy";
+import { attendanceEventAction, canTransitionBoardSessionStatus, type BoardSessionStatus } from "./session-policy";
 
 async function loadEnrollments(userId: string) {
   const sql = await getSql();
@@ -261,6 +261,17 @@ export const logAttendance = createServerFn({ method: "POST" })
     const eventKey = data.eventKey?.trim();
     if (eventKey && (eventKey.length > 120 || !/^[a-zA-Z0-9:_-]+$/.test(eventKey))) {
       throw new Error("Invalid attendance event key.");
+    }
+    const latestRows = await sql`
+      select kind from attendance_events
+      where session_id = ${data.sessionId} and user_id = ${context.userId}
+      order by created_at desc limit 1`;
+    const latestValue = latestRows[0] ? String(latestRows[0].kind) : null;
+    const latestKind = latestValue === "join" || latestValue === "leave" ? latestValue : null;
+    const action = attendanceEventAction(latestKind, data.kind);
+    if (action === "duplicate") return { ok: true, duplicate: true };
+    if (action === "invalid") {
+      throw new Error("Join the live class before recording that you left.");
     }
     if (eventKey) {
       const scopedEventKey = `${data.kind}:${eventKey}`;
