@@ -66,9 +66,23 @@ export const createConversation = createServerFn({ method: "POST" })
       if (!profile[0]) throw new Error("One or more members have not joined UNIBUD yet.");
     }
     const id = crypto.randomUUID();
-    await sql`insert into social_conversations (id, kind, title, created_by) values (${id}, ${kind}, ${title}, ${context.userId})`;
-    for (const memberId of memberIds) {
-      await sql`insert into social_conversation_members (conversation_id, user_id) values (${id}, ${memberId}) on conflict do nothing`;
+    // Keep the conversation and its initial membership in one atomic statement.
+    // If any membership insert fails, the conversation insert rolls back too.
+    const createdMembers = await sql`
+      with new_conversation as (
+        insert into social_conversations (id, kind, title, created_by)
+        values (${id}, ${kind}, ${title}, ${context.userId})
+        returning id
+      )
+      insert into social_conversation_members (conversation_id, user_id)
+      select new_conversation.id, members.user_id
+      from new_conversation
+      cross join unnest(${memberIds}::text[]) as members(user_id)
+      on conflict (conversation_id, user_id) do nothing
+      returning user_id
+    `;
+    if (createdMembers.length !== memberIds.length) {
+      throw new Error("Conversation membership could not be initialized. Please retry.");
     }
     return { id, kind, title, memberIds };
   });
@@ -639,8 +653,24 @@ export const openConversation = createServerFn({ method: "POST" })
       return { id };
     }
     const conversationId = crypto.randomUUID();
-    await sql`insert into social_conversations (id, kind, title, created_by) values (${conversationId}, 'direct', '', ${context.userId})`;
-    await sql`insert into social_conversation_members (conversation_id, user_id) values (${conversationId}, ${context.userId}), (${conversationId}, ${peerId})`;
+    // Atomically create the direct conversation with both members. Seed-message
+    // persistence remains a follow-up, but cannot leave an ownerless conversation.
+    const createdMembers = await sql`
+      with new_conversation as (
+        insert into social_conversations (id, kind, title, created_by)
+        values (${conversationId}, 'direct', '', ${context.userId})
+        returning id
+      )
+      insert into social_conversation_members (conversation_id, user_id)
+      select new_conversation.id, members.user_id
+      from new_conversation
+      cross join (values (${context.userId}::text), (${peerId}::text)) as members(user_id)
+      on conflict (conversation_id, user_id) do nothing
+      returning user_id
+    `;
+    if (createdMembers.length !== 2) {
+      throw new Error("Direct conversation membership could not be initialized. Please retry.");
+    }
     if (data.seed?.trim()) {
       await sql`insert into social_messages (id, conversation_id, sender_id, body) values (${crypto.randomUUID()}, ${conversationId}, ${context.userId}, ${data.seed.trim().slice(0, 10000)})`;
       await sql`update social_conversations set updated_at = now() where id = ${conversationId}`;
