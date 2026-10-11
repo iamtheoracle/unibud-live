@@ -188,13 +188,14 @@ export const listChatPeople = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const sql = await getSql();
     const rows = await sql`
-      select handle, display_name
+      select user_id, handle, display_name
       from student_profiles
       where user_id <> ${context.userId}
         and handle is not null and length(trim(handle)) > 0
       order by display_name asc nulls last, handle asc
       limit 30`;
     return rows.map((row) => ({
+      userId: String(row.user_id),
       handle: String(row.handle),
       name: String(row.display_name ?? row.handle),
     }));
