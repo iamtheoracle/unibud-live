@@ -1,9 +1,84 @@
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { createHash, createHmac } from "node:crypto";
 
-const ROOT = path.join(process.cwd(), "data", "media");
+const ROOT = process.env.MEDIA_STORAGE_DIR || path.join(process.cwd(), "data", "media");
+const AWS_ALGORITHM = "AWS4-HMAC-SHA256";
+
+type S3Config = {
+  endpoint: string;
+  bucket: string;
+  region: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+};
+
+function s3Config(): S3Config | null {
+  const endpoint = process.env.MEDIA_S3_ENDPOINT;
+  const bucket = process.env.MEDIA_S3_BUCKET;
+  const region = process.env.MEDIA_S3_REGION || "auto";
+  const accessKeyId = process.env.MEDIA_S3_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.MEDIA_S3_SECRET_ACCESS_KEY;
+  const configured = [endpoint, bucket, accessKeyId, secretAccessKey].filter(Boolean).length;
+  if (configured === 0) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("Durable media storage is not configured. Set MEDIA_S3_ENDPOINT, MEDIA_S3_BUCKET, MEDIA_S3_ACCESS_KEY_ID and MEDIA_S3_SECRET_ACCESS_KEY.");
+    }
+    return null;
+  }
+  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) {
+    throw new Error("Media object storage configuration is incomplete.");
+  }
+  return { endpoint: endpoint.replace(/\/$/, ""), bucket, region, accessKeyId, secretAccessKey };
+}
+
+function hmac(key: Buffer | string, value: string) {
+  return createHmac("sha256", key).update(value, "utf8").digest();
+}
+
+function sha256(value: Buffer | string) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function objectRequest(config: S3Config, id: string, method: "GET" | "PUT" | "DELETE", bytes?: Buffer) {
+  const endpoint = new URL(config.endpoint);
+  const key = `${config.bucket}/${id}`;
+  const canonicalUri = `${endpoint.pathname.replace(/\/$/, "")}/${key.split("/").map(encodeURIComponent).join("/")}`.replace(/^$/, "/");
+  const url = new URL(endpoint.origin + (canonicalUri.startsWith("/") ? canonicalUri : `/${canonicalUri}`));
+  const body = bytes ?? Buffer.alloc(0);
+  const payloadHash = sha256(body);
+  const now = new Date();
+  const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
+  const dateStamp = amzDate.slice(0, 8);
+  const host = url.host;
+  const canonicalHeaders = `host:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
+  const signedHeaders = "host;x-amz-content-sha256;x-amz-date";
+  const canonicalRequest = [method, url.pathname, "", canonicalHeaders, signedHeaders, payloadHash].join("\n");
+  const scope = `${dateStamp}/${config.region}/s3/aws4_request`;
+  const stringToSign = [AWS_ALGORITHM, amzDate, scope, sha256(canonicalRequest)].join("\n");
+  const kDate = hmac(`AWS4${config.secretAccessKey}`, dateStamp);
+  const kRegion = hmac(kDate, config.region);
+  const kService = hmac(kRegion, "s3");
+  const kSigning = hmac(kService, "aws4_request");
+  const signature = createHmac("sha256", kSigning).update(stringToSign, "utf8").digest("hex");
+  const authorization = `${AWS_ALGORITHM} Credential=${config.accessKeyId}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+  return { url, init: { method, headers: { Authorization: authorization, "x-amz-content-sha256": payloadHash, "x-amz-date": amzDate, ...(method === "PUT" ? { "Content-Type": "application/octet-stream" } : {}) }, ...(method === "PUT" ? { body } : {}) } as RequestInit };
+}
+
+async function objectStorageRequest(id: string, method: "GET" | "PUT" | "DELETE", bytes?: Buffer) {
+  const config = s3Config();
+  if (!config) return null;
+  const { url, init } = objectRequest(config, id, method, bytes);
+  const response = await fetch(url, init);
+  if (method === "GET" && response.status === 404) return null;
+  if (method === "DELETE" && (response.ok || response.status === 404)) return Buffer.alloc(0);
+  if (!response.ok) throw new Error(`Media object storage ${method} failed with status ${response.status}.`);
+  return method === "GET" ? Buffer.from(await response.arrayBuffer()) : Buffer.alloc(0);
+}
 
 export async function writeMediaBytes(id: string, bytes: Buffer) {
+  const stored = await objectStorageRequest(id, "PUT", bytes);
+  if (stored !== null) return `s3://${process.env.MEDIA_S3_BUCKET}/${id}`;
   await mkdir(ROOT, { recursive: true });
   const filePath = path.join(ROOT, id);
   await writeFile(filePath, bytes);
@@ -11,10 +86,15 @@ export async function writeMediaBytes(id: string, bytes: Buffer) {
 }
 
 export async function readMediaBytes(id: string) {
+  const stored = await objectStorageRequest(id, "GET");
+  if (stored !== null) return stored;
+  if (process.env.NODE_ENV === "production") throw new Error("Media object was not found in configured durable storage.");
   return readFile(path.join(ROOT, id));
 }
 
 export async function removeMediaBytes(id: string) {
+  const stored = await objectStorageRequest(id, "DELETE");
+  if (stored !== null) return;
   try {
     await unlink(path.join(ROOT, id));
   } catch {
