@@ -70,6 +70,13 @@ export const uploadMedia = createServerFn({ method: "POST" })
       await sql`update media_assets set status = ${"ready"}, updated_at = now() where id = ${id}`;
       return { ok: true as const, id, kind, mime, size: parsed.bytes.length };
     } catch (err) {
+      // A failed PUT may have partially written an object. Best-effort cleanup
+      // prevents abandoned bytes while preserving the original upload failure.
+      try {
+        await removeMediaBytes(id);
+      } catch {
+        // Keep the asset marked failed even if cleanup also fails.
+      }
       await sql`update media_assets set status = ${"failed"}, error = ${String(err)}, updated_at = now() where id = ${id}`;
       return { ok: false as const, error: "Upload failed. Try again." };
     }
