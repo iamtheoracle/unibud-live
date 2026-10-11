@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseDataUrl, readMediaBytes } from "./store.server.ts";
+import { parseDataUrl, readMediaBytes, removeMediaBytes, writeMediaBytes } from "./store.server.ts";
 
 test("parses valid Base64 media data URLs", () => {
   const parsed = parseDataUrl("data:text/plain;base64,aGVsbG8=");
@@ -119,6 +119,79 @@ test("rejects incomplete object storage configuration instead of silently using 
       /Media object storage configuration is incomplete/,
     );
   } finally {
+    for (const key of keys) {
+      const value = previousEnv.get(key);
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
+
+
+test("failed object storage writes reject instead of falling back to local disk", async () => {
+  const keys = [
+    "MEDIA_S3_ENDPOINT",
+    "MEDIA_S3_BUCKET",
+    "MEDIA_S3_REGION",
+    "MEDIA_S3_ACCESS_KEY_ID",
+    "MEDIA_S3_SECRET_ACCESS_KEY",
+  ] as const;
+  const previousEnv = new Map(keys.map((key) => [key, process.env[key]]));
+  const previousFetch = globalThis.fetch;
+
+  process.env.MEDIA_S3_ENDPOINT = "https://storage.example.test";
+  process.env.MEDIA_S3_BUCKET = "unibud-media";
+  process.env.MEDIA_S3_REGION = "auto";
+  process.env.MEDIA_S3_ACCESS_KEY_ID = "test-access-key";
+  process.env.MEDIA_S3_SECRET_ACCESS_KEY = "test-secret-key";
+  globalThis.fetch = async (_input, init) => {
+    assert.equal(init?.method, "PUT");
+    return new Response("upstream failure", { status: 503 });
+  };
+
+  try {
+    await assert.rejects(
+      writeMediaBytes("object-storage-put-error-test", Buffer.from("payload")),
+      /Media object storage PUT failed with status 503/,
+    );
+  } finally {
+    globalThis.fetch = previousFetch;
+    for (const key of keys) {
+      const value = previousEnv.get(key);
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
+
+test("failed object storage deletes surface an error instead of claiming cleanup succeeded", async () => {
+  const keys = [
+    "MEDIA_S3_ENDPOINT",
+    "MEDIA_S3_BUCKET",
+    "MEDIA_S3_REGION",
+    "MEDIA_S3_ACCESS_KEY_ID",
+    "MEDIA_S3_SECRET_ACCESS_KEY",
+  ] as const;
+  const previousEnv = new Map(keys.map((key) => [key, process.env[key]]));
+  const previousFetch = globalThis.fetch;
+
+  process.env.MEDIA_S3_ENDPOINT = "https://storage.example.test";
+  process.env.MEDIA_S3_BUCKET = "unibud-media";
+  process.env.MEDIA_S3_REGION = "auto";
+  process.env.MEDIA_S3_ACCESS_KEY_ID = "test-access-key";
+  process.env.MEDIA_S3_SECRET_ACCESS_KEY = "test-secret-key";
+  globalThis.fetch = async (_input, init) => {
+    assert.equal(init?.method, "DELETE");
+    return new Response("upstream failure", { status: 503 });
+  };
+
+  try {
+    await assert.rejects(
+      removeMediaBytes("object-storage-delete-error-test"),
+      /Media object storage DELETE failed with status 503/,
+    );
+  } finally {
+    globalThis.fetch = previousFetch;
     for (const key of keys) {
       const value = previousEnv.get(key);
       if (value === undefined) delete process.env[key];
