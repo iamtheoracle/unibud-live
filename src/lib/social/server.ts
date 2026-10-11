@@ -379,6 +379,54 @@ export const getPublicProfile = createServerFn({ method: "GET" })
     };
   });
 
+/** Public-profile post feed with community privacy checked against the viewing account. */
+export const listPublicProfilePosts = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .validator((handle: string) => handle)
+  .handler(async ({ context, data: rawHandle }) => {
+    if (typeof rawHandle !== "string") throw new Error("Choose a valid user handle.");
+    const handle = rawHandle.trim().toLowerCase();
+    if (!/^[a-z0-9_]{2,32}$/.test(handle)) throw new Error("Choose a valid user handle.");
+    const sql = await getSql();
+    const rows = await sql`
+      select p.id, p.body, p.kind, p.created_at, c.id as community_id, c.name as community_name
+      from posts p
+      join communities c on c.id = p.community_id
+      where lower(p.author_handle) = ${handle}
+        and (
+          coalesce(c.privacy, 'public') = 'public'
+          or (
+            c.privacy = 'campus'
+            and exists (
+              select 1 from student_profiles viewer
+              where viewer.user_id = ${context.userId}
+                and viewer.university_id = c.university_id
+            )
+            and exists (
+              select 1 from community_members cm
+              where cm.user_id = ${context.userId} and cm.community_id = c.id
+            )
+          )
+          or (
+            c.privacy = 'private'
+            and exists (
+              select 1 from community_members cm
+              where cm.user_id = ${context.userId} and cm.community_id = c.id
+            )
+          )
+        )
+      order by p.created_at desc
+      limit 30`;
+    return rows.map((row) => ({
+      id: String(row.id),
+      body: String(row.body),
+      kind: String(row.kind ?? "post"),
+      createdAt: String(row.created_at),
+      communityId: String(row.community_id),
+      communityName: String(row.community_name),
+    }));
+  });
+
 /** Durable incoming/outgoing requests, accepted connections, follows and followers. */
 export const getMyConnectState = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
