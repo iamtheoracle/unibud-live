@@ -61,13 +61,13 @@ This ledger is the implementation and acceptance gate for issue #3. A screen, ro
 - Run typecheck, full lint, unit tests, production build, route checks, and browser smoke tests.
 - Record external dependencies and exact blockers rather than inventing credentials or real-world state.
 
-## First confirmed audit findings (2026-10-11)
-- `src/lib/social/server.ts` contains only `PLACEHOLDER`; it cannot be counted as an implemented social server module.
+## Confirmed audit findings and changes (2026-10-11)
+- Resolved on this branch: `src/lib/social/server.ts` now contains server-backed messaging operations. Attachment scope checks and unsafe shared-media URL validation have dedicated tests; live two-account verification remains pending.
 - `src/lib/money/server.ts` explicitly describes its wallet ledger as demo-only and states no real money moved.
 - `src/routes/_app/board.tsx` uses `BOARD_SESSIONS` and a client campus store for some live/recording attendance display; this is not proof of a durable authoritative session/attendance lifecycle.
-- `src/lib/academic/server.ts` exposes attendance/question reads and writes with sign-in middleware, but the inspected handlers do not visibly enforce session membership or lecturer/owner scope. These must be fixed before institutional use.
+- Board session authorization was strengthened on this branch: session reads require enrollment or the assigned lecturer, attendance-roster reads require the assigned session lecturer, and attendance events are accepted only while a session is live. A persisted session lifecycle now supports scheduled → live/cancelled and live → ended. Database-backed integration tests and institution-authorized attendance workflows are still pending.
 - `netlify.toml` currently sets `VITE_AUTH_ENABLED=false` for build and production. `src/lib/auth/verify.server.ts` rejects authenticated data operations if a real database is configured while auth remains disabled. Do not simply flip this flag: verify the actual production database and broker credentials first.
-- `.github/workflows/unibud-ci.yml` has not passed the current PR gate; the latest observed result was `action_required`. A green lockfile install is not a passing product verification.
+- The application verification workflow passed on commit `45543df10b35f0fdc081dfae979d0748020b87b9`. Later Board UI and attendance changes are undergoing their own verification; do not treat an earlier green run as proof for later commits.
 - The production Netlify site, repository, deployed branch and commit are not yet proven to match each other.
 
 This ledger is intentionally conservative. Reclassify status only when evidence and tests justify it.
