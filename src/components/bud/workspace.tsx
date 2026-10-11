@@ -688,7 +688,7 @@ export function BudWorkspace() {
                 {(mediaQ.data ?? []).slice(0, 4).map((m) => (
                   <li key={m.id} className={cn("rounded-2xl bg-card p-3 ring-1 ring-border", focusId === m.id && "ring-bud")}>
                     <p className="text-sm font-medium">{m.title}</p>
-                    <p className="text-xs text-muted-foreground">{m.course}</p>
+                    <p className="text-xs text-muted-foreground">{m.course} · {m.mediaId && m.status === "ready" ? "Ready to play" : "Awaiting verified upload · not playable"}</p>
                     {m.mediaId && m.status === "ready" ? (
                       <audio className="mt-2 w-full" src={mediaUrl(m.mediaId)} controls onPlay={() => recordAudioEvent({ kind: "bud_media_play", budMediaId: m.id, surface: "bud" })} />
                     ) : null}
