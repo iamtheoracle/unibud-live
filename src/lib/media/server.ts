@@ -21,7 +21,15 @@ export const uploadMedia = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { dataUrl: string; fileName: string; mime?: string; kind?: MediaKind; conversationId?: string; roomId?: string }) => input)
   .handler(async ({ context, data }) => {
-    const parsed = parseDataUrl(data.dataUrl);
+    let parsed: ReturnType<typeof parseDataUrl>;
+    try {
+      parsed = parseDataUrl(data.dataUrl, MAX_UPLOAD_BYTES);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("byte limit")) {
+        return { ok: false as const, error: "That file is over 8 MiB." };
+      }
+      throw error;
+    }
     if (parsed.bytes.length > MAX_UPLOAD_BYTES) {
       return { ok: false as const, error: "That file is over 8 MiB." };
     }
