@@ -5,7 +5,7 @@ import { getSql } from "@/lib/db";
 export const Route = createFileRoute("/api/internal/analytics")({
   server: { handlers: { GET: async ({ request }) => {
     const expected = process.env.UNIBUD_ANALYTICS_API_KEY ?? "";
-    const supplied = (request.headers.get("authorization") ?? "").replace(/^Bearer\\s+/i, "");
+    const supplied = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
     if (expected.length < 32 || supplied.length !== expected.length || Buffer.byteLength(supplied) !== Buffer.byteLength(expected) || !timingSafeEqual(Buffer.from(supplied), Buffer.from(expected))) {
       return Response.json({ error: "Unauthorized." }, { status: 401, headers: { "Cache-Control": "no-store" } });
     }
