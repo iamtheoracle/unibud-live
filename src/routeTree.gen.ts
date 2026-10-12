@@ -303,6 +303,7 @@ export interface FileRoutesByFullPath {
   '/creator': typeof AppCreatorRoute
   '/discovery': typeof AppDiscoveryRoute
   '/feedback': typeof AppFeedbackRoute
+  '/guild': typeof AppGuildRoute
   '/fixer': typeof AppFixerRoute
   '/help': typeof AppHelpRoute
   '/live': typeof AppLiveRoute
@@ -349,6 +350,7 @@ export interface FileRoutesByTo {
   '/creator': typeof AppCreatorRoute
   '/discovery': typeof AppDiscoveryRoute
   '/feedback': typeof AppFeedbackRoute
+  '/guild': typeof AppGuildRoute
   '/fixer': typeof AppFixerRoute
   '/help': typeof AppHelpRoute
   '/live': typeof AppLiveRoute
@@ -447,6 +449,7 @@ export interface FileRouteTypes {
     | '/creator'
     | '/discovery'
     | '/feedback'
+    | '/guild'
     | '/fixer'
     | '/help'
     | '/live'
@@ -493,6 +496,7 @@ export interface FileRouteTypes {
     | '/creator'
     | '/discovery'
     | '/feedback'
+    | '/guild'
     | '/fixer'
     | '/help'
     | '/live'
@@ -540,6 +544,7 @@ export interface FileRouteTypes {
     | '/_app/creator'
     | '/_app/discovery'
     | '/_app/feedback'
+    | '/_app/guild'
     | '/_app/fixer'
     | '/_app/help'
     | '/_app/live'
@@ -656,6 +661,13 @@ declare module '@tanstack/react-router' {
       path: '/feedback'
       fullPath: '/feedback'
       preLoaderRoute: typeof AppFeedbackRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/guild': {
+      id: '/_app/guild'
+      path: '/guild'
+      fullPath: '/guild'
+      preLoaderRoute: typeof AppGuildRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/fixer': {
