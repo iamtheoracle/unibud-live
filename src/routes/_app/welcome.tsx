@@ -53,26 +53,26 @@ function Welcome() {
 
   if (!user) {
     return (
-      <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6">
-        <Wordmark size="sm" className="mb-10 max-w-[9rem]" />
-        <p className="kicker">Welcome</p>
-        <h1 className="mt-3 font-display text-4xl font-medium">The UNIBUD world.</h1>
+      <main className="relative mx-auto flex min-h-dvh max-w-md flex-col justify-center overflow-hidden bg-[#0b0c12] px-6 text-white">
+        <div className="mb-10"><Wordmark size="sm" className="max-w-[9rem]" /></div>
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-violet-300">A social world by My Realm</p>
+        <h1 className="mt-3 font-display text-5xl font-medium leading-[1.04] tracking-tight">More life. More people. More to explore.</h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          People, ideas, culture, and learning. Sign in to keep your wallet, chats, and semester with you.
+          Meet people, catch the conversation, find your corner, and talk to Bud when you need a hand.
         </p>
         <div className="mt-8 space-y-3">
           <Link to="/login" search={{ mode: "up" }}>
-            <Button className="w-full">Create account</Button>
+            <Button className="w-full rounded-full bg-white text-black hover:bg-white/90">Create account</Button>
           </Link>
           <Link to="/login">
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10">
               Sign in
             </Button>
           </Link>
         </div>
         <button
           type="button"
-          className="mt-6 text-sm text-muted-foreground"
+          className="mt-6 min-h-12 w-full rounded-full border border-violet-300/30 bg-violet-300/10 px-4 text-sm font-medium text-white transition-colors hover:bg-violet-300/15"
           onClick={() => {
             enterGuestMode();
             void nav({ to: "/bud" });
@@ -81,7 +81,7 @@ function Welcome() {
           Continue as Guest
         </button>
         <p className="mt-2 text-center text-xs text-muted-foreground">
-          Guests can use Bud only. Sign in for Square, Connect, Quad, and Chat.
+          Guest access opens Bud directly. Create an account to use the rest of UNIBUD.
         </p>
       </main>
     );
