@@ -78,8 +78,11 @@ function Welcome() {
             void nav({ to: "/bud" });
           }}
         >
-          Look around first
+          Continue as Guest
         </button>
+        <p className="mt-2 text-center text-xs text-muted-foreground">
+          Guests can use Bud only. Sign in for Square, Connect, Quad, and Chat.
+        </p>
       </main>
     );
   }
