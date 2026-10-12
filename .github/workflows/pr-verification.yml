@@ -43,6 +43,9 @@ jobs:
       - name: Authentication policy tests
         run: npm run test:auth-policy
 
+      - name: Riff persistence and ownership tests
+        run: npm run test:riff
+
       - name: Bud and agent tests
         run: npm run test:agents
 
