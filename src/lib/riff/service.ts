@@ -13,7 +13,8 @@ const idValue = (value: unknown, label = "ID") => {
   return value.trim();
 };
 const postDto = (r: Record<string, unknown>) => ({
-  id: String(r.id), authorUserId: String(r.author_user_id), body: String(r.body),
+  id: String(r.id), authorUserId: String(r.author_user_id), authorHandle: String(r.author_handle ?? "member"), body: String(r.body),
+  liked: Boolean(r.liked), following: Boolean(r.following),
   communityId: r.community_id == null ? null : String(r.community_id),
   quotePostId: r.quote_post_id == null ? null : String(r.quote_post_id),
   mediaId: r.media_id == null ? null : String(r.media_id),
@@ -22,7 +23,7 @@ const postDto = (r: Record<string, unknown>) => ({
 });
 const replyDto = (r: Record<string, unknown>) => ({
   id: String(r.id), postId: String(r.post_id), parentReplyId: r.parent_reply_id == null ? null : String(r.parent_reply_id),
-  authorUserId: String(r.author_user_id), body: String(r.body), createdAt: String(r.created_at),
+  authorUserId: String(r.author_user_id), authorHandle: String(r.author_handle ?? "member"), body: String(r.body), createdAt: String(r.created_at),
 });
 
 export function createRiffService(sql: Sql, sessionUserId: string) {
@@ -35,11 +36,14 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
   }
   async function postById(postId: string) {
     const rows = await sql.query(`select p.id, p.author_user_id, p.body, p.community_id, p.quote_post_id, p.media_id,
-      p.created_at, p.updated_at,
+      p.created_at, p.updated_at, coalesce(sp.handle, 'member') as author_handle,
+      exists(select 1 from riff_reactions own_like where own_like.post_id = p.id and own_like.user_id = $2) as liked,
+      exists(select 1 from riff_follows own_follow where own_follow.post_id = p.id and own_follow.user_id = $2) as following,
       (select count(*)::int from riff_replies r where r.post_id = p.id and r.deleted_at is null) as reply_count,
       (select count(*)::int from riff_reactions x where x.post_id = p.id) as like_count,
       (select count(*)::int from riff_follows f where f.post_id = p.id) as follow_count
-      from riff_posts p where p.id = $1 and p.deleted_at is null limit 1`, [postId]);
+      from riff_posts p left join student_profiles sp on sp.user_id = p.author_user_id
+      where p.id = $1 and p.deleted_at is null limit 1`, [postId, actor]);
     if (!rows[0]) throw new Error("Riff not found.");
     return postDto(rows[0] as Record<string, unknown>);
   }
@@ -52,21 +56,26 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
       if (Boolean(at) !== Boolean(id)) throw new Error("Both cursor fields are required.");
       if (at && Number.isNaN(Date.parse(at))) throw new Error("Invalid feed cursor.");
       const rows = await sql.query(`select p.id, p.author_user_id, p.body, p.community_id, p.quote_post_id, p.media_id,
-        p.created_at, p.updated_at,
+        p.created_at, p.updated_at, coalesce(sp.handle, 'member') as author_handle,
+        exists(select 1 from riff_reactions own_like where own_like.post_id = p.id and own_like.user_id = $4) as liked,
+        exists(select 1 from riff_follows own_follow where own_follow.post_id = p.id and own_follow.user_id = $4) as following,
         (select count(*)::int from riff_replies r where r.post_id = p.id and r.deleted_at is null) as reply_count,
         (select count(*)::int from riff_reactions x where x.post_id = p.id) as like_count,
         (select count(*)::int from riff_follows f where f.post_id = p.id) as follow_count
-        from riff_posts p where p.deleted_at is null
+        from riff_posts p left join student_profiles sp on sp.user_id = p.author_user_id
+        where p.deleted_at is null
         and ($1::timestamptz is null or (p.created_at, p.id) < ($1::timestamptz, $2::text))
-        order by p.created_at desc, p.id desc limit $3`, [at, id, limit]);
+        order by p.created_at desc, p.id desc limit $3`, [at, id, limit, actor]);
       return rows.map((r) => postDto(r as Record<string, unknown>));
     },
 
     async getRiff(postIdValue: string) {
       const postId = idValue(postIdValue, "post ID");
       const post = await postById(postId);
-      const rows = await sql.query(`select r.id, r.post_id, r.parent_reply_id, r.author_user_id, r.body, r.created_at
+      const rows = await sql.query(`select r.id, r.post_id, r.parent_reply_id, r.author_user_id, r.body, r.created_at,
+        coalesce(sp.handle, 'member') as author_handle
         from riff_replies r join riff_posts p on p.id = r.post_id
+        left join student_profiles sp on sp.user_id = r.author_user_id
         where r.post_id = $1 and r.deleted_at is null and p.deleted_at is null
         order by r.created_at desc, r.id desc limit 500`, [postId]);
       const own = await sql.query(`select exists(select 1 from riff_reactions where post_id = $1 and user_id = $2) as liked,
@@ -106,7 +115,7 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
           returning id, author_user_id, body, community_id, quote_post_id, media_id, created_at, updated_at`,
         [id, actor, body, communityId, quotePostId]);
       }
-      return postDto({ ...rows[0], reply_count: 0, like_count: 0, follow_count: 0 } as Record<string, unknown>);
+      return postDto({ ...rows[0], author_handle: "you", liked: false, following: false, reply_count: 0, like_count: 0, follow_count: 0 } as Record<string, unknown>);
     },
 
     async replyToRiff(input: { postId: string; body: string; parentReplyId?: string }) {
@@ -122,7 +131,7 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
       const rows = await sql.query(`insert into riff_replies (id, post_id, parent_reply_id, author_user_id, body)
         values ($1, $2, $3, $4, $5) returning id, post_id, parent_reply_id, author_user_id, body, created_at`,
       [id, postId, parentId, actor, body]);
-      return replyDto(rows[0] as Record<string, unknown>);
+      return replyDto({ ...rows[0], author_handle: "you" } as Record<string, unknown>);
     },
 
     async toggleRiffLike(postIdValue: string) {
