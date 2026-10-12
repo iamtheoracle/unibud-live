@@ -190,7 +190,7 @@ export function BudWorkspace() {
       if (!user) {
         if (r.ok && "text" in r) {
           setGuestMessages((current) => [...current, { id: crypto.randomUUID(), role: "assistant", content: r.text, createdAt: new Date().toISOString() }]);
-        } else if ("error" in r && r.error) {
+        } else if ("error" in r && typeof r.error === "string" && r.error) {
           setGuestMessages((current) => [...current, { id: crypto.randomUUID(), role: "assistant", content: r.error, createdAt: new Date().toISOString() }]);
         }
         return;
