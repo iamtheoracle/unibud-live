@@ -122,9 +122,12 @@ function Riff() {
       ) : null}
 
       <div>
-        {list.map((s) => (
-          <RiffCard key={s.id} spill={s} onQuote={() => setQuoting(s.id)} />
-        ))}
+        {list.length === 0 ? (
+          <section className="mx-5 my-5 rounded-2xl border border-dashed border-border p-6 text-center">
+            <h2 className="font-semibold">No Riffs published yet</h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Start a conversation when you are ready. Only real posts appear here; sample activity is not used to fill the feed.</p>
+          </section>
+        ) : list.map((s) => <RiffCard key={s.id} spill={s} onQuote={() => setQuoting(s.id)} />)}
       </div>
     </main>
   );
