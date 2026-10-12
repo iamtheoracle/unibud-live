@@ -47,6 +47,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Database transaction lifecycle tests
+        run: node --experimental-strip-types --test src/lib/db-transaction.test.ts
+
       - name: Lint agent and integration layer
         run: npx eslint src/lib/agents src/lib/spark src/lib/bud/server.ts src/lib/bud/spark.ts
 
@@ -75,6 +78,9 @@ jobs:
           src/lib/unibud/quad.server.ts
           src/lib/unibud/quad-privacy.ts
           src/lib/unibud/quad-privacy.test.ts
+          src/lib/db-transaction.ts
+          src/lib/db-transaction.test.ts
+          src/lib/db.ts
 
       - name: Agent, Spark, and profile-role tests
         run: |
