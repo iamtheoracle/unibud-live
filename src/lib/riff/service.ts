@@ -85,15 +85,27 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
         throw new Error("Riff media sharing is not enabled yet; create a text-only Riff for now.");
       }
       if (quotePostId) await assertPost(quotePostId);
-      if (communityId) {
-        const member = await sql.query("select user_id from community_members where community_id = $1 and user_id = $2 limit 1", [communityId, actor]);
-        if (!member[0]) throw new Error("Join this community before posting to it.");
-      }
       const id = `riff_${crypto.randomUUID()}`;
-      const rows = await sql.query(`insert into riff_posts (id, author_user_id, body, community_id, quote_post_id)
-        values ($1, $2, $3, $4, $5)
+      let rows: Record<string, unknown>[];
+      if (communityId) {
+        // Lock the membership row in the same statement as the insert so a
+        // concurrent leave/revocation cannot race the authorization check.
+        rows = await sql.query(`with authorized_member as (
+          select user_id from community_members
+          where community_id = $4 and user_id = $2
+          for key share
+        )
+        insert into riff_posts (id, author_user_id, body, community_id, quote_post_id)
+        select $1, authorized_member.user_id, $3, $4, $5 from authorized_member
         returning id, author_user_id, body, community_id, quote_post_id, media_id, created_at, updated_at`,
-      [id, actor, body, communityId, quotePostId]);
+        [id, actor, body, communityId, quotePostId]);
+        if (!rows[0]) throw new Error("Join this community before posting to it.");
+      } else {
+        rows = await sql.query(`insert into riff_posts (id, author_user_id, body, community_id, quote_post_id)
+          values ($1, $2, $3, $4, $5)
+          returning id, author_user_id, body, community_id, quote_post_id, media_id, created_at, updated_at`,
+        [id, actor, body, communityId, quotePostId]);
+      }
       return postDto({ ...rows[0], reply_count: 0, like_count: 0, follow_count: 0 } as Record<string, unknown>);
     },
 
@@ -156,14 +168,24 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
       if (!reasons.has(input.reason)) throw new Error("Invalid report reason.");
       const details = (input.details ?? "").trim();
       if (details.length > 1000) throw new Error("Report details must be at most 1,000 characters.");
-      if (postId) await assertPost(postId);
-      if (replyId) {
-        const target = await sql.query("select r.id from riff_replies r join riff_posts p on p.id = r.post_id where r.id = $1 and r.deleted_at is null and p.deleted_at is null limit 1", [replyId]);
-        if (!target[0]) throw new Error("Riff reply not found.");
-      }
-      const id = `riff_report_${crypto.randomUUID()}`;
-      await sql.query("insert into riff_reports (id, reporter_user_id, post_id, reply_id, reason, details) values ($1, $2, $3, $4, $5, $6)", [id, actor, postId, replyId, input.reason, details]);
-      return { id, status: "open" as const };
+      const operation = async (tx: Sql) => {
+        // Serialize a reporter's own submissions while applying the rate limit.
+        await tx.query('select id from "user" where id = $1 for update', [actor]);
+        const recent = await tx.query("select count(*)::int as count from riff_reports where reporter_user_id = $1 and created_at > now() - interval '1 hour'", [actor]);
+        if (Number(recent[0]?.count ?? 0) >= 10) throw new Error("Report limit reached. Try again later.");
+        if (postId) {
+          const target = await tx.query("select id from riff_posts where id = $1 and deleted_at is null limit 1", [postId]);
+          if (!target[0]) throw new Error("Riff not found.");
+        }
+        if (replyId) {
+          const target = await tx.query("select r.id from riff_replies r join riff_posts p on p.id = r.post_id where r.id = $1 and r.deleted_at is null and p.deleted_at is null limit 1", [replyId]);
+          if (!target[0]) throw new Error("Riff reply not found.");
+        }
+        const id = `riff_report_${crypto.randomUUID()}`;
+        await tx.query("insert into riff_reports (id, reporter_user_id, post_id, reply_id, reason, details) values ($1, $2, $3, $4, $5, $6)", [id, actor, postId, replyId, input.reason, details]);
+        return { id, status: "open" as const };
+      };
+      return sql.transaction ? sql.transaction(operation) : operation(sql);
     },
 
     async softDeleteRiffPost(postIdValue: string) {
