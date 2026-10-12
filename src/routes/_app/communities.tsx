@@ -19,8 +19,6 @@ export const Route = createFileRoute("/_app/communities")({ component: Communiti
 function Communities() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const nested = pathname !== "/communities" && pathname.startsWith("/communities/");
-  if (nested) return <Outlet />;
-
   const queryClient = useQueryClient();
   const { data } = useCatalog();
   const allRooms = data?.communities ?? [];
@@ -35,7 +33,7 @@ function Communities() {
   const mine = useQuery({
     queryKey: ["my-communities"],
     queryFn: () => myCommunities(),
-    enabled: Boolean(user),
+    enabled: Boolean(user) && !nested,
   });
   const communities = allRooms.filter(
     (c) =>
@@ -47,6 +45,8 @@ function Communities() {
     (c) => kind === "all" || c.kind === kind || (kind === "Interest" && ["Interest", "Music", "Sports", "Career"].includes(c.kind)),
   );
 
+  if (nested) return <Outlet />;
+
   return (
     <main className="safe-bottom px-5 pt-6">
       <p className="kicker">Find your rooms</p>
@@ -57,9 +57,6 @@ function Communities() {
           New
         </Button>
       </div>
-      <p className="mt-2 text-sm text-muted-foreground">
-        App-like communities — not a class list, not Square. Groups live inside a Quad.
-      </p>
 
       {creating ? (
         <form
@@ -67,35 +64,26 @@ function Communities() {
           onSubmit={async (e) => {
             e.preventDefault();
             if (!name.trim()) return;
-            if (createKind === "Class" && !canGovernClass(role)) {
-              toast.error("Only class governors can open a Class room.");
-              return;
+            try {
+              const created = await createQuad({ data: { name: name.trim(), kind: createKind } });
+              toast.success("Quad created");
+              setCreating(false);
+              setName("");
+              await queryClient.invalidateQueries({ queryKey: ["catalog"] });
+              await queryClient.invalidateQueries({ queryKey: ["my-communities"] });
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : "Could not create Quad");
             }
-            if (!user) {
-              toast.error("Sign in to create a Quad.");
-              return;
-            }
-            void createQuad({
-              data: { name: name.trim(), kind: createKind, description: "", privacy: "public" },
-            })
-              .then(async () => {
-                toast.success("Quad created.");
-                setCreating(false);
-                setName("");
-                await queryClient.invalidateQueries({ queryKey: ["catalog"] });
-                await mine.refetch();
-              })
-              .catch((err: Error) => toast.error(err.message || "Could not create Quad."));
           }}
         >
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name this Quad or group" />
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Quad name" />
           <div className="flex flex-wrap gap-2">
             {(["Study", "Interest", "Class"] as const).map((k) => (
               <button
                 key={k}
                 type="button"
                 onClick={() => setCreateKind(k)}
-                className={cn("h-9 rounded-full px-3 text-sm", createKind === k ? "bg-ink text-paper" : "bg-secondary")}
+                className={cn("h-8 rounded-full px-3 text-xs", createKind === k ? "bg-ink text-paper" : "bg-secondary")}
               >
                 {k}
               </button>
