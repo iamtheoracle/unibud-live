@@ -96,9 +96,9 @@ function Login() {
         </Link>
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
-          <h1 className="text-center font-display text-3xl font-medium">Sign in</h1>
+          <h1 className="text-center font-display text-3xl font-medium">{mode === "up" ? "Create your account" : "Welcome back"}</h1>
           <p className="mt-2 text-center text-sm text-muted-foreground">
-            Use a campus account. Your wallet, chats, and semester stay on this device’s session.
+            Join UNIBUD. Connect, share, and find your people.
           </p>
 
           {authEnabled ? (
