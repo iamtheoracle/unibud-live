@@ -88,7 +88,7 @@ test("reports persist without exposing reporter identity in feed results", async
   try {
     const post = await a.createRiff({ body: "Reportable post" });
     const report = await b.reportRiff({ postId: post.id, reason: "spam", details: "Unwanted content" });
-    const rows = await pg.query("select reporter_user_id, status from riff_reports where id = $1", [report.id]);
+    const rows = await pg.query<{ reporter_user_id: string; status: string }>("select reporter_user_id, status from riff_reports where id = $1", [report.id]);
     assert.equal(rows.rows[0].reporter_user_id, "user-b");
     assert.equal(rows.rows[0].status, "open");
     assert.equal("reporterUserId" in (await a.getRiff(post.id)), false);
