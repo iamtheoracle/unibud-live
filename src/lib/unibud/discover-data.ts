@@ -16,8 +16,9 @@ export type GlobalClip = {
   authorHandle: string;
 };
 
+export type GlobalFact = { id: string; kicker: string; title: string; summary: string; topic: string; image?: string };
 /** Populated only from approved, real content. */
-export const GLOBAL_FACTS = [] as const;
+export const GLOBAL_FACTS: GlobalFact[] = [];
 
 /** Populated only from approved, real content. */
 export const CHALLENGES: Challenge[] = [];
