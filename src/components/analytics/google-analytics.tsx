@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
-import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { trackAnalyticsEvent } from "@/lib/analytics/server";
+import { trackPublicAnalyticsEvent } from "@/lib/analytics/client";
 
 declare global {
   interface Window {
@@ -14,7 +13,6 @@ const CONSENT_KEY = "unibud-optional-analytics-consent";
 
 export function GoogleAnalytics() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const { user, isPending } = useCurrentUserState();
   const [consent, setConsent] = useState<"accepted" | "rejected" | "unset">("unset");
   const measurementId = import.meta.env.VITE_GA_MEASUREMENT_ID?.trim() ?? "";
 
@@ -45,12 +43,8 @@ export function GoogleAnalytics() {
   useEffect(() => {
     if (consent !== "accepted" || !/^G-[A-Z0-9]+$/.test(measurementId) || navigator.doNotTrack === "1") return;
     window.gtag?.("event", "page_view", { page_path: pathname, page_location: window.location.href, page_title: document.title });
+    trackPublicAnalyticsEvent({ eventName: "page_view", pagePath: pathname });
   }, [consent, measurementId, pathname]);
-
-  useEffect(() => {
-    if (isPending || !user || pathname.length > 300 || !pathname.startsWith("/")) return;
-    void trackAnalyticsEvent({ data: { eventName: "page_view", pagePath: pathname } }).catch(() => {});
-  }, [isPending, user, pathname]);
 
   if (consent !== "unset" || !/^G-[A-Z0-9]+$/.test(measurementId)) return null;
   const choose = (value: "accepted" | "rejected") => {
