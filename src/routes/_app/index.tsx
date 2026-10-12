@@ -39,10 +39,6 @@ function Square() {
     if (user && !onboardingDone) void nav({ to: "/welcome" });
   }, [user, isPending, onboardingDone, nav]);
 
-  if (isPending || (user && !onboardingDone)) {
-    return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
-  }
-
   const [lane, setLane] = useState<SquareLane>("on-stream");
   const [peekStart, setPeekStart] = useState<string | undefined>();
   const [shown, setShown] = useState(10);
@@ -82,6 +78,10 @@ function Square() {
     io.observe(el);
     return () => io.disconnect();
   }, [lane, lanePosts.length]);
+
+  if (isPending || (user && !onboardingDone)) {
+    return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
+  }
 
   function openPeek(id: string) {
     setPeekStart(id);
@@ -130,7 +130,6 @@ function Square() {
           </div>
           <div className="mt-3">
             <CampusMoments
-              signedIn
               onCreate={() => {
                 const studio = useStudioStore.getState();
                 studio.setIntent("story");
