@@ -418,7 +418,7 @@ function FeedItem({ post, onOpenPeek, selected, onToggleSelection }: { post: Fee
             )
           ) : null}
           <div className="mt-3 flex flex-wrap items-center gap-3 text-muted-foreground">
-            <button type="button" onClick={() => { toggleLike(key); if (user) void togglePostLike({ data: key }).catch(() => {}); }} className={cn("inline-flex h-9 items-center gap-1.5 text-sm", liked && "text-bud")}>
+            <button type="button" onClick={() => { toggleLike(key); if (user) void togglePostLike({ data: key }).then(() => { if (!liked) trackPublicAnalyticsEvent({ eventName: "post_like", pagePath: "/", contentId: key }); }).catch(() => {}); }} className={cn("inline-flex h-9 items-center gap-1.5 text-sm", liked && "text-bud")}>
               <Heart className={cn("size-4", liked && "fill-bud")} />
               {count || ""}
             </button>
@@ -455,7 +455,7 @@ function FeedItem({ post, onOpenPeek, selected, onToggleSelection }: { post: Fee
                   if (!reply.trim()) return;
                   const body = reply.trim();
                   addPostReply(key, { id: crypto.randomUUID(), authorHandle: "you", body, createdAt: new Date().toISOString() });
-                  if (user) void addSquareReply({ data: { postId: key, body } }).catch(() => {});
+                  if (user) void addSquareReply({ data: { postId: key, body } }).then(() => trackPublicAnalyticsEvent({ eventName: "post_comment", pagePath: "/", contentId: key })).catch(() => {});
                   setReply("");
                 }}
               >
