@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
+import { useAuthReady } from "@/components/unibud/sign-in-gate";
 import {
   askBud,
   askBudGuest,
