@@ -29,13 +29,6 @@ function Square() {
 
   useEffect(() => {
     if (isPending) return;
-    try {
-      if (!sessionStorage.getItem("unibud-guest-browse")) {
-        sessionStorage.setItem("unibud-guest-browse", "1");
-      }
-    } catch {
-      /* ignore */
-    }
     if (user && !onboardingDone) void nav({ to: "/welcome" });
   }, [user, isPending, onboardingDone, nav]);
 
@@ -130,7 +123,6 @@ function Square() {
           </div>
           <div className="mt-3">
             <CampusMoments
-              signedIn
               onCreate={() => {
                 const studio = useStudioStore.getState();
                 studio.setIntent("story");
