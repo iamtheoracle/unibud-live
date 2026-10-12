@@ -195,7 +195,7 @@ export function BudWorkspace() {
         }
         return;
       }
-      if ("conversationId" in r && r.conversationId && r.conversationId !== activeId) {
+      if ("conversationId" in r && typeof r.conversationId === "string" && r.conversationId && r.conversationId !== activeId) {
         setActiveId(r.conversationId);
       }
       await qc.invalidateQueries({ queryKey: ["bud"] });
