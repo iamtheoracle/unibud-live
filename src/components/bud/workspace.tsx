@@ -372,6 +372,7 @@ export function BudWorkspace() {
             onClick={() => {
               setFreshChat(true);
               setActiveId(null);
+              if (!user) setGuestMessages([]);
               sessionStorage.removeItem(ACTIVE_KEY);
               setHistoryOpen(false);
               setMenuOpen(false);
