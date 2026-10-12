@@ -27,7 +27,7 @@ export const Route = createFileRoute("/api/analytics/event")({
     if (Number(rate[0]?.count ?? 0) >= 60) return Response.json({ error: "Analytics event rate limit exceeded." }, { status: 429, headers: { "Cache-Control": "no-store" } });
     const recent = await sql`SELECT id FROM analytics_events WHERE session_key = ${sessionKey} AND event_name = ${eventName}
       AND created_at > NOW() - INTERVAL '30 minutes'
-      AND ((${eventName} = 'page_view' AND page_path = ${pagePath}) OR (${eventName} <> 'page_view' AND content_id IS NOT DISTINCT FROM ${contentId})) LIMIT 1`;
+      AND ((${eventName} = 'page_view' AND page_path = ${pagePath}) OR (${eventName} = 'post_view' AND content_id IS NOT DISTINCT FROM ${contentId}) OR (${eventName} = 'category_filter' AND content_id IS NOT DISTINCT FROM ${contentId})) LIMIT 1`;
     if (!recent[0]) await sql`INSERT INTO analytics_events (id,event_name,page_path,content_id,session_key)
       VALUES (${crypto.randomUUID()},${eventName},${pagePath},${contentId},${sessionKey})`;
     return Response.json({ recorded: true, deduplicated: Boolean(recent[0]) }, { headers: {
