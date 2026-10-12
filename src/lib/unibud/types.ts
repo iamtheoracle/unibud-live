@@ -90,6 +90,7 @@ export type FeedPost = {
   image?: string;
   video?: string;
   kind?: "post" | "reel";
+  category?: "general" | "learning" | "campus" | "opportunity" | "culture" | "question" | "announcement";
   createdAt: string;
   audioId?: string;
 };

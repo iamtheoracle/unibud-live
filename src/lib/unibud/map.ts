@@ -123,6 +123,7 @@ export function mapPost(r: {
   image: string | null;
   video?: string | null;
   kind?: string | null;
+  category?: string | null;
   created_at: string;
 }): FeedPost {
   return {
@@ -133,6 +134,7 @@ export function mapPost(r: {
     image: r.image ?? undefined,
     video: r.video ?? undefined,
     kind: r.kind === "reel" ? "reel" : "post",
+    category: r.category as FeedPost["category"],
     createdAt: r.created_at,
   };
 }
