@@ -17,8 +17,8 @@ export const Route = createFileRoute("/api/internal/analytics")({
         FROM analytics_events WHERE created_at >= NOW() - INTERVAL '30 days'`,
       sql`SELECT p.id, LEFT(p.body, 120) AS title,
         (SELECT COUNT(*)::int FROM analytics_events e WHERE e.content_id = p.id AND e.event_name = 'post_view' AND e.created_at >= NOW() - INTERVAL '30 days') AS views,
-        (SELECT COUNT(*)::int FROM post_likes l WHERE l.post_id = p.id) AS likes,
-        (SELECT COUNT(*)::int FROM post_replies r WHERE r.post_id = p.id) AS comments
+        (SELECT COUNT(*)::int FROM post_likes l WHERE l.post_id = p.id AND l.created_at >= NOW() - INTERVAL '30 days') AS likes,
+        (SELECT COUNT(*)::int FROM post_replies r WHERE r.post_id = p.id AND r.created_at >= NOW() - INTERVAL '30 days') AS comments
         FROM posts p
         ORDER BY views DESC, likes DESC, comments DESC LIMIT 10`,
       sql`SELECT page_path, COUNT(*)::int AS views FROM analytics_events WHERE event_name = 'page_view' AND created_at >= NOW() - INTERVAL '30 days' GROUP BY page_path ORDER BY views DESC LIMIT 12`,
