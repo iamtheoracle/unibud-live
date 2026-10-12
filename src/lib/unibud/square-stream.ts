@@ -19,16 +19,10 @@ export function likeKey(id: string) {
   return id.split("~")[0] ?? id;
 }
 
-/** Repeat a finite catalog so Square never hits an artificial end. */
+/** Return only real available items. Never duplicate a short feed to imply activity. */
 export function loopStream<T extends { id: string }>(source: T[], count: number): T[] {
   if (!source.length || count <= 0) return [];
-  const out: T[] = [];
-  for (let i = 0; i < count; i++) {
-    const src = source[i % source.length];
-    const lap = Math.floor(i / source.length);
-    out.push(lap === 0 ? src : { ...src, id: `${src.id}~${lap}` });
-  }
-  return out;
+  return source.slice(0, count);
 }
 
 export function postsForLane(

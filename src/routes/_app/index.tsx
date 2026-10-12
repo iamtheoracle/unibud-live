@@ -29,19 +29,8 @@ function Square() {
 
   useEffect(() => {
     if (isPending) return;
-    try {
-      if (!sessionStorage.getItem("unibud-guest-browse")) {
-        sessionStorage.setItem("unibud-guest-browse", "1");
-      }
-    } catch {
-      /* ignore */
-    }
     if (user && !onboardingDone) void nav({ to: "/welcome" });
   }, [user, isPending, onboardingDone, nav]);
-
-  if (isPending || (user && !onboardingDone)) {
-    return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
-  }
 
   const [lane, setLane] = useState<SquareLane>("on-stream");
   const [peekStart, setPeekStart] = useState<string | undefined>();
@@ -96,6 +85,10 @@ function Square() {
     setShown(10);
   }
 
+  if (isPending || (user && !onboardingDone)) {
+    return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
+  }
+
   return (
     <main className="bg-card">
       {lane === "peek" ? (
@@ -130,7 +123,6 @@ function Square() {
           </div>
           <div className="mt-3">
             <CampusMoments
-              signedIn
               onCreate={() => {
                 const studio = useStudioStore.getState();
                 studio.setIntent("story");

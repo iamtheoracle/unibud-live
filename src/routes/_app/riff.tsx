@@ -48,6 +48,9 @@ function Riff() {
         <p className="mt-2 text-sm text-muted-foreground">
           Short posts that can become a whole conversation. Not Square. Not Chat. Not a profile tab.
         </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          On this build, Riff posts, replies, likes, and follows stay on this device only. They are not a shared server feed yet.
+        </p>
       </header>
 
       <div className="mt-4 flex gap-2 overflow-x-auto px-5">
@@ -74,7 +77,7 @@ function Riff() {
             className="w-44 shrink-0 rounded-2xl bg-secondary p-3 text-left"
             onClick={() => setDraft((d) => d || `${c.title}: ${c.body}`)}
           >
-            <p className="text-[11px] font-medium text-bud">{c.joins.toLocaleString()} in</p>
+            <p className="text-[11px] font-medium text-bud">Writing prompt</p>
             <p className="mt-1 text-sm font-medium">{c.title}</p>
           </button>
         ))}
@@ -122,9 +125,13 @@ function Riff() {
       ) : null}
 
       <div>
-        {list.map((s) => (
-          <RiffCard key={s.id} spill={s} onQuote={() => setQuoting(s.id)} />
-        ))}
+        {list.length === 0 ? (
+          <p className="px-5 py-10 text-center text-sm text-muted-foreground">
+            No Riffs yet. When the shared feed is connected, posts from other students will appear here.
+          </p>
+        ) : (
+          list.map((s) => <RiffCard key={s.id} spill={s} onQuote={() => setQuoting(s.id)} />)
+        )}
       </div>
     </main>
   );

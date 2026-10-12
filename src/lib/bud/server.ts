@@ -106,6 +106,13 @@ export const retryBud = createServerFn({ method: "POST" }).middleware([authMiddl
   return runAsk(sql, context.userId, prompt, data.conversationId);
 });
 
+export const askBudGuest = createServerFn({ method: "POST" })
+  .validator((input: { prompt: string; history?: { role: "user" | "assistant"; content: string }[] }) => input)
+  .handler(async ({ data }) => {
+    const { runGuestBud } = await import("./guest.server");
+    return runGuestBud(data);
+  });
+
 export const askBud = createServerFn({ method: "POST" }).middleware([authMiddleware]).validator((input: {
   prompt: string;
   conversationId?: string;

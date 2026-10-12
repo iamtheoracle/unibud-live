@@ -15,9 +15,10 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
+import { useAuthReady } from "@/components/unibud/sign-in-gate";
 import {
   askBud,
+  askBudGuest,
   deleteBudConversation,
   getBudThread,
   listBudConversations,
@@ -84,6 +85,7 @@ export function BudWorkspace() {
     media?: BudThreadMedia;
   } | null>(null);
   const [pendingUser, setPendingUser] = useState<string | null>(null);
+  const [guestMessages, setGuestMessages] = useState<BudMessage[]>([]);
   const scroller = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -126,7 +128,7 @@ export function BudWorkspace() {
     enabled: Boolean(user) && Boolean(activeId),
   });
 
-  const messages: BudMessage[] = activeId ? (thread.data ?? []) : [];
+  const messages: BudMessage[] = user ? (activeId ? (thread.data ?? []) : []) : guestMessages;
   const empty = !activeId || messages.length === 0;
 
   useEffect(() => {
@@ -156,8 +158,11 @@ export function BudWorkspace() {
   }, [messages.length, thread.isFetching]);
 
   const ask = useMutation({
-    mutationFn: (input: { text: string; media?: BudThreadMedia }) =>
-      askBud({
+    mutationFn: (input: { text: string; media?: BudThreadMedia }) => {
+      if (!user) {
+        return askBudGuest({ data: { prompt: input.text, history: guestMessages.slice(-6).map((m) => ({ role: m.role, content: m.content })) } });
+      }
+      return askBud({
         data: {
           prompt: input.text,
           conversationId: activeId ?? undefined,
@@ -175,13 +180,22 @@ export function BudWorkspace() {
             likes: atlas?.likes?.length ? atlas.likes : interests,
           },
         },
-      }),
+      });
+    },
     onSuccess: async (r) => {
       setPrompt("");
       setAttachment(null);
       setPendingUser(null);
       setFreshChat(false);
-      if ("conversationId" in r && r.conversationId && r.conversationId !== activeId) {
+      if (!user) {
+        if (r.ok && "text" in r) {
+          setGuestMessages((current) => [...current, { id: crypto.randomUUID(), role: "assistant", content: r.text, createdAt: new Date().toISOString() }]);
+        } else if ("error" in r && typeof r.error === "string" && r.error) {
+          setGuestMessages((current) => [...current, { id: crypto.randomUUID(), role: "assistant", content: r.error, createdAt: new Date().toISOString() }]);
+        }
+        return;
+      }
+      if ("conversationId" in r && typeof r.conversationId === "string" && r.conversationId && r.conversationId !== activeId) {
         setActiveId(r.conversationId);
       }
       await qc.invalidateQueries({ queryKey: ["bud"] });
@@ -208,12 +222,19 @@ export function BudWorkspace() {
 
   function send(text: string) {
     const t = text.trim();
+    if (!user && attachment?.media) {
+      toast.error("Guest Bud supports text only. Sign in to attach files or voice notes.");
+      return;
+    }
     if (attachment?.media?.status === "failed") {
       toast.error("This file was not uploaded. Remove it and try again before sending.");
       return;
     }
     if ((!t && !attachment?.media) || ask.isPending) return;
     const tagged = !t ? (attachment?.media?.kind === "voice" ? "Voice note" : "Sent media") : purpose === "learn" ? t : `[${purpose}] ${t}`;
+    if (!user) {
+      setGuestMessages((current) => [...current, { id: crypto.randomUUID(), role: "user", content: tagged, createdAt: new Date().toISOString() }]);
+    }
     setPendingUser(tagged);
     setPrompt("");
     ask.mutate({ text: tagged, media: attachment?.media });
@@ -226,6 +247,10 @@ export function BudWorkspace() {
 
   async function onFile(file: File | undefined) {
     if (!file) return null;
+    if (!user) {
+      toast.error("Sign in to attach files to Bud.");
+      return null;
+    }
     if (file.size > MAX_UPLOAD_BYTES) {
       toast.error("That file is over the 8 MiB upload limit.");
       const failed = { name: file.name, kind: file.type || "file", media: { kind: "file" as const, name: file.name, status: "failed" as const } };
@@ -275,6 +300,10 @@ export function BudWorkspace() {
   }
 
   async function toggleVoiceNote() {
+    if (!user) {
+      toast.error("Sign in to send voice notes to Bud.");
+      return;
+    }
     if (recording) {
       recRef.current?.stop();
       recRef.current?.stream.getTracks().forEach((t) => t.stop());
@@ -320,20 +349,6 @@ export function BudWorkspace() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="fixed inset-0 z-40 flex flex-col bg-background pt-[env(safe-area-inset-top)]">
-        <BudTop onClose={close} onMenu={() => {}} />
-        <div className="mx-auto w-full max-w-3xl px-5 py-10">
-          <SignInCard
-            title="Talk to Bud"
-            body="Sign in so Bud can keep this conversation with you."
-          />
-        </div>
-      </div>
-    );
-  }
-
   const failed = ask.isError || (ask.data && ask.data.ok === false);
   const busy = ask.isPending || retry.isPending;
 
@@ -357,6 +372,7 @@ export function BudWorkspace() {
             onClick={() => {
               setFreshChat(true);
               setActiveId(null);
+              if (!user) setGuestMessages([]);
               sessionStorage.removeItem(ACTIVE_KEY);
               setHistoryOpen(false);
               setMenuOpen(false);
@@ -364,7 +380,7 @@ export function BudWorkspace() {
           >
             <Plus className="size-4" /> New conversation
           </button>
-          <button
+          {user ? <button
             type="button"
             className="flex h-11 w-full items-center gap-2 rounded-xl px-3 text-sm hover:bg-secondary"
             onClick={() => {
@@ -373,8 +389,8 @@ export function BudWorkspace() {
             }}
           >
             History
-          </button>
-          {activeId ? (
+          </button> : null}
+          {user && activeId ? (
             <button
               type="button"
               className="flex h-11 w-full items-center gap-2 rounded-xl px-3 text-sm text-destructive hover:bg-secondary"
@@ -444,8 +460,9 @@ export function BudWorkspace() {
             </span>
             <h1 className="mt-6 font-display text-4xl">Hey, I’m Bud.</h1>
             <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted-foreground">
-              Talk, type, send a voice note, or drop in a photo. I’ll stay in this conversation.
+              Talk or type a question. I’ll help you work through it.
             </p>
+            {!user ? <p className="mt-3 max-w-sm text-xs leading-relaxed text-muted-foreground">Guest chat is temporary and isn’t saved to an account. Sign in to keep conversations, use voice notes, or attach files.</p> : null}
             <div className="mt-8 flex flex-wrap gap-2">
               {PROMPTS.map((p) => (
                 <button

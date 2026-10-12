@@ -100,6 +100,7 @@ function specialistNote(id: SpecialistId, prompt: string): string | null {
 function discoveryNote(prompt: string): string | null {
   const p = prompt.toLowerCase();
   if (!/\b(trending|happening|new|discover|invent|moon|space|robot|what.?s on)\b/.test(p)) return null;
-  const hit = GLOBAL_FACTS.find((f) => p.includes(f.topic) || p.includes(f.kicker.toLowerCase())) ?? GLOBAL_FACTS[0];
+  const hit = GLOBAL_FACTS.find((f) => p.includes(f.topic) || p.includes(f.kicker.toLowerCase()));
+  if (!hit) return null;
   return `Pulse fact (optional, only if useful): ${hit.kicker} — ${hit.title}. ${hit.summary}`;
 }

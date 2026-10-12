@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppGuildRouteImport } from './routes/_app/guild'
 import { Route as AppBoardRouteImport } from './routes/_app/board'
 import { Route as AppBudRouteImport } from './routes/_app/bud'
 import { Route as AppCommunitiesRouteImport } from './routes/_app/communities'
@@ -64,6 +65,11 @@ const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppGuildRoute = AppGuildRouteImport.update({
+  id: '/guild',
+  path: '/guild',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
@@ -297,6 +303,7 @@ export interface FileRoutesByFullPath {
   '/creator': typeof AppCreatorRoute
   '/discovery': typeof AppDiscoveryRoute
   '/feedback': typeof AppFeedbackRoute
+  '/guild': typeof AppGuildRoute
   '/fixer': typeof AppFixerRoute
   '/help': typeof AppHelpRoute
   '/live': typeof AppLiveRoute
@@ -343,6 +350,7 @@ export interface FileRoutesByTo {
   '/creator': typeof AppCreatorRoute
   '/discovery': typeof AppDiscoveryRoute
   '/feedback': typeof AppFeedbackRoute
+  '/guild': typeof AppGuildRoute
   '/fixer': typeof AppFixerRoute
   '/help': typeof AppHelpRoute
   '/live': typeof AppLiveRoute
@@ -441,6 +449,7 @@ export interface FileRouteTypes {
     | '/creator'
     | '/discovery'
     | '/feedback'
+    | '/guild'
     | '/fixer'
     | '/help'
     | '/live'
@@ -487,6 +496,7 @@ export interface FileRouteTypes {
     | '/creator'
     | '/discovery'
     | '/feedback'
+    | '/guild'
     | '/fixer'
     | '/help'
     | '/live'
@@ -534,6 +544,7 @@ export interface FileRouteTypes {
     | '/_app/creator'
     | '/_app/discovery'
     | '/_app/feedback'
+    | '/_app/guild'
     | '/_app/fixer'
     | '/_app/help'
     | '/_app/live'
@@ -650,6 +661,13 @@ declare module '@tanstack/react-router' {
       path: '/feedback'
       fullPath: '/feedback'
       preLoaderRoute: typeof AppFeedbackRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/guild': {
+      id: '/_app/guild'
+      path: '/guild'
+      fullPath: '/guild'
+      preLoaderRoute: typeof AppGuildRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/fixer': {
@@ -998,6 +1016,7 @@ const AppSpillRouteWithChildren = AppSpillRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppGuildRoute: typeof AppGuildRoute
   AppBoardRoute: typeof AppBoardRouteWithChildren
   AppBudRoute: typeof AppBudRouteWithChildren
   AppCommunitiesRoute: typeof AppCommunitiesRouteWithChildren
@@ -1032,6 +1051,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppGuildRoute: AppGuildRoute,
   AppBoardRoute: AppBoardRouteWithChildren,
   AppBudRoute: AppBudRouteWithChildren,
   AppCommunitiesRoute: AppCommunitiesRouteWithChildren,

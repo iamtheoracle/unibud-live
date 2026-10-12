@@ -2,24 +2,16 @@ name: Deploy to Netlify
 
 on:
   push:
-    branches: [main]
+    branches: [main, fix/critical-usability-2026-10-12]
   workflow_dispatch:
 
-# Deploys production builds of UNIBUD to the Netlify site unibud-live-08dz.
-# Preferred path: link the repo in Netlify UI (Site configuration → Build & deploy → Continuous deployment).
-# This workflow is a fallback when the site is not Git-linked yet.
-#
-# Required GitHub repo secrets:
-#   NETLIFY_AUTH_TOKEN  — Personal access token from https://app.netlify.com/user/applications
-#   NETLIFY_SITE_ID     — 8fc34214-aaf6-4c4d-b298-611cc35ca429
-#
-# Optional secrets (server-only):
-#   OPENAI_API_KEY
-#   XAI_API_KEY
-#   DATABASE_URL
+# Production deploy keeps its existing path on main.
+# The critical usability branch deploys ONLY to the separate unibud-staging site.
+# Never add production secrets or production DATABASE_URL to the staging job.
 
 jobs:
-  deploy:
+  deploy-production:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -30,37 +22,63 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
-
       - name: Install dependencies
         run: npm install --legacy-peer-deps
-
       - name: Build
         run: npm run build:netlify
         env:
           VITE_AUTH_ENABLED: "false"
-
       - name: Install Netlify CLI
         run: npm install -g netlify-cli
-
-      - name: Deploy to Netlify
+      - name: Deploy production to Netlify
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         run: |
           if [ -z "$NETLIFY_AUTH_TOKEN" ] || [ -z "$NETLIFY_SITE_ID" ]; then
             echo "Missing NETLIFY_AUTH_TOKEN or NETLIFY_SITE_ID secrets."
-            echo "Link the repo in Netlify UI instead, or add both secrets under Settings → Secrets."
             exit 1
           fi
-          # Publish client assets + Nitro SSR functions generated under .netlify/functions-internal
-          netlify deploy \
-            --prod \
-            --dir=dist \
-            --functions=.netlify/functions-internal \
-            --message "GitHub Actions deploy ${{ github.sha }}"
+          netlify deploy --prod --dir=dist --functions=.netlify/functions-internal --message "GitHub Actions production deploy ${{ github.sha }}"
+
+  deploy-staging:
+    if: github.ref == 'refs/heads/fix/critical-usability-2026-10-12'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_VERSION: "22"
+      VITE_AUTH_ENABLED: "true"
+      NPM_CONFIG_LEGACY_PEER_DEPS: "true"
+      NODE_OPTIONS: "--max-old-space-size=4096"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps --include=dev
+      - name: Build staging
+        run: npm run build:netlify
+        env:
+          VITE_AUTH_ENABLED: "true"
+      - name: Install Netlify CLI
+        run: npm install -g netlify-cli
+      - name: Deploy to isolated staging site
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: "edcb75c8-f2fe-456c-8b5b-73425efc30a1"
+        run: |
+          if [ -z "$NETLIFY_AUTH_TOKEN" ]; then
+            echo "Missing NETLIFY_AUTH_TOKEN repository secret."
+            echo "Add it in GitHub repository Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          netlify deploy --prod --dir=dist --functions=.netlify/functions-internal --message "UNIBUD isolated staging ${{ github.sha }}"
