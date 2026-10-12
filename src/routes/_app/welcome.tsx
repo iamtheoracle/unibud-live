@@ -5,6 +5,7 @@ import { Wordmark } from "@/components/brand/logo";
 import { useCampusStore, type LifeStage } from "@/lib/unibud/campus-store";
 import { upsertMyProfile } from "@/lib/unibud/server";
 import { useAuthReady } from "@/components/unibud/sign-in-gate";
+import { enterGuestMode } from "@/lib/auth/guest";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/welcome")({ component: Welcome });
@@ -73,12 +74,8 @@ function Welcome() {
           type="button"
           className="mt-6 text-sm text-muted-foreground"
           onClick={() => {
-            try {
-              sessionStorage.setItem("unibud-guest-browse", "1");
-            } catch {
-              /* ignore */
-            }
-            void nav({ to: "/" });
+            enterGuestMode();
+            void nav({ to: "/bud" });
           }}
         >
           Look around first
