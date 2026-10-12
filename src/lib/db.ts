@@ -1,4 +1,5 @@
 import { pendingMigrations } from "../../scripts/migration-plan.mjs";
+import { runInTransaction } from "./db-transaction";
 import { DATABASE_URL_VARS, isServerlessRuntime, resolveDatabaseUrl } from "./database-url";
 
 export type DbSource = "postgres" | "pglite" | "unconfigured";
@@ -68,20 +69,12 @@ function createPostgresSql(): Promise<Sql> {
     };
     return toSql(run, async <T>(work: (tx: Sql) => Promise<T>) => {
       const client = await pool.connect();
-      try {
-        await client.query("begin");
-        const result = await work(toSql(async <R>(text: string, params: unknown[]) => {
+      return runInTransaction(client, () =>
+        work(toSql(async <R>(text: string, params: unknown[]) => {
           const response = await client.query(text, params);
           return response.rows as R[];
-        }));
-        await client.query("commit");
-        return result;
-      } catch (error) {
-        await client.query("rollback");
-        throw error;
-      } finally {
-        client.release();
-      }
+        })),
+      );
     });
   })().catch((err) => {
     globalRef.__pgSqlPromise__ = undefined;
