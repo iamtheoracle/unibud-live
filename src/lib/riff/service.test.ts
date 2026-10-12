@@ -16,7 +16,9 @@ async function fixture() {
       created_at timestamptz not null default now(), updated_at timestamptz not null default now()
     );
     create table community_members (community_id text not null, user_id text not null, primary key (community_id, user_id));
+    create table student_profiles (user_id text primary key, handle text not null);
     insert into "user" (id, name, email) values ('user-a', 'A', 'a@example.test'), ('user-b', 'B', 'b@example.test');
+    insert into student_profiles (user_id, handle) values ('user-a', 'alice'), ('user-b', 'ben');
   `);
   const migration = await readFile(new URL("../../../migrations/0027_riff.sql", import.meta.url), "utf8");
   await pg.exec(migration);
