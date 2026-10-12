@@ -68,8 +68,11 @@ function RiffThread() {
       </Button>
 
       <h2 className="mt-8 text-sm font-medium">Conversation</h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Replies are stored on this device only and are not yet shared with other users.
+      </p>
       <ul className="mt-3 space-y-3">
-        {spill.replies.map((r) => {
+        {[...spill.replies].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).map((r) => {
           const who = personByHandle(r.authorHandle);
           const parentBody = r.parentId ? spill.replies.find((x) => x.id === r.parentId)?.body : null;
           return (
