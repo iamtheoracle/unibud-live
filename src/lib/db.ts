@@ -1,5 +1,5 @@
 import { pendingMigrations } from "../../scripts/migration-plan.mjs";
-import { DATABASE_URL_VARS, isServerlessRuntime, resolveDatabaseUrl } from "./database-url";
+import { DATABASE_URL_VARS, isServerlessRuntime, resolveDatabaseUrl } from "./database-url.ts";
 
 export type DbSource = "postgres" | "pglite" | "unconfigured";
 

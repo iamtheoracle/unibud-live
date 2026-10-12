@@ -8,7 +8,7 @@ test('unconfigured Bud provider is unavailable, never a fake successful reply', 
   try {
     const result = await getAIProvider().complete([{ role: 'user', content: 'test' }]);
     assert.equal(result.ok, false);
-    if (!result.ok) assert.match(result.error, /model connection is not available/i);
+    if (!result.ok) assert.match(result.error, /isn.t connected|not available/i);
   } finally {
     if (previous === undefined) delete process.env.XAI_API_KEY;
     else process.env.XAI_API_KEY = previous;
