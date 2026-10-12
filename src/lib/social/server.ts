@@ -259,10 +259,34 @@ export const bulkDeleteMyPosts = createServerFn({ method: "POST" })
     }
     const sql = await getSql();
     const deleted = await sql`
-      delete from posts
-      where author_user_id = ${context.userId}
-        and id = any(${postIds}::text[])
-      returning id
+      WITH owned AS (
+        SELECT id FROM posts WHERE author_user_id = ${context.userId} AND id = ANY(${postIds}::text[])
+      ),
+      reply_ids AS (
+        SELECT id FROM post_replies WHERE post_id IN (SELECT id FROM owned)
+      ),
+      removed_comment_likes AS (
+        DELETE FROM comment_likes WHERE reply_id IN (SELECT id FROM reply_ids) RETURNING reply_id
+      ),
+      removed_replies AS (
+        DELETE FROM post_replies WHERE id IN (SELECT id FROM reply_ids)
+          AND (SELECT COUNT(*) FROM removed_comment_likes) >= 0 RETURNING id
+      ),
+      removed_post_likes AS (
+        DELETE FROM post_likes WHERE post_id IN (SELECT id FROM owned) RETURNING post_id
+      ),
+      removed_saves AS (
+        DELETE FROM saves WHERE user_id = ${context.userId} AND kind = 'post'
+          AND item_id IN (SELECT id FROM owned) RETURNING item_id
+      ),
+      deleted AS (
+        DELETE FROM posts WHERE author_user_id = ${context.userId} AND id IN (SELECT id FROM owned)
+          AND (SELECT COUNT(*) FROM removed_replies) >= 0
+          AND (SELECT COUNT(*) FROM removed_post_likes) >= 0
+          AND (SELECT COUNT(*) FROM removed_saves) >= 0
+        RETURNING id
+      )
+      SELECT id FROM deleted
     `;
     const deletedIds = deleted.map((row) => String(row.id));
     return {
