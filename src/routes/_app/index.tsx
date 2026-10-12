@@ -130,7 +130,6 @@ function Square() {
           </div>
           <div className="mt-3">
             <CampusMoments
-              signedIn
               onCreate={() => {
                 const studio = useStudioStore.getState();
                 studio.setIntent("story");
