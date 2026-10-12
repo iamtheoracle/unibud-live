@@ -207,10 +207,13 @@ export const markConversationRead = createServerFn({ method: "POST" })
 /** Create a persistent community post using the signed-in user's profile. */
 export const createPost = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((input: { communityId: string; body: string; image?: string; video?: string; kind?: string }) => input)
+  .validator((input: { communityId: string; body: string; image?: string; video?: string; kind?: string; category?: string }) => input)
   .handler(async ({ context, data }) => {
     const communityId = data.communityId.trim();
     const body = data.body.trim();
+    const allowedCategories = new Set(["general", "learning", "campus", "opportunity", "culture", "question", "announcement"]);
+    const category = (data.category ?? "general").trim().toLowerCase();
+    if (!allowedCategories.has(category)) throw new Error("Choose a supported post category.");
     if (!communityId || !body || body.length > 10000) throw new Error("A post needs a community and text up to 10,000 characters.");
     if (data.image !== undefined && (data.image.length > 2048 || !isSafeShareSource(data.image))) {
       throw new Error("Post image must be a supported web URL or uploaded media path.");
@@ -240,8 +243,56 @@ export const createPost = createServerFn({ method: "POST" })
     const profile = await sql`select handle from student_profiles where user_id = ${context.userId} limit 1`;
     if (!profile[0]) throw new Error("Finish setting up your UNIBUD profile before posting.");
     const id = `post_${crypto.randomUUID()}`;
-    await sql`insert into posts (id, community_id, author_handle, body, image, video, kind) values (${id}, ${communityId}, ${profile[0].handle}, ${body}, ${data.image ?? null}, ${data.video ?? null}, ${data.kind === "reel" ? "reel" : "post"})`;
-    return { id, communityId, body, handle: String(profile[0].handle) };
+    await sql`insert into posts (id, community_id, author_user_id, author_handle, body, image, video, kind, category)
+      values (${id}, ${communityId}, ${context.userId}, ${profile[0].handle}, ${body}, ${data.image ?? null}, ${data.video ?? null}, ${data.kind === "reel" ? "reel" : "post"}, ${category})`;
+    return { id, communityId, body, category, handle: String(profile[0].handle) };
+  });
+
+/** Delete a bounded batch of the current user's own posts. Authorization is enforced in SQL. */
+export const bulkDeleteMyPosts = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { postIds: string[] }) => input)
+  .handler(async ({ context, data }) => {
+    const postIds = [...new Set(data.postIds.filter((id) => typeof id === "string").map((id) => id.trim()).filter(Boolean))];
+    if (postIds.length === 0 || postIds.length > 100) {
+      throw new Error("Select between 1 and 100 posts to delete.");
+    }
+    const sql = await getSql();
+    const deleted = await sql`
+      WITH owned AS (
+        SELECT id FROM posts WHERE author_user_id = ${context.userId} AND id = ANY(${postIds}::text[])
+      ),
+      reply_ids AS (
+        SELECT id FROM post_replies WHERE post_id IN (SELECT id FROM owned)
+      ),
+      removed_comment_likes AS (
+        DELETE FROM comment_likes WHERE reply_id IN (SELECT id FROM reply_ids) RETURNING reply_id
+      ),
+      removed_replies AS (
+        DELETE FROM post_replies WHERE id IN (SELECT id FROM reply_ids)
+          AND (SELECT COUNT(*) FROM removed_comment_likes) >= 0 RETURNING id
+      ),
+      removed_post_likes AS (
+        DELETE FROM post_likes WHERE post_id IN (SELECT id FROM owned) RETURNING post_id
+      ),
+      removed_saves AS (
+        DELETE FROM saves WHERE user_id = ${context.userId} AND kind = 'post'
+          AND item_id IN (SELECT id FROM owned) RETURNING item_id
+      ),
+      deleted AS (
+        DELETE FROM posts WHERE author_user_id = ${context.userId} AND id IN (SELECT id FROM owned)
+          AND (SELECT COUNT(*) FROM removed_replies) >= 0
+          AND (SELECT COUNT(*) FROM removed_post_likes) >= 0
+          AND (SELECT COUNT(*) FROM removed_saves) >= 0
+        RETURNING id
+      )
+      SELECT id FROM deleted
+    `;
+    const deletedIds = deleted.map((row) => String(row.id));
+    return {
+      deletedIds,
+      notDeletedIds: postIds.filter((id) => !deletedIds.includes(id)),
+    };
   });
 
 export const joinCommunity = createServerFn({ method: "POST" })

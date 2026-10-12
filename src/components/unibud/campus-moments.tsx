@@ -13,44 +13,8 @@ type Cluster = {
   photos: [string, string];
 };
 
-/** DEMO_ONLY — local UI fixtures. Not real users, not live sessions, not shared activity. */
-const CLUSTERS: Cluster[] = [
-  {
-    id: "c-amaka",
-    handles: ["amaka", "kemi"],
-    count: 3,
-    photos: ["/market/camera.jpg", "/covers/campus-night.jpg"],
-    lines: ["Hall week fittings, not the rumour.", "Studio light hit different tonight.", "Portraits after faculty night."],
-  },
-  {
-    id: "c-tunde",
-    handles: ["tunde", "ibrahim"],
-    count: 2,
-    photos: ["/market/keke.jpg", "/covers/campus-night.jpg"],
-    lines: ["Rain, keke, still made 8am.", "Second gate queue before lecture."],
-  },
-  {
-    id: "c-adaeze",
-    handles: ["adaeze", "chinedu"],
-    count: 4,
-    photos: ["/covers/campus-night.jpg", "/market/camera.jpg"],
-    lines: ["Library till close. Notes after.", "Quiet reading corner, no playlist.", "Night class from the floor.", "Past questions club, New Hall."],
-  },
-  {
-    id: "c-fatima",
-    handles: ["fatima", "ngozi"],
-    count: 2,
-    photos: ["/covers/campus-night.jpg", "/market/braids.jpg"],
-    lines: ["From the second gate before lecture.", "Meal plan that actually lasted the week."],
-  },
-  {
-    id: "c-sky",
-    handles: ["jonas_wits", "aisha_nbo"],
-    count: 2,
-    photos: ["/covers/campus-night.jpg", "/market/camera.jpg"],
-    lines: ["Cheap lens. Honest sky.", "The arm grabbed on the third try."],
-  },
-];
+/** Stories are rendered only when real, persisted story records are available. */
+const CLUSTERS: Cluster[] = [];
 
 function Face({ src, name, className }: { src?: string; name: string; className?: string }) {
   if (src) {
@@ -84,7 +48,7 @@ export function CampusMoments({
 
   return (
     <>
-      <div className="flex gap-3 overflow-x-auto px-4 py-2" data-demo="stories">
+      <div className="flex gap-3 overflow-x-auto px-4 py-2">
         <button
           type="button"
           onClick={() => (mine.length ? setMineOpen(true) : onCreate())}
@@ -133,6 +97,7 @@ export function CampusMoments({
             </button>
           );
         })}
+        {active.length === 0 && mine.length === 0 ? <p className="self-center px-2 text-xs text-muted-foreground">No stories published yet.</p> : null}
       </div>
 
       {current ? (

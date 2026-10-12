@@ -10,6 +10,7 @@ import { Toaster } from "sonner";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
+import { GoogleAnalytics } from "@/components/analytics/google-analytics";
 
 const APP_NAME = "UNIBUD";
 
@@ -66,6 +67,7 @@ function Root() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <Outlet />
+            <GoogleAnalytics />
             <Toaster
               theme="light"
               position="top-center"

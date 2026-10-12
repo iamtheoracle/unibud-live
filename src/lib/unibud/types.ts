@@ -86,10 +86,12 @@ export type FeedPost = {
   id: string;
   communityId: string;
   authorHandle: string;
+  authorUserId?: string;
   body: string;
   image?: string;
   video?: string;
   kind?: "post" | "reel";
+  category?: "general" | "learning" | "campus" | "opportunity" | "culture" | "question" | "announcement";
   createdAt: string;
   audioId?: string;
 };

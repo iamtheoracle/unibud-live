@@ -56,6 +56,7 @@ export function PublishDesk() {
   const navigate = useNavigate();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [category, setCategory] = useState<"general" | "learning" | "campus" | "opportunity" | "culture" | "question" | "announcement">("general");
 
   async function bakeImage() {
     if (!image) return undefined;
@@ -139,6 +140,7 @@ export function PublishDesk() {
           image: baked,
           video: clip,
           kind,
+          category,
         },
       });
       addPost(r.body, r.handle, { image: baked, video: clip, id: r.id, audioId: musicRef?.audioId });
@@ -214,7 +216,11 @@ export function PublishDesk() {
             </button>
           ))}
         </div>
-        <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Topic" className="mt-4 h-11 w-full rounded-2xl bg-secondary px-4 text-sm outline-none" />
+        <p className="mt-5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">Post category</p>
+        <select value={category} onChange={(e) => setCategory(e.target.value as typeof category)} className="mt-2 h-11 w-full rounded-2xl bg-secondary px-4 text-sm outline-none" aria-label="Post category">
+          <option value="general">General</option><option value="learning">Learning</option><option value="campus">Campus</option><option value="opportunity">Opportunities</option><option value="culture">Culture</option><option value="question">Questions</option><option value="announcement">Announcements</option>
+        </select>
+        <input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Optional topic tag" className="mt-2 h-11 w-full rounded-2xl bg-secondary px-4 text-sm outline-none" />
         <input value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Place" className="mt-2 h-11 w-full rounded-2xl bg-secondary px-4 text-sm outline-none" />
       </div>
       <div className="mx-auto w-full max-w-3xl px-5 py-4" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>

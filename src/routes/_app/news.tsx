@@ -34,6 +34,12 @@ function News() {
           </button>
         ))}
       </div>
+      {items.length === 0 ? (
+        <section className="mt-5 rounded-2xl border border-border bg-card p-5">
+          <h2 className="font-semibold">No verified notices published yet</h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">Official academic notices will appear here after an operator adds the source, publication date, and verified link. We do not display invented headlines.</p>
+        </section>
+      ) : (
       <ul className="mt-5 space-y-3">
         {items.map((n) => (
           <li key={n.id} className="rounded-2xl bg-card p-4 ring-1 ring-border">
@@ -49,6 +55,7 @@ function News() {
           </li>
         ))}
       </ul>
+      )}
     </main>
   );
 }
