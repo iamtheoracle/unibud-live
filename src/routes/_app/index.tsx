@@ -324,6 +324,21 @@ function FeedItem({ post, onOpenPeek, selected, onToggleSelection }: { post: Fee
   const toggleSavePost = useCampusStore((s) => s.toggleSavePost);
   const { user } = useCurrentUserState();
   const [replySort, setReplySort] = useState<"newest" | "oldest">("newest");
+  const articleRef = useRef<HTMLElement | null>(null);
+  const viewSent = useRef(false);
+  useEffect(() => {
+    const element = articleRef.current;
+    if (!user || !element || viewSent.current || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.5) && !viewSent.current) {
+        viewSent.current = true;
+        void trackAnalyticsEvent({ data: { eventName: "post_view", pagePath: "/", contentId: key } }).catch(() => {});
+        observer.disconnect();
+      }
+    }, { threshold: 0.5 });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [user, key]);
   const catalog = useLoaderData({ from: "/_app" });
   const dbReplies = (catalog.replies ?? [])
     .filter((r) => r.postId === key)
@@ -350,7 +365,7 @@ function FeedItem({ post, onOpenPeek, selected, onToggleSelection }: { post: Fee
   const video = isVideoPost(post);
 
   return (
-    <article data-square-interactive className="border-b border-border px-5 py-4">
+    <article ref={articleRef} data-square-interactive className="border-b border-border px-5 py-4">
       <div className="flex gap-3">
         {user && post.authorUserId === user.id ? <input type="checkbox" aria-label={`Select post by @${post.authorHandle}`} checked={selected}
           onChange={(event) => onToggleSelection(key, event.currentTarget.checked)} className="mt-3 size-4 shrink-0 accent-current" /> : null}
@@ -403,7 +418,7 @@ function FeedItem({ post, onOpenPeek, selected, onToggleSelection }: { post: Fee
             )
           ) : null}
           <div className="mt-3 flex flex-wrap items-center gap-3 text-muted-foreground">
-            <button type="button" onClick={() => { toggleLike(key); if (user) { void togglePostLike({ data: key }).catch(() => {}); void trackAnalyticsEvent({ data: { eventName: "post_like", pagePath: "/", contentId: key } }).catch(() => {}); } }} className={cn("inline-flex h-9 items-center gap-1.5 text-sm", liked && "text-bud")}>
+            <button type="button" onClick={() => { toggleLike(key); if (user) { void togglePostLike({ data: key }).catch(() => {}); if (!liked) void trackAnalyticsEvent({ data: { eventName: "post_like", pagePath: "/", contentId: key } }).catch(() => {}); } }} className={cn("inline-flex h-9 items-center gap-1.5 text-sm", liked && "text-bud")}>
               <Heart className={cn("size-4", liked && "fill-bud")} />
               {count || ""}
             </button>
@@ -411,7 +426,7 @@ function FeedItem({ post, onOpenPeek, selected, onToggleSelection }: { post: Fee
               <MessageCircle className="size-4" />
               {replies.length || ""}
             </button>
-            <button type="button" onClick={() => void sharePost(post)} className="inline-flex h-9 items-center gap-1.5 text-sm" aria-label="Share">
+            <button type="button" onClick={() => { if (user) void trackAnalyticsEvent({ data: { eventName: "post_share", pagePath: "/", contentId: key } }).catch(() => {}); void sharePost(post); }} className="inline-flex h-9 items-center gap-1.5 text-sm" aria-label="Share">
               <Share2 className="size-4" />
             </button>
             <button type="button" onClick={() => { toggleSavePost(key); if (user) void toggleSave({ data: { kind: "post", itemId: key, title: post.body.slice(0, 80), href: postUrl(post.id) } }).catch(() => {}); }} className={cn("inline-flex h-9 items-center gap-1.5 text-sm", saved && "text-ink")} aria-label="Save">
@@ -440,7 +455,7 @@ function FeedItem({ post, onOpenPeek, selected, onToggleSelection }: { post: Fee
                   if (!reply.trim()) return;
                   const body = reply.trim();
                   addPostReply(key, { id: crypto.randomUUID(), authorHandle: "you", body, createdAt: new Date().toISOString() });
-                  if (user) { void addSquareReply({ data: { postId: key, body } }).catch(() => {}); void trackAnalyticsEvent({ data: { eventName: "post_comment", pagePath: "/", contentId: key } }).catch(() => {}); }
+                  if (user) void addSquareReply({ data: { postId: key, body } }).then(() => trackAnalyticsEvent({ data: { eventName: "post_comment", pagePath: "/", contentId: key } })).catch(() => {});
                   setReply("");
                 }}
               >
