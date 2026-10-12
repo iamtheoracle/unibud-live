@@ -113,33 +113,53 @@ export const leaveQuad = createServerFn({ method: "POST" })
   .validator((communityId: string) => communityId)
   .handler(async ({ context, data: communityId }) => {
     const sql = await getSql();
-    // Serialize leave operations per Quad. Without this lock, two owners can
-    // both observe the other's membership and leave concurrently, orphaning the Quad.
-    await sql`select id from communities where id = ${communityId} for update`;
-    const mem = await sql<{ role?: string }>`
-      select role from community_members where user_id = ${context.userId} and community_id = ${communityId}
-    `;
-    if (!mem[0]) return { left: true as const };
-    if (mem[0].role === "owner") {
-      const otherOwners = await sql`
-        select user_id from community_members
-        where community_id = ${communityId} and role = ${"owner"} and user_id <> ${context.userId}
-        limit 1
-      `;
-      if (!otherOwners[0]) throw new Error("Transfer Quad ownership before leaving.");
-    }
-    // Delete membership and decrement the denormalized count atomically.
-    // The CTE produces a row only when a membership was actually removed.
-    await sql`
-      with removed as (
-        delete from community_members
-        where user_id = ${context.userId} and community_id = ${communityId}
-        returning community_id
+    // Keep the Quad row lock, owner check, membership deletion, and count update
+    // inside one SQL statement. A FOR UPDATE query in a separate statement would
+    // release its lock before the later delete under autocommit/serverless clients.
+    const rows = await sql<{ membership_exists: boolean; is_owner: boolean; has_other_owner: boolean; removed: boolean }>`
+      with locked_quad as materialized (
+        select id from communities where id = ${communityId} for update
+      ),
+      my_membership as materialized (
+        select cm.user_id, cm.role, cm.community_id
+        from community_members cm
+        join locked_quad q on q.id = cm.community_id
+        where cm.user_id = ${context.userId}
+      ),
+      owner_guard as materialized (
+        select exists (
+          select 1 from community_members other
+          join locked_quad q on q.id = other.community_id
+          where other.role = ${"owner"} and other.user_id <> ${context.userId}
+        ) as has_other_owner
+        from my_membership where role = ${"owner"}
+      ),
+      removed as (
+        delete from community_members cm
+        using my_membership mine
+        where cm.user_id = mine.user_id
+          and cm.community_id = mine.community_id
+          and (mine.role <> ${"owner"} or coalesce((select has_other_owner from owner_guard), false))
+        returning cm.community_id
+      ),
+      updated_quad as (
+        update communities c
+        set members = greatest(coalesce(c.members, 0) - 1, 0)
+        from removed r
+        where c.id = r.community_id
+        returning c.id
       )
-      update communities c
-      set members = greatest(coalesce(c.members, 0) - 1, 0)
-      from removed
-      where c.id = removed.community_id
+      select
+        exists(select 1 from my_membership) as membership_exists,
+        coalesce((select role = ${"owner"} from my_membership limit 1), false) as is_owner,
+        coalesce((select has_other_owner from owner_guard), false) as has_other_owner,
+        exists(select 1 from removed) as removed
     `;
+    const result = rows[0];
+    if (!result?.membership_exists) return { left: true as const };
+    if (result.is_owner && !result.has_other_owner) {
+      throw new Error("Transfer Quad ownership before leaving.");
+    }
+    if (!result.removed) throw new Error("Could not leave this Quad. Please retry.");
     return { left: true as const };
   });
