@@ -1,11 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
 
 export function useAuthReady() {
   return useCurrentUserState();
 }
-
-import { useCurrentUserState } from "@/lib/auth/use-current-user";
 
 export function SignInCard({
   title,
