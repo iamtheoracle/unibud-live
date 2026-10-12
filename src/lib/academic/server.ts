@@ -81,24 +81,34 @@ export const openCourseConversation = createServerFn({ method: "POST" })
     if (!course) throw new Error("Course not found.");
     await requireCourseAccess(context.userId, course.code, "read");
     const sql = await getSql();
-    const lecturer = await sql`select user_id from student_profiles where handle = ${course.lecturerHandle} limit 1`;
-    const inserted = await sql`insert into social_conversations (id, kind, title, created_by, course_code)
-      values (${crypto.randomUUID()}, 'class', ${course.code + " · " + course.title}, ${context.userId}, ${course.code})
-      on conflict (course_code) where kind = 'class' and course_code is not null do nothing returning id`;
-    let id = inserted[0] ? String(inserted[0].id) : "";
-    if (!id) {
-      const found = await sql`select id from social_conversations where kind = 'class' and course_code = ${course.code} limit 1`;
-      if (!found[0]) throw new Error("Could not open class chat. Please retry.");
-      id = String(found[0].id);
-    }
-    await sql`insert into social_conversation_members (conversation_id, user_id)
-      select ${id}, e.user_id from enrollments e where e.course_code = ${course.code}
-      on conflict (conversation_id, user_id) do nothing`;
-    if (lecturer[0]) {
-      await sql`insert into social_conversation_members (conversation_id, user_id)
-        values (${id}, ${String(lecturer[0].user_id)}) on conflict do nothing`;
-    }
-    return { id };
+    // Create or recover the unique course conversation and reconcile its current
+    // enrolled students plus assigned lecturer in one statement. A failed member
+    // insert cannot leave a newly-created conversation only partially initialized.
+    const rows = await sql`
+      with course_conversation as (
+        insert into social_conversations (id, kind, title, created_by, course_code)
+        values (${crypto.randomUUID()}, 'class', ${course.code + " · " + course.title}, ${context.userId}, ${course.code})
+        on conflict (course_code) where kind = 'class' and course_code is not null
+        do update set title = excluded.title
+        returning id
+      ),
+      course_members as (
+        select e.user_id from enrollments e where e.course_code = ${course.code}
+        union
+        select sp.user_id from student_profiles sp where sp.handle = ${course.lecturerHandle}
+      ),
+      inserted_members as (
+        insert into social_conversation_members (conversation_id, user_id)
+        select cc.id, cm.user_id
+        from course_conversation cc cross join course_members cm
+        on conflict (conversation_id, user_id) do nothing
+        returning user_id
+      )
+      select cc.id, (select count(*) from inserted_members) as initialized_members
+      from course_conversation cc
+    `;
+    if (!rows[0]) throw new Error("Could not open class chat. Please retry.");
+    return { id: String(rows[0].id) };
   });
 
 export const postAnnouncement = createServerFn({ method: "POST" })
