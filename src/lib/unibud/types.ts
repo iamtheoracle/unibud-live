@@ -181,6 +181,7 @@ export type AppNotification = {
 };
 
 export type StudentProfile = {
+  campusRole?: import("./roles").CampusRole;
   userId: string;
   displayName: string;
   handle: string;
@@ -188,7 +189,6 @@ export type StudentProfile = {
   program: string;
   year: string;
   bio: string;
-  campusRole?: string;
   onboardingDone?: boolean;
 };
 

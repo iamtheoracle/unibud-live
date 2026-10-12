@@ -1,4 +1,5 @@
 import { pendingMigrations } from "../../scripts/migration-plan.mjs";
+import { runInTransaction } from "./db-transaction";
 import { DATABASE_URL_VARS, isServerlessRuntime, resolveDatabaseUrl } from "./database-url";
 
 export type DbSource = "postgres" | "pglite" | "unconfigured";
@@ -19,6 +20,7 @@ export interface Sql {
     ...values: unknown[]
   ): Promise<T[]>;
   query<T = any>(text: string, params?: unknown[]): Promise<T[]>;
+  transaction?<T>(work: (tx: Sql) => Promise<T>): Promise<T>;
 }
 
 const globalRef = globalThis as typeof globalThis & {
@@ -33,7 +35,10 @@ const OID_INTERVAL = 1186;
 const identity = (v: string) => v;
 type Run = <T>(text: string, params: unknown[]) => Promise<T[]>;
 
-function toSql(run: Run): Sql {
+function toSql(
+  run: Run,
+  transaction?: <T>(work: (tx: Sql) => Promise<T>) => Promise<T>,
+): Sql {
   const sql = (async <T = Record<string, unknown>>(
     strings: TemplateStringsArray,
     ...values: unknown[]
@@ -44,6 +49,7 @@ function toSql(run: Run): Sql {
   }) as unknown as Sql;
   sql.query = <T = Record<string, unknown>>(text: string, params: unknown[] = []) =>
     run<T>(text, params);
+  if (transaction) sql.transaction = transaction;
   return sql;
 }
 
@@ -57,9 +63,18 @@ function createPostgresSql(): Promise<Sql> {
       throw new Error(`A PostgreSQL connection string (${DATABASE_URL_VARS}) is required.`);
     }
     const pool = new Pool({ connectionString: databaseUrl });
-    return toSql(async <T>(text: string, params: unknown[]) => {
+    const run: Run = async <T>(text: string, params: unknown[]) => {
       const res = await pool.query(text, params);
       return res.rows as T[];
+    };
+    return toSql(run, async <T>(work: (tx: Sql) => Promise<T>) => {
+      const client = await pool.connect();
+      return runInTransaction(client, () =>
+        work(toSql(async <R>(text: string, params: unknown[]) => {
+          const response = await client.query(text, params);
+          return response.rows as R[];
+        })),
+      );
     });
   })().catch((err) => {
     globalRef.__pgSqlPromise__ = undefined;
@@ -119,10 +134,18 @@ async function createPgliteSql(): Promise<Sql> {
   globalRef.__pgliteMigrateChain__ = pass;
   await pass;
 
-  return toSql(async <T>(text: string, params: unknown[]) => {
+  const run: Run = async <T>(text: string, params: unknown[]) => {
     const result = await pg.query<T>(text, params);
     return result.rows;
-  });
+  };
+  return toSql(run, async <T>(work: (tx: Sql) => Promise<T>) =>
+    pg.transaction(async (tx) =>
+      work(toSql(async <R>(text: string, params: unknown[]) => {
+        const result = await tx.query<R>(text, params);
+        return result.rows;
+      })),
+    ),
+  );
 }
 
 let sqlPromise: Promise<Sql> | null = null;

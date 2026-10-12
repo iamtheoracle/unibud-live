@@ -7,6 +7,35 @@ import { recordAudioEvent } from "@/lib/music/events";
 
 export type { ChatShare };
 
+async function shareMedia(src: string, title: string, fallbackMime: string) {
+  try {
+    if (navigator.share) {
+      try {
+        const response = await fetch(src, { credentials: "same-origin" });
+        if (response.ok) {
+          const blob = await response.blob();
+          const mime = blob.type || fallbackMime;
+          const extension = mime.split("/")[1]?.split(";")[0] || "bin";
+          const file = new File([blob], title || `unibud-media.${extension}`, { type: mime });
+          if (navigator.canShare?.({ files: [file] })) {
+            await navigator.share({ title, files: [file] });
+            return;
+          }
+        }
+      } catch {
+        // Fall back to sharing a link when this browser cannot share files.
+      }
+      await navigator.share({ title, url: new URL(src, window.location.href).href });
+      return;
+    }
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(new URL(src, window.location.href).href);
+    }
+  } catch {
+    // A dismissed native share sheet is not an error that needs surfacing.
+  }
+}
+
 function srcOf(share: ChatShare) {
   if (share.mediaId) return mediaUrl(share.mediaId);
   return share.src;
@@ -18,10 +47,28 @@ export function ShareCard({ share }: { share: ChatShare }) {
   const src = srcOf(share);
 
   if (share.kind === "photo" && src) {
-    return <img src={src} alt="" className="mt-2 max-h-48 w-full rounded-xl object-cover" />;
+    return (
+      <div className="mt-2">
+        <a href={src} target="_blank" rel="noreferrer" aria-label="Open full-size image">
+          <img src={src} alt={share.title ?? "Shared image"} className="max-h-64 w-full rounded-xl object-contain" />
+        </a>
+        <div className="mt-2 flex flex-wrap gap-3 text-xs font-medium">
+          <a href={src} download={share.title || "unibud-image"} className="underline">Save image</a>
+          <button type="button" className="underline" onClick={() => void shareMedia(src, share.title ?? "Shared image", "image/*")}>Share</button>
+        </div>
+      </div>
+    );
   }
   if (share.kind === "video" && src) {
-    return <video src={src} className="mt-2 max-h-56 w-full rounded-xl" controls playsInline />;
+    return (
+      <div className="mt-2">
+        <video src={src} className="max-h-56 w-full rounded-xl" controls playsInline />
+        <div className="mt-2 flex gap-3 text-xs font-medium">
+          <a href={src} download={share.title || "unibud-video"} className="underline">Save video</a>
+          <button type="button" className="underline" onClick={() => void shareMedia(src, share.title ?? "Shared video", "video/*")}>Share</button>
+        </div>
+      </div>
+    );
   }
   if (share.kind === "file") {
     return (

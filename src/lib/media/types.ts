@@ -1,4 +1,21 @@
 export type MediaKind = "photo" | "video" | "audio" | "file";
+
+const MEDIA_KINDS: readonly MediaKind[] = ["photo", "video", "audio", "file"];
+
+export function isMediaKind(value: unknown): value is MediaKind {
+  return typeof value === "string" && MEDIA_KINDS.includes(value as MediaKind);
+}
+
+export function resolveMediaKind(value: unknown, mime: string): MediaKind {
+  if (value !== undefined && !isMediaKind(value)) {
+    throw new Error("Unsupported media kind.");
+  }
+  const inferredKind = kindFromMime(mime.toLowerCase());
+  if (value && inferredKind !== "file" && value !== inferredKind) {
+    throw new Error("File type does not match the selected media kind.");
+  }
+  return value ?? inferredKind;
+}
 export type MediaStatus = "uploading" | "processing" | "ready" | "failed" | "deleted" | "awaiting_file";
 export type MediaVisibility = "private" | "conversation" | "room" | "class" | "campus";
 

@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
 import {
   askBud,
@@ -31,7 +32,7 @@ import { useBudVoice } from "@/components/bud/use-bud-voice";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { listBudMedia, uploadMedia } from "@/lib/media/server";
 import { fileToDataUrl } from "@/lib/media/client";
-import { mediaUrl } from "@/lib/media/types";
+import { mediaUrl, MAX_UPLOAD_BYTES } from "@/lib/media/types";
 import { recordAudioEvent } from "@/lib/music/events";
 import { listEnrollments } from "@/lib/academic/server";
 import { courseByCode } from "@/lib/unibud/academic";
@@ -61,7 +62,6 @@ export function BudWorkspace() {
   const { user, isPending } = useAuthReady();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const role = useCampusStore((s) => s.role ?? "student");
   const [focusId, setFocusId] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
@@ -208,6 +208,10 @@ export function BudWorkspace() {
 
   function send(text: string) {
     const t = text.trim();
+    if (attachment?.media?.status === "failed") {
+      toast.error("This file was not uploaded. Remove it and try again before sending.");
+      return;
+    }
     if ((!t && !attachment?.media) || ask.isPending) return;
     const tagged = !t ? (attachment?.media?.kind === "voice" ? "Voice note" : "Sent media") : purpose === "learn" ? t : `[${purpose}] ${t}`;
     setPendingUser(tagged);
@@ -222,6 +226,18 @@ export function BudWorkspace() {
 
   async function onFile(file: File | undefined) {
     if (!file) return null;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      toast.error("That file is over the 8 MiB upload limit.");
+      const failed = { name: file.name, kind: file.type || "file", media: { kind: "file" as const, name: file.name, status: "failed" as const } };
+      setAttachment(failed);
+      return failed;
+    }
+    if (file.size === 0) {
+      toast.error("That file is empty.");
+      const failed = { name: file.name, kind: file.type || "file", media: { kind: "file" as const, name: file.name, status: "failed" as const } };
+      setAttachment(failed);
+      return failed;
+    }
     let excerpt: string | undefined;
     if (file.type.startsWith("text/") && file.size < 80_000) {
       excerpt = (await file.text()).slice(0, 2000);
@@ -237,14 +253,20 @@ export function BudWorkspace() {
     try {
       const dataUrl = await fileToDataUrl(file);
       const up = await uploadMedia({ data: { dataUrl, fileName: file.name, mime: file.type } });
-      media = {
-        kind,
-        name: file.name,
-        status: "ready",
-        mediaId: up.ok ? up.id : undefined,
-        src: up.ok ? mediaUrl(up.id) : dataUrl,
-      };
-    } catch {
+      if (!up.ok) {
+        toast.error(up.error);
+        media = { kind, name: file.name, status: "failed" };
+      } else {
+        media = {
+          kind,
+          name: file.name,
+          status: "ready",
+          mediaId: up.id,
+          src: mediaUrl(up.id),
+        };
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "File upload failed.");
       media = { kind, name: file.name, status: "failed" };
     }
     const next = { name: file.name, kind: file.type || "file", excerpt, media };
@@ -677,7 +699,7 @@ export function BudWorkspace() {
                 {(mediaQ.data ?? []).slice(0, 4).map((m) => (
                   <li key={m.id} className={cn("rounded-2xl bg-card p-3 ring-1 ring-border", focusId === m.id && "ring-bud")}>
                     <p className="text-sm font-medium">{m.title}</p>
-                    <p className="text-xs text-muted-foreground">{m.course}</p>
+                    <p className="text-xs text-muted-foreground">{m.course} · {m.mediaId && m.status === "ready" ? "Ready to play" : "Awaiting verified upload · not playable"}</p>
                     {m.mediaId && m.status === "ready" ? (
                       <audio className="mt-2 w-full" src={mediaUrl(m.mediaId)} controls onPlay={() => recordAudioEvent({ kind: "bud_media_play", budMediaId: m.id, surface: "bud" })} />
                     ) : null}

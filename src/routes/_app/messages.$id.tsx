@@ -5,13 +5,13 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Avatar } from "@/components/unibud/person";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
-import { personByHandle } from "@/lib/unibud/catalog";
 import { getConversation, sendMessage } from "@/lib/social/server";
 import { persistAudioEvent, listRoomMessages, sendRoomMessage, uploadMedia } from "@/lib/media/server";
 import { fileToDataUrl } from "@/lib/media/client";
 import { mediaUrl } from "@/lib/media/types";
 import { parseShareJson, type ChatShare } from "@/lib/media/share";
 import { campusRoomById, ROOM_SEED, type CampusRoom } from "@/lib/unibud/chat-rooms";
+import { getCampusRoom, listPersistentRoomMessages } from "@/lib/unibud/rooms";
 import { canGovernClass } from "@/lib/unibud/roles";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { useStudioStore } from "@/lib/studio/store";
@@ -26,8 +26,56 @@ export const Route = createFileRoute("/_app/messages/$id")({ component: Thread }
 function Thread() {
   const { id } = Route.useParams();
   const room = campusRoomById(id);
+  if (id.startsWith("room_")) return <PersistentRoomThread id={id} />;
   if (room) return <RoomThread room={room} />;
   return <DirectThread id={id} />;
+}
+
+ 
+function PersistentRoomThread({ id }: { id: string }) {
+  const { user, isPending } = useAuthReady();
+  const qc = useQueryClient();
+  const [body, setBody] = useState("");
+  const room = useQuery({ queryKey: ["persistent-room", id], queryFn: () => getCampusRoom({ data: id }), enabled: Boolean(user) });
+  const messages = useQuery({ queryKey: ["persistent-room-messages", id], queryFn: () => listPersistentRoomMessages({ data: id }), enabled: Boolean(user && room.data) });
+  const send = useMutation({
+    mutationFn: (extra?: { body?: string; mediaId?: string; shareKind?: string; shareJson?: string }) =>
+      sendRoomMessage({ data: { roomId: id, senderName: "You", body: extra?.body ?? body.trim(), mediaId: extra?.mediaId, shareKind: extra?.shareKind, shareJson: extra?.shareJson } }),
+    onSuccess: async () => { setBody(""); await Promise.all([
+      qc.invalidateQueries({ queryKey: ["persistent-room-messages", id] }),
+      qc.invalidateQueries({ queryKey: ["persistent-campus-rooms"] }),
+    ]); },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Message could not be sent."),
+  });
+  const sentPending = useRef(false);
+  useEffect(() => {
+    if (sentPending.current || !user || !room.data) return;
+    const pending = useCampusStore.getState().pendingShare;
+    if (!pending) return;
+    sentPending.current = true;
+    void send.mutateAsync({
+      body: pending.title ?? "",
+      mediaId: pending.mediaId,
+      shareKind: pending.kind,
+      shareJson: JSON.stringify(pending),
+    }).then(() => useCampusStore.getState().setPendingShare(undefined)).catch(() => {
+      toast.error("Share could not be sent. It has been kept so you can retry.");
+    });
+  }, [user, room.data, send]);
+  if (isPending) return <div className="m-4 h-40 animate-pulse rounded-2xl bg-secondary" />;
+  if (!user) return <main className="px-5 py-8"><SignInCard title="Sign in to chat" body="Room messages are private to room members." /></main>;
+  if (room.isLoading) return <div className="m-4 h-40 animate-pulse rounded-2xl bg-secondary" />;
+  if (room.isError || !room.data) return <main className="px-5 py-8"><Link to="/messages" className="text-sm text-muted-foreground">← Back to chats</Link><div className="mt-6 rounded-2xl border border-border p-5"><h1 className="font-semibold">Room unavailable</h1><p className="mt-2 text-sm text-muted-foreground">This room may have been removed, or your account may no longer have access.</p><button type="button" className="mt-4 rounded-full bg-ink px-4 py-2 text-sm text-paper" onClick={() => void room.refetch()}>Try again</button></div></main>;
+  return <main className="flex min-h-[calc(100dvh-3.5rem)] flex-col bg-card">
+    <div className="flex items-center gap-3 border-b border-border px-4 py-3"><Link to="/messages" className="text-sm text-muted-foreground">←</Link><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{room.data.title}</p><p className="text-xs text-muted-foreground">{room.data.kind} room · Persistent chat</p></div></div>
+    <div className="flex-1 space-y-3 overflow-y-auto px-4 py-5">
+      {messages.isLoading ? <p className="py-8 text-center text-sm text-muted-foreground">Loading messages…</p> : null}
+      {messages.isError ? <div className="rounded-xl border border-border p-4 text-sm text-muted-foreground">Messages could not load. Check the database migration and room membership.</div> : null}
+      {(messages.data ?? []).map((m) => <div key={m.id} className={cn("max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed", m.sender === "You" ? "ml-auto bg-ink text-paper" : "bg-secondary text-foreground")}><p className="mb-1 text-[10px] font-semibold opacity-70">{m.sender}</p>{m.body}{m.shareJson || m.mediaId ? <ShareCard share={parseShareJson(m.shareJson ?? undefined) ?? { kind: (m.shareKind as ChatShare["kind"]) ?? "file", mediaId: m.mediaId ?? undefined, title: m.body }} /> : null}</div>)}
+      {!messages.isLoading && !messages.isError && !(messages.data ?? []).length ? <p className="py-12 text-center text-sm text-muted-foreground">This room is ready. Send the first message.</p> : null}
+    </div>
+    <Composer body={body} setBody={setBody} placeholder="Write a message…" pending={send.isPending} roomId={id} onSend={() => { if (body.trim() && !send.isPending) send.mutate(); }} onShare={(share) => { void send.mutateAsync({ body: share.title ?? "", mediaId: share.mediaId, shareKind: share.kind, shareJson: JSON.stringify(share) }); }} />
+  </main>;
 }
 
 function DirectThread({ id }: { id: string }) {
@@ -55,6 +103,9 @@ function DirectThread({ id }: { id: string }) {
       void qc.invalidateQueries({ queryKey: ["convo", id] });
       void qc.invalidateQueries({ queryKey: ["convos"] });
     },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Message could not be sent.");
+    },
   });
 
   if (isPending) return <div className="m-4 h-40 animate-pulse rounded-2xl bg-secondary" />;
@@ -65,17 +116,38 @@ function DirectThread({ id }: { id: string }) {
       </main>
     );
   }
-  const person = personByHandle(q.data?.conversation.peerHandle ?? "");
+  if (q.isLoading) return <div className="m-4 h-40 animate-pulse rounded-2xl bg-secondary" />;
+  if (q.isError || !q.data) {
+    return (
+      <main className="px-5 py-8">
+        <Link to="/messages" className="text-sm text-muted-foreground">← Back to chats</Link>
+        <div className="mt-6 rounded-2xl border border-border p-5">
+          <h1 className="font-semibold">Conversation unavailable</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            This thread may have been removed, or your account may not have access to it.
+          </p>
+          <button
+            type="button"
+            className="mt-4 rounded-full bg-ink px-4 py-2 text-sm text-paper"
+            onClick={() => void q.refetch()}
+          >
+            Try again
+          </button>
+        </div>
+      </main>
+    );
+  }
 
+  const peerName = q.data.conversation.peerName || q.data.conversation.peerHandle || "Student";
   return (
     <main className="flex min-h-[calc(100dvh-3.5rem)] flex-col bg-card">
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-        <Avatar name={person?.name ?? "Student"} className="size-11" />
+        <Avatar name={peerName} className="size-11" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{person?.name ?? q.data?.conversation.peerHandle}</p>
-          <p className="text-xs text-success">Active now · Direct</p>
+          <p className="truncate text-sm font-semibold">{peerName}</p>
+          <p className="text-xs text-muted-foreground">@{q.data.conversation.peerHandle}</p>
         </div>
-        <CallButtons group={false} peer={person?.name ?? "them"} />
+        <CallButtons group={false} peer={peerName} />
       </div>
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-5">
         <p className="text-center text-xs text-muted-foreground">Today</p>
@@ -91,9 +163,9 @@ function DirectThread({ id }: { id: string }) {
             {m.shareJson || m.mediaId ? (
               <ShareCard
                 share={
-                  parseShareJson(m.shareJson) ?? {
+                  parseShareJson(m.shareJson ?? undefined) ?? {
                     kind: (m.shareKind as ChatShare["kind"]) ?? "file",
-                    mediaId: m.mediaId,
+                    mediaId: m.mediaId ?? undefined,
                     title: m.body,
                   }
                 }
@@ -105,7 +177,7 @@ function DirectThread({ id }: { id: string }) {
       <Composer
         body={body}
         setBody={setBody}
-        placeholder={`Message ${person?.name.split(" ")[0] ?? ""}…`}
+        placeholder={`Message ${peerName.split(" ")[0]}…`}
         onSend={() => {
           if (body.trim()) mut.mutate();
         }}
@@ -355,6 +427,17 @@ function Composer({
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function sendFile(file: File, kind: ChatShare["kind"]) {
+    // Reject oversized files before FileReader creates a second, Base64-expanded
+    // copy in memory. Larger media will use the direct object-storage upload flow.
+    const maxUploadBytes = 8 * 1024 * 1024;
+    if (file.size > maxUploadBytes) {
+      toast.message("This chat upload is limited to 8 MiB for now. Larger media uploads are being added through direct storage.");
+      return;
+    }
+    if (file.size === 0) {
+      toast.message("That file is empty.");
+      return;
+    }
     setBusy(true);
     try {
       const dataUrl = await fileToDataUrl(file);
@@ -458,7 +541,17 @@ function Composer({
         <input
           value={body}
           onChange={(e) => setBody(e.target.value)}
+          onPaste={(e) => {
+            const imageItem = Array.from(e.clipboardData.items).find((item) => item.kind === "file" && item.type.startsWith("image/"));
+            const image = imageItem?.getAsFile();
+            if (image) {
+              e.preventDefault();
+              const namedImage = new File([image], `pasted-image-${Date.now()}.${image.type.split("/")[1] || "png"}`, { type: image.type });
+              void sendFile(namedImage, "photo");
+            }
+          }}
           placeholder={placeholder}
+          aria-label="Message. Paste an image to send it."
           className="h-11 flex-1 rounded-full bg-secondary px-4 text-sm outline-none"
         />
         <button

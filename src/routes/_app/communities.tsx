@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCatalog } from "@/lib/unibud/queries";
 import { myCommunities } from "@/lib/social/server";
-import { createQuad } from "@/lib/unibud/quad.server";
-import { useQuery } from "@tanstack/react-query";
+import { createQuad } from "@/lib/unibud/quad";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthReady } from "@/components/unibud/sign-in-gate";
 import { canGovernClass } from "@/lib/unibud/roles";
 import { useCampusStore } from "@/lib/unibud/campus-store";
@@ -21,6 +21,7 @@ function Communities() {
   const nested = pathname !== "/communities" && pathname.startsWith("/communities/");
   if (nested) return <Outlet />;
 
+  const queryClient = useQueryClient();
   const { data } = useCatalog();
   const allRooms = data?.communities ?? [];
   const { user } = useAuthReady();
@@ -63,7 +64,7 @@ function Communities() {
       {creating ? (
         <form
           className="mt-4 space-y-3 rounded-2xl bg-card p-4 ring-1 ring-border"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
             if (!name.trim()) return;
             if (createKind === "Class" && !canGovernClass(role)) {
@@ -77,11 +78,12 @@ function Communities() {
             void createQuad({
               data: { name: name.trim(), kind: createKind, description: "", privacy: "public" },
             })
-              .then(() => {
+              .then(async () => {
                 toast.success("Quad created.");
                 setCreating(false);
                 setName("");
-                void mine.refetch();
+                await queryClient.invalidateQueries({ queryKey: ["catalog"] });
+                await mine.refetch();
               })
               .catch((err: Error) => toast.error(err.message || "Could not create Quad."));
           }}

@@ -104,10 +104,68 @@ function openaiProvider(apiKey: string): AIProvider {
   };
 }
 
+/**
+ * Try providers in order, giving each its own timeout budget. A timed-out first
+ * provider must not poison the fallback with an already-aborted shared signal.
+ * A caller cancellation still stops the chain immediately.
+ */
+export function createFallbackProvider(providers: AIProvider[], timeoutMs = 10_000): AIProvider {
+  if (providers.length === 0) return freeProvider;
+  if (providers.length === 1) return providers[0];
+
+  return {
+    id: providers.map((provider) => provider.id).join("->"),
+    kind: "remote",
+    capabilities: [...new Set(providers.flatMap((provider) => provider.capabilities))],
+    async complete(messages, opts) {
+      let lastResult: ProviderResult | undefined;
+      for (const provider of providers) {
+        if (opts?.signal?.aborted) {
+          return lastResult ?? { ok: false, error: "The request was cancelled before Bud could finish the reply.", providerId: provider.id };
+        }
+        const controller = new AbortController();
+        let timedOut = false;
+        const abortFromCaller = () => controller.abort(opts?.signal?.reason);
+        opts?.signal?.addEventListener("abort", abortFromCaller, { once: true });
+        const timeout = setTimeout(() => {
+          timedOut = true;
+          controller.abort();
+        }, timeoutMs);
+        let result: ProviderResult;
+        try {
+          result = await provider.complete(messages, { ...opts, signal: controller.signal });
+        } catch {
+          result = { ok: false, error: "The model provider failed unexpectedly. Trying the next available model.", providerId: provider.id };
+        } finally {
+          clearTimeout(timeout);
+          opts?.signal?.removeEventListener("abort", abortFromCaller);
+        }
+        if (result.ok) return result;
+        lastResult = result;
+        // A caller cancellation is different from a provider-specific timeout:
+        // do not start another network request after the caller has cancelled.
+        if (opts?.signal?.aborted) return lastResult;
+        if (timedOut) {
+          lastResult = {
+            ok: false,
+            error: "The request timed out before Bud could finish the reply. Trying the next available model.",
+            providerId: provider.id,
+          };
+        }
+      }
+      // Keep the final real provider error. Never turn a failed model call into fake success.
+      return lastResult ?? freeProvider.complete(messages, opts);
+    },
+  };
+}
+
 export function getAIProvider(): AIProvider {
   const xai = typeof process !== "undefined" ? process.env.XAI_API_KEY : undefined;
-  if (xai && xai.trim()) return xaiProvider(xai.trim());
   const openai = typeof process !== "undefined" ? process.env.OPENAI_API_KEY : undefined;
-  if (openai && openai.trim()) return openaiProvider(openai.trim());
-  return freeProvider;
+  const providers: AIProvider[] = [];
+
+  // Prefer xAI, then fall back to OpenAI if both are configured.
+  if (xai && xai.trim()) providers.push(xaiProvider(xai.trim()));
+  if (openai && openai.trim()) providers.push(openaiProvider(openai.trim()));
+  return createFallbackProvider(providers);
 }

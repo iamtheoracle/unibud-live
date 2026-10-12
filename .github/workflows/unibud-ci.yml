@@ -1,5 +1,5 @@
-name: UNIBUD Pre-UI Verification Gate
-# Full application verification gate
+name: UNIBUD Application Verification
+# Verify the application without touching production.
 
 on:
   push:
@@ -26,18 +26,78 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
+
+      - name: Authentication invariant
+        run: |
+          npm run dev > /tmp/unibud-dev.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8080/__app-env > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          npm run check:auth
+
+      - name: Authentication policy tests
+        run: npm run test:auth-policy
 
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Lint agent and integration layer (pre-UI gate)
+      - name: Database transaction lifecycle tests
+        run: node --experimental-strip-types --test src/lib/db-transaction.test.ts
+
+      - name: Lint agent and integration layer
         run: npx eslint src/lib/agents src/lib/spark src/lib/bud/server.ts src/lib/bud/spark.ts
 
-      # The existing UI/studio/routes lint baseline remains intentionally outside the pre-UI gate.
-      # Full application linting will be restored when UI implementation begins.
+      - name: Lint changed Board, media, chat, auth, and Quad privacy surfaces
+        run: >-
+          npx eslint
+          src/routes/_app/board.tsx
+          'src/routes/_app/board.$id.tsx'
+          src/routes/_app/podcasts.tsx
+          src/routes/_app/connect.tsx
+          'src/routes/_app/u.$handle.tsx'
+          src/components/unibud/relation-actions.tsx
+          src/components/bud/workspace.tsx
+          src/lib/media/server.ts
+          src/lib/media/share.ts
+          src/lib/media/share.test.ts
+          src/lib/music/audio-policy.ts
+          src/lib/music/audio-policy.test.ts
+          src/lib/social/server.ts
+          src/lib/academic/server.ts
+          src/lib/academic/session-policy.ts
+          src/lib/academic/session-policy.test.ts
+          src/lib/auth/verify.server.ts
+          src/lib/auth/auth-policy.ts
+          src/lib/auth/auth-policy.test.ts
+          src/lib/unibud/quad.server.ts
+          src/lib/unibud/quad-privacy.ts
+          src/lib/unibud/quad-privacy.test.ts
+          src/lib/db-transaction.ts
+          src/lib/db-transaction.test.ts
+          src/lib/db.ts
 
-      - name: Agent and Spark tests (pre-UI gate)
-        run: npm run test:agents
+      - name: Agent, Spark, and profile-role tests
+        run: |
+          npm run test:agents
+          node --experimental-strip-types --test src/lib/unibud/profile-role.test.ts
 
-      # Full UI/template tests and production build remain deferred until UI implementation begins.
+      - name: Media payload parser tests
+        run: npm run test:media
+
+      - name: Quad privacy boundary tests
+        run: node --experimental-strip-types --test src/lib/unibud/quad-privacy.test.ts
+
+      - name: Audio availability policy tests
+        run: node --experimental-strip-types --test src/lib/music/audio-policy.test.ts
+
+      - name: Academic session lifecycle tests
+        run: npm run test:academic
+
+      - name: Production-bundle build check
+        run: npm run build:netlify

@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -10,7 +10,7 @@ import { useAuthReady } from "@/components/unibud/sign-in-gate";
 import { communityById, personByHandle } from "@/lib/unibud/catalog";
 import { relativeTime } from "@/lib/unibud/format";
 import { useCatalog } from "@/lib/unibud/queries";
-import { createPost, joinCommunity, myCommunities } from "@/lib/social/server";
+import { createPost, joinCommunity, myCommunities, openCommunityConversation } from "@/lib/social/server";
 import { COMMUNITY_META, communityKindCopy, communityKindLabel } from "@/lib/unibud/community-meta";
 import { canGovernClass, canModerateCommunity, canTeach } from "@/lib/unibud/roles";
 import { useCampusStore } from "@/lib/unibud/campus-store";
@@ -19,6 +19,7 @@ export function CommunitySpace({ id }: { id: string }) {
   const { data, refetch } = useCatalog();
   const { user } = useAuthReady();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const role = useCampusStore((s) => s.role ?? "student");
   const community = data?.communities.find((c) => c.id === id) ?? communityById(id);
   const posts = (data?.posts ?? []).filter((p) => p.communityId === id);
@@ -43,6 +44,18 @@ export function CommunitySpace({ id }: { id: string }) {
     mutationFn: () => joinCommunity({ data: id }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["my-communities"] }),
   });
+  async function openQuadChat() {
+    try {
+      if (!user) throw new Error("Sign in to open this Quad chat.");
+      if (!isIn) throw new Error("Join this Quad before opening its chat.");
+      const conversation = await openCommunityConversation({ data: id });
+      await qc.invalidateQueries({ queryKey: ["convos"] });
+      await navigate({ to: "/messages/$id", params: { id: conversation.id } });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not open this Quad chat.");
+    }
+  }
+
   const postMut = useMutation({
     mutationFn: () => createPost({ data: { communityId: id, body } }),
     onSuccess: () => {
@@ -79,14 +92,14 @@ export function CommunitySpace({ id }: { id: string }) {
         ) : null}
       </div>
 
-      {meta?.chatId ? (
-        <Link
-          to="/messages/$id"
-          params={{ id: meta.chatId }}
+      {user && isIn ? (
+        <button
+          type="button"
+          onClick={() => void openQuadChat()}
           className="mt-4 inline-flex h-10 items-center rounded-full bg-secondary px-4 text-sm font-medium"
         >
           Open {isClass ? "class" : isStudy ? "study" : "community"} chat
-        </Link>
+        </button>
       ) : null}
       {communitySpills.length ? (
         <Link to="/riff" className="mt-3 block text-sm font-medium text-bud">
@@ -108,14 +121,14 @@ export function CommunitySpace({ id }: { id: string }) {
             >
               Organise a study group
             </Link>
-            {meta?.chatId ? (
-              <Link
-                to="/messages/$id"
-                params={{ id: meta.chatId }}
+            {isIn ? (
+              <button
+                type="button"
+                onClick={() => void openQuadChat()}
                 className="inline-flex h-9 items-center rounded-full bg-secondary px-3 text-sm"
               >
                 Class chat
-              </Link>
+              </button>
             ) : null}
           </div>
           <Textarea

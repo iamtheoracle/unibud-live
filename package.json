@@ -17,7 +17,10 @@
     "preview:stop": "node scripts/preview.mjs stop",
     "typecheck": "tsc --noEmit",
     "check:auth": "node scripts/check-auth-invariant.mjs",
-    "test:agents": "node --experimental-strip-types --test src/lib/agents/organization.test.ts src/lib/agents/acceptance.test.ts src/lib/agents/activation.test.ts src/lib/agents/response-policy.test.ts src/lib/agents/runtime.test.ts src/lib/agents/content-context.test.ts src/lib/agents/tools.test.ts",
+    "test:agents": "node --experimental-strip-types --test src/lib/agents/organization.test.ts src/lib/agents/acceptance.test.ts src/lib/agents/activation.test.ts src/lib/agents/response-policy.test.ts src/lib/agents/runtime.test.ts src/lib/agents/content-context.test.ts src/lib/agents/tools.test.ts src/lib/bud/provider.test.ts",
+    "test:media": "node --experimental-strip-types --test src/lib/media/store.server.test.ts src/lib/media/access.server.test.ts src/lib/media/share.test.ts",
+    "test:academic": "node --experimental-strip-types --test src/lib/academic/session-policy.test.ts",
+    "test:auth-policy": "node --experimental-strip-types --test src/lib/auth/auth-policy.test.ts",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
