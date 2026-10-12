@@ -39,10 +39,6 @@ function Square() {
     if (user && !onboardingDone) void nav({ to: "/welcome" });
   }, [user, isPending, onboardingDone, nav]);
 
-  if (isPending || (user && !onboardingDone)) {
-    return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
-  }
-
   const [lane, setLane] = useState<SquareLane>("on-stream");
   const [peekStart, setPeekStart] = useState<string | undefined>();
   const [shown, setShown] = useState(10);
@@ -94,6 +90,10 @@ function Square() {
     setSquareView(v === "peek" ? "peek" : "feed");
     if (v !== "peek") setPeekStart(undefined);
     setShown(10);
+  }
+
+  if (isPending || (user && !onboardingDone)) {
+    return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
   }
 
   return (
