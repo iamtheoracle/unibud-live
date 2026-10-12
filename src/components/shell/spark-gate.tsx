@@ -52,25 +52,26 @@ export function SparkGate({ className }: { className?: string }) {
   }, [open]);
 
   return (
-    <div ref={root} className={cn("relative", className)}>
+    <div ref={root} className={cn("fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom))] right-4 z-40", className)}>
       <button
         type="button"
         aria-expanded={open}
         aria-haspopup="dialog"
-        aria-label={open ? "Close Spark" : "Open Spark"}
+        aria-label={open ? "Close destinations" : "Explore destinations"}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "grid size-12 place-items-center rounded-full transition-transform",
+          "flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2.5 shadow-soft transition-transform",
           open ? "scale-105 bg-secondary ring-1 ring-border" : "hover:bg-secondary/70",
         )}
       >
-        <LifeMark size={30} className={cn(open && "life-mark-active")} />
+        <LifeMark size={26} className={cn(open && "life-mark-active")} />
+        <span className="text-xs font-semibold">Explore destinations</span>
       </button>
 
       {open ? (
         <div
           role="dialog"
-          aria-label="Spark"
+          aria-label="Explore destinations"
           className="absolute bottom-[calc(100%+0.65rem)] right-0 z-50 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl bg-background shadow-soft ring-1 ring-border"
         >
           <div className="flex items-center gap-3 border-b border-border/70 bg-secondary/40 px-4 py-3">
