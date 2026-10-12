@@ -15,8 +15,8 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - run: npm run typecheck
       - run: npm run build:netlify
+      - run: npm run typecheck
       - run: npm run test:academic
       - run: npm run test:auth-policy
       - run: npm run test:media
