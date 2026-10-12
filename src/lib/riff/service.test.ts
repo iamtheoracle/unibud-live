@@ -95,6 +95,20 @@ test("reports persist without exposing reporter identity in feed results", async
   } finally { await pg.close(); }
 });
 
+test("report submissions are rate-limited per account", async () => {
+  const { pg, a, b } = await fixture();
+  try {
+    const post = await a.createRiff({ body: "Rate-limit target" });
+    for (let i = 0; i < 10; i += 1) {
+      await b.reportRiff({ postId: post.id, reason: "spam", details: `Report ${i}` });
+    }
+    await assert.rejects(
+      () => b.reportRiff({ postId: post.id, reason: "spam" }),
+      /Report limit reached/,
+    );
+  } finally { await pg.close(); }
+});
+
 test("media sharing fails closed until Riff has a dedicated media read policy", async () => {
   const { pg, a } = await fixture();
   try {
