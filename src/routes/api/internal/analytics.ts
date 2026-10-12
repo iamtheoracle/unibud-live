@@ -19,7 +19,7 @@ export const Route = createFileRoute("/api/internal/analytics")({
         (SELECT COUNT(*)::int FROM analytics_events e WHERE e.content_id = p.id AND e.event_name = 'post_view' AND e.created_at >= NOW() - INTERVAL '30 days') AS views,
         (SELECT COUNT(*)::int FROM post_likes l WHERE l.post_id = p.id) AS likes,
         (SELECT COUNT(*)::int FROM post_replies r WHERE r.post_id = p.id) AS comments
-        FROM posts p JOIN communities c ON c.id = p.community_id AND c.privacy = 'public'
+        FROM posts p
         ORDER BY views DESC, likes DESC, comments DESC LIMIT 10`,
       sql`SELECT page_path, COUNT(*)::int AS views FROM analytics_events WHERE event_name = 'page_view' AND created_at >= NOW() - INTERVAL '30 days' GROUP BY page_path ORDER BY views DESC LIMIT 12`,
     ]);
