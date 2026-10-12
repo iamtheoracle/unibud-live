@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { isVideoPost, likeKey, loopStream, postsForLane, SQUARE_LANES, type SquareLane } from "@/lib/unibud/square-stream";
 import { addSquareReply, toggleCommentLike as toggleDbCommentLike, togglePostLike, toggleSave } from "@/lib/unibud/server";
 import { bulkDeleteMyPosts } from "@/lib/social/server";
+import { trackAnalyticsEvent } from "@/lib/analytics/server";
 import { toast } from "sonner";
 import type { DiscoveryItem, FeedPost } from "@/lib/unibud/types";
 import { isSquareInteractiveTarget } from "@/lib/unibud/square-board";
@@ -171,7 +172,7 @@ function Square() {
               ["all", "All topics"], ["general", "General"], ["learning", "Learning"], ["campus", "Campus"],
               ["opportunity", "Opportunities"], ["culture", "Culture"], ["question", "Questions"], ["announcement", "Announcements"],
             ] as const).map(([value, label]) => (
-              <button key={value} type="button" onClick={() => { setCategory(value); setShown(10); }} aria-pressed={category === value}
+              <button key={value} type="button" onClick={() => { setCategory(value); setShown(10); if (user) void trackAnalyticsEvent({ data: { eventName: "category_filter", pagePath: "/", contentId: value } }).catch(() => {}); }} aria-pressed={category === value}
                 className={cn("shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium", category === value ? "border-ink bg-ink text-paper" : "border-border bg-background text-muted-foreground")}>{label}</button>
             ))}
           </div>
@@ -402,7 +403,7 @@ function FeedItem({ post, onOpenPeek, selected, onToggleSelection }: { post: Fee
             )
           ) : null}
           <div className="mt-3 flex flex-wrap items-center gap-3 text-muted-foreground">
-            <button type="button" onClick={() => { toggleLike(key); if (user) void togglePostLike({ data: key }).catch(() => {}); }} className={cn("inline-flex h-9 items-center gap-1.5 text-sm", liked && "text-bud")}>
+            <button type="button" onClick={() => { toggleLike(key); if (user) { void togglePostLike({ data: key }).catch(() => {}); void trackAnalyticsEvent({ data: { eventName: "post_like", pagePath: "/", contentId: key } }).catch(() => {}); } }} className={cn("inline-flex h-9 items-center gap-1.5 text-sm", liked && "text-bud")}>
               <Heart className={cn("size-4", liked && "fill-bud")} />
               {count || ""}
             </button>
@@ -439,7 +440,7 @@ function FeedItem({ post, onOpenPeek, selected, onToggleSelection }: { post: Fee
                   if (!reply.trim()) return;
                   const body = reply.trim();
                   addPostReply(key, { id: crypto.randomUUID(), authorHandle: "you", body, createdAt: new Date().toISOString() });
-                  if (user) void addSquareReply({ data: { postId: key, body } }).catch(() => {});
+                  if (user) { void addSquareReply({ data: { postId: key, body } }).catch(() => {}); void trackAnalyticsEvent({ data: { eventName: "post_comment", pagePath: "/", contentId: key } }).catch(() => {}); }
                   setReply("");
                 }}
               >
