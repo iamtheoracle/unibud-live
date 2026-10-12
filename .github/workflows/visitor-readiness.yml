@@ -1,0 +1,23 @@
+name: Visitor Readiness Verification
+on:
+  push:
+    branches: [implementation/visitor-readiness-orbit]
+  pull_request:
+    branches: [implementation/whole-product-foundation]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build:netlify
+      - run: npm run test:academic
+      - run: npm run test:auth-policy
+      - run: npm run test:media
