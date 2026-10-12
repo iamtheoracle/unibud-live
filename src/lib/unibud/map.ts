@@ -119,6 +119,7 @@ export function mapPost(r: {
   id: string;
   community_id: string;
   author_handle: string;
+  author_user_id?: string | null;
   body: string;
   image: string | null;
   video?: string | null;
@@ -130,6 +131,7 @@ export function mapPost(r: {
     id: r.id,
     communityId: r.community_id,
     authorHandle: r.author_handle,
+    authorUserId: r.author_user_id ?? undefined,
     body: r.body,
     image: r.image ?? undefined,
     video: r.video ?? undefined,

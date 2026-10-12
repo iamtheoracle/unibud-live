@@ -86,6 +86,7 @@ export type FeedPost = {
   id: string;
   communityId: string;
   authorHandle: string;
+  authorUserId?: string;
   body: string;
   image?: string;
   video?: string;

@@ -13,6 +13,7 @@ import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { cn } from "@/lib/utils";
 import { isVideoPost, likeKey, loopStream, postsForLane, SQUARE_LANES, type SquareLane } from "@/lib/unibud/square-stream";
 import { addSquareReply, toggleCommentLike as toggleDbCommentLike, togglePostLike, toggleSave } from "@/lib/unibud/server";
+import { bulkDeleteMyPosts } from "@/lib/social/server";
 import { toast } from "sonner";
 import type { DiscoveryItem, FeedPost } from "@/lib/unibud/types";
 import { isSquareInteractiveTarget } from "@/lib/unibud/square-board";
@@ -42,6 +43,9 @@ function Square() {
   const [lane, setLane] = useState<SquareLane>("on-stream");
   const [peekStart, setPeekStart] = useState<string | undefined>();
   const [shown, setShown] = useState(10);
+  const [category, setCategory] = useState<NonNullable<FeedPost["category"]> | "all">("all");
+  const [selectedPostIds, setSelectedPostIds] = useState<string[]>([]);
+  const [deletingPosts, setDeletingPosts] = useState(false);
   const localPosts = useCampusStore((s) => s.localPosts);
   const following = useCampusStore((s) => s.following);
   const connections = useCampusStore((s) => s.connections);
@@ -59,9 +63,13 @@ function Square() {
     return [...locals, ...base];
   }, [catalog.posts, localPosts]);
 
+  const categorizedPosts = useMemo(
+    () => category === "all" ? merged : merged.filter((post) => (post.category ?? "general") === category),
+    [merged, category],
+  );
   const lanePosts = useMemo(
-    () => postsForLane(merged, lane, { following, interests, universityId: "unilag", likeCounts, searches }, connections),
-    [merged, lane, following, connections, interests, likeCounts, searches],
+    () => postsForLane(categorizedPosts, lane, { following, interests, universityId: "unilag", likeCounts, searches }, connections),
+    [categorizedPosts, lane, following, connections, interests, likeCounts, searches],
   );
 
   const stream = useMemo(() => loopStream(lanePosts, shown), [lanePosts, shown]);
@@ -87,6 +95,22 @@ function Square() {
     setPeekStart(id);
     setLane("peek");
     setSquareView("peek");
+  }
+
+  async function deleteSelectedPosts() {
+    if (!selectedPostIds.length || deletingPosts) return;
+    const confirmed = window.confirm(`Delete ${selectedPostIds.length} selected post(s)? This cannot be undone.`);
+    if (!confirmed) return;
+    setDeletingPosts(true);
+    try {
+      const result = await bulkDeleteMyPosts({ data: { postIds: selectedPostIds } });
+      setSelectedPostIds([]);
+      if (result.notDeletedIds.length) toast.message(`${result.deletedIds.length} deleted. ${result.notDeletedIds.length} were not deleted because they are not yours or no longer exist.`);
+      else toast.success(`${result.deletedIds.length} post(s) deleted.`);
+      window.location.reload();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not delete selected posts.");
+    } finally { setDeletingPosts(false); }
   }
 
   function chooseLane(v: SquareLane) {
@@ -142,13 +166,21 @@ function Square() {
             />
           </div>
           <StreamPicker lane={lane} onChange={chooseLane} />
-          <LaneFeed
-            lane={lane}
-            stream={stream}
-            discovery={lane === "off-rails" ? (catalog.discovery ?? []) : []}
-            sentinel={sentinel}
-            onOpenPeek={openPeek}
-          />
+          <div className="flex gap-2 overflow-x-auto px-4 py-3" aria-label="Filter posts by topic">
+            {([
+              ["all", "All topics"], ["general", "General"], ["learning", "Learning"], ["campus", "Campus"],
+              ["opportunity", "Opportunities"], ["culture", "Culture"], ["question", "Questions"], ["announcement", "Announcements"],
+            ] as const).map(([value, label]) => (
+              <button key={value} type="button" onClick={() => { setCategory(value); setShown(10); }} aria-pressed={category === value}
+                className={cn("shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium", category === value ? "border-ink bg-ink text-paper" : "border-border bg-background text-muted-foreground")}>{label}</button>
+            ))}
+          </div>
+          {selectedPostIds.length ? <div className="sticky top-12 z-20 flex items-center justify-between gap-3 border-y border-border bg-background/95 px-4 py-3 backdrop-blur-sm">
+            <span className="text-sm">{selectedPostIds.length} selected</span>
+            <button type="button" disabled={deletingPosts} onClick={() => void deleteSelectedPosts()} className="rounded-full bg-red-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{deletingPosts ? "Deleting…" : "Delete selected"}</button>
+          </div> : null}
+          <LaneFeed lane={lane} stream={stream} discovery={lane === "off-rails" ? (catalog.discovery ?? []) : []} sentinel={sentinel} onOpenPeek={openPeek}
+            selectedPostIds={selectedPostIds} onTogglePostSelection={(id, checked) => setSelectedPostIds((ids) => checked ? [...new Set([...ids, id])] : ids.filter((item) => item !== id))} />
         </div>
       )}
     </main>
@@ -203,12 +235,16 @@ function LaneFeed({
   discovery,
   sentinel,
   onOpenPeek,
+  selectedPostIds,
+  onTogglePostSelection,
 }: {
   lane: SquareLane;
   stream: FeedPost[];
   discovery: DiscoveryItem[];
   sentinel: React.RefObject<HTMLDivElement | null>;
   onOpenPeek: (id: string) => void;
+  selectedPostIds: string[];
+  onTogglePostSelection: (id: string, checked: boolean) => void;
 }) {
   if (!stream.length) {
     const copy =
@@ -231,7 +267,7 @@ function LaneFeed({
         return (
           <div key={p.id}>
             {showSpark && spark ? <DiscoveryCard item={spark} /> : null}
-            <FeedItem post={p} onOpenPeek={onOpenPeek} />
+            <FeedItem post={p} onOpenPeek={onOpenPeek} selected={selectedPostIds.includes(likeKey(p.id))} onToggleSelection={onTogglePostSelection} />
           </div>
         );
       })}
@@ -273,7 +309,7 @@ async function sharePost(post: FeedPost) {
   }
 }
 
-function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: string) => void }) {
+function FeedItem({ post, onOpenPeek, selected, onToggleSelection }: { post: FeedPost; onOpenPeek: (id: string) => void; selected: boolean; onToggleSelection: (id: string, checked: boolean) => void }) {
   const person = personByHandle(post.authorHandle);
   const community = communityById(post.communityId);
   const key = likeKey(post.id);
@@ -286,6 +322,7 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
   const saved = useCampusStore((s) => (s.savedPosts ?? []).includes(key));
   const toggleSavePost = useCampusStore((s) => s.toggleSavePost);
   const { user } = useCurrentUserState();
+  const [replySort, setReplySort] = useState<"newest" | "oldest">("newest");
   const catalog = useLoaderData({ from: "/_app" });
   const dbReplies = (catalog.replies ?? [])
     .filter((r) => r.postId === key)
@@ -297,7 +334,10 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
       createdAt: r.createdAt,
     }));
   const localIds = new Set(localReplies.map((r) => r.id));
-  const replies = [...dbReplies.filter((r) => !localIds.has(r.id)), ...localReplies];
+  const replies = [...dbReplies.filter((r) => !localIds.has(r.id)), ...localReplies].sort((a, b) => {
+    const difference = new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime();
+    return replySort === "newest" ? difference : -difference;
+  });
   const following = useCampusStore((s) => s.following);
   const follow = useCampusStore((s) => s.follow);
   const unfollow = useCampusStore((s) => s.unfollow);
@@ -311,6 +351,8 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
   return (
     <article data-square-interactive className="border-b border-border px-5 py-4">
       <div className="flex gap-3">
+        {user && post.authorUserId === user.id ? <input type="checkbox" aria-label={`Select post by @${post.authorHandle}`} checked={selected}
+          onChange={(event) => onToggleSelection(key, event.currentTarget.checked)} className="mt-3 size-4 shrink-0 accent-current" /> : null}
         <Link to="/u/$handle" params={{ handle: post.authorHandle }} className="shrink-0">
           <Avatar name={name} className="size-11" />
         </Link>
@@ -377,6 +419,14 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
           </div>
           {open ? (
             <div className="mt-3 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-muted-foreground">Replies</span>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">Sort
+                  <select aria-label="Sort replies" value={replySort} onChange={(event) => setReplySort(event.target.value as "newest" | "oldest")} className="rounded-full border border-border bg-background px-2 py-1 text-foreground">
+                    <option value="newest">Newest first</option><option value="oldest">Oldest first</option>
+                  </select>
+                </label>
+              </div>
               {replies.map((r) => (
                 <p key={r.id} className="text-sm text-muted-foreground">
                   <span className="font-medium text-ink">@{r.authorHandle}</span> {r.body}
