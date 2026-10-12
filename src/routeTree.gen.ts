@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppGuildRouteImport } from './routes/_app/guild'
 import { Route as AppBoardRouteImport } from './routes/_app/board'
 import { Route as AppBudRouteImport } from './routes/_app/bud'
 import { Route as AppCommunitiesRouteImport } from './routes/_app/communities'
@@ -64,6 +65,11 @@ const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppGuildRoute = AppGuildRouteImport.update({
+  id: '/guild',
+  path: '/guild',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
@@ -998,6 +1004,7 @@ const AppSpillRouteWithChildren = AppSpillRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppGuildRoute: typeof AppGuildRoute
   AppBoardRoute: typeof AppBoardRouteWithChildren
   AppBudRoute: typeof AppBudRouteWithChildren
   AppCommunitiesRoute: typeof AppCommunitiesRouteWithChildren
@@ -1032,6 +1039,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppGuildRoute: AppGuildRoute,
   AppBoardRoute: AppBoardRouteWithChildren,
   AppBudRoute: AppBudRouteWithChildren,
   AppCommunitiesRoute: AppCommunitiesRouteWithChildren,
