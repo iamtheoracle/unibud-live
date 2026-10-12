@@ -41,12 +41,14 @@ export function GoogleAnalytics() {
   }, [consent, measurementId]);
 
   useEffect(() => {
-    if (consent !== "accepted" || !/^G-[A-Z0-9]+$/.test(measurementId) || navigator.doNotTrack === "1") return;
-    window.gtag?.("event", "page_view", { page_path: pathname, page_location: window.location.href, page_title: document.title });
+    if (consent !== "accepted" || navigator.doNotTrack === "1") return;
+    if (/^G-[A-Z0-9]+$/.test(measurementId)) {
+      window.gtag?.("event", "page_view", { page_path: pathname, page_location: window.location.href, page_title: document.title });
+    }
     trackPublicAnalyticsEvent({ eventName: "page_view", pagePath: pathname });
   }, [consent, measurementId, pathname]);
 
-  if (consent !== "unset" || !/^G-[A-Z0-9]+$/.test(measurementId)) return null;
+  if (consent !== "unset") return null;
   const choose = (value: "accepted" | "rejected") => {
     try { window.localStorage.setItem(CONSENT_KEY, value); } catch { /* optional analytics stays off if consent cannot be stored */ }
     setConsent(value);
