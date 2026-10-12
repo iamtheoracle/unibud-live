@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { getSql } from "@/lib/db";
 
 const COOKIE = "unibud_analytics_session";
-const ALLOWED = new Set(["page_view", "post_view", "post_share", "category_filter"]);
+const ALLOWED = new Set(["page_view", "post_view", "post_like", "post_comment", "post_share", "category_filter"]);
 function readToken(request: Request) {
   const part = (request.headers.get("cookie") ?? "").split(";").map((v) => v.trim()).find((v) => v.startsWith(COOKIE + "="));
   return part ? decodeURIComponent(part.slice(COOKIE.length + 1)) : "";
