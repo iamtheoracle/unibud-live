@@ -1,0 +1,51 @@
+name: PR verification
+
+on:
+  pull_request:
+    branches:
+      - implementation/whole-product-foundation
+  push:
+    branches:
+      - fix/square-react-hooks-order-2026-10-12
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-verification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck-build-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps --include=dev
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      - name: Netlify production build
+        run: npm run build:netlify
+
+      - name: Authentication policy tests
+        run: npm run test:auth-policy
+
+      - name: Bud and agent tests
+        run: npm run test:agents
+
+      - name: Media access and storage tests
+        run: npm run test:media
+
+      - name: Academic session policy tests
+        run: npm run test:academic
