@@ -74,7 +74,7 @@ function Riff() {
             className="w-44 shrink-0 rounded-2xl bg-secondary p-3 text-left"
             onClick={() => setDraft((d) => d || `${c.title}: ${c.body}`)}
           >
-            <p className="text-[11px] font-medium text-bud">{c.joins.toLocaleString()} in</p>
+            <p className="text-[11px] font-medium text-bud">Writing prompt</p>
             <p className="mt-1 text-sm font-medium">{c.title}</p>
           </button>
         ))}
@@ -99,6 +99,9 @@ function Riff() {
               </button>
             </p>
           ) : null}
+          <p className="mb-2 text-xs text-muted-foreground">
+            Local preview: Riffs, replies, likes, and follows are saved on this device only. They are not yet shared through a server-backed Riff feed.
+          </p>
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -122,9 +125,18 @@ function Riff() {
       ) : null}
 
       <div>
-        {list.map((s) => (
-          <RiffCard key={s.id} spill={s} onQuote={() => setQuoting(s.id)} />
-        ))}
+        {list.length ? (
+          list.map((s) => <RiffCard key={s.id} spill={s} onQuote={() => setQuoting(s.id)} />)
+        ) : (
+          <div className="px-5 py-10 text-center">
+            <p className="text-sm font-medium">No Riffs to show yet.</p>
+            <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+              {spills.length === 0
+                ? "The shared Riff feed is not connected yet. Posts made here stay on this device and are not visible to other people."
+                : "There are no local Riffs in this topic. Try another topic or start a draft."}
+            </p>
+          </div>
+        )}
       </div>
     </main>
   );
@@ -150,9 +162,13 @@ function RiffCard({ spill, onQuote }: { spill: SpillPost; onQuote: () => void })
         <Avatar name={name} />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">
-            <Link to="/u/$handle" params={{ handle: spill.authorHandle }} className="hover:underline">
-              {name}
-            </Link>
+            {person || spill.authorHandle === "you" ? (
+              <Link to="/u/$handle" params={{ handle: spill.authorHandle }} className="hover:underline">
+                {name}
+              </Link>
+            ) : (
+              <span>{name}</span>
+            )}
             <span className="ml-1 font-normal text-muted-foreground">@{spill.authorHandle}</span>
             <span className="ml-1 font-normal text-muted-foreground">· {relativeTime(spill.createdAt)}</span>
           </p>
