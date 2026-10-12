@@ -16,7 +16,10 @@ export type GlobalClip = {
   authorHandle: string;
 };
 
-export const GLOBAL_FACTS = [] as const;
+export type GlobalFact = { id: string; topic: string; kicker: string; title: string; summary: string };
+
+// Empty until sourced, reviewed facts are added. Never seed invented discovery content.
+export const GLOBAL_FACTS: GlobalFact[] = [];
 
 export const CHALLENGES: Challenge[] = [];
 
