@@ -1,5 +1,7 @@
 # UNIBUD — Netlify (TanStack Start + Nitro SSR)
-# Server secrets (set in Netlify UI, never commit): OPENAI_API_KEY, XAI_API_KEY, DATABASE_URL
+# Server secrets (set in Netlify UI, never commit):
+#   DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL (public site origin),
+#   OPENAI_API_KEY and/or XAI_API_KEY
 
 [build]
   # Disable Corepack before install; use lockfile-verified npm ci.
@@ -14,11 +16,6 @@
   NETLIFY_COREPACK_ENABLED = "false"
   VITE_AUTH_ENABLED = "false"
 
+# Production: auth enabled for public social use. Configure secrets in Netlify UI.
 [context.production.environment]
-  VITE_AUTH_ENABLED = "false"
-
-[context.deploy-preview.environment]
-  VITE_AUTH_ENABLED = "false"
-
-[context.branch-deploy.environment]
-  VITE_AUTH_ENABLED = "false"
+  VITE_AUTH_ENABLED = "true"
