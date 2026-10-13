@@ -12,7 +12,7 @@
   publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"
   NPM_FLAGS = "--legacy-peer-deps"
   NPM_CONFIG_LEGACY_PEER_DEPS = "true"
   NODE_OPTIONS = "--max-old-space-size=4096"
