@@ -72,7 +72,14 @@ const grokClientSecret = env("GROK_AUTH_CLIENT_SECRET") ?? PREVIEW_CLIENT_SECRET
 export const authConfigured =
   !authDisabled && databaseConfigured() && Boolean(grokClientId && grokClientSecret);
 
-const explicitBaseURL = env("BETTER_AUTH_URL");
+// Netlify Deploy Previews have their own host. A site-level BETTER_AUTH_URL
+// may point at production, which makes Better Auth reject preview POSTs as
+// "Invalid origin". Prefer the exact preview URL in preview context; otherwise
+// keep the explicit deployment URL and the existing dynamic-host fallback.
+const isDeployPreview = env("CONTEXT") === "deploy-preview";
+const explicitBaseURL = isDeployPreview
+  ? env("DEPLOY_PRIME_URL") ?? env("URL")
+  : env("BETTER_AUTH_URL");
 const previewAllowedHosts: string[] = [...PREVIEW_ALLOWED_HOSTS];
 const LOCAL_DEV_ORIGINS: string[] = [
   "http://localhost:8080",
