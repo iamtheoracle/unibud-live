@@ -1,10 +1,13 @@
 # UNIBUD — Netlify (TanStack Start + Nitro SSR)
-# Server secrets (set in Netlify UI, never commit):
-#   DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL (public site origin),
-#   OPENAI_API_KEY and/or XAI_API_KEY
+# Required secrets in Netlify UI (never commit):
+#   DATABASE_URL
+#   BETTER_AUTH_SECRET
+#   BETTER_AUTH_URL = exact site origin (e.g. https://university-buddy.netlify.app
+#                   or the deploy-preview origin when testing previews)
+#   Optional OAuth broker: GROK_AUTH_ISSUER, GROK_AUTH_CLIENT_ID, GROK_AUTH_CLIENT_SECRET
+#   AI: OPENAI_API_KEY and/or XAI_API_KEY
 
 [build]
-  # Disable Corepack before install; use lockfile-verified npm ci.
   command = "command -v corepack >/dev/null && corepack disable || true; npm ci --legacy-peer-deps && npm run build:netlify"
   publish = "dist"
 
@@ -14,8 +17,14 @@
   NPM_CONFIG_LEGACY_PEER_DEPS = "true"
   NODE_OPTIONS = "--max-old-space-size=4096"
   NETLIFY_COREPACK_ENABLED = "false"
-  VITE_AUTH_ENABLED = "false"
+  # Client auth flag: must be true for public sign-in UI. Secrets still required server-side.
+  VITE_AUTH_ENABLED = "true"
 
-# Production: auth enabled for public social use. Configure secrets in Netlify UI.
 [context.production.environment]
+  VITE_AUTH_ENABLED = "true"
+
+[context.deploy-preview.environment]
+  VITE_AUTH_ENABLED = "true"
+
+[context.branch-deploy.environment]
   VITE_AUTH_ENABLED = "true"
