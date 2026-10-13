@@ -29,8 +29,8 @@ export const Route = createRootRoute({
   beforeLoad: async ({ location }) => {
     const sessionUser = await fetchSessionUser();
     const path = location.pathname;
-    // Guests may only use start, login, bud, and help. Everything else requires sign-in.
-    const publicPaths = ["/start", "/login", "/bud", "/help"];
+    // Guests: start, login, bud, help, and public Riff read. Member surfaces require sign-in.
+    const publicPaths = ["/start", "/login", "/bud", "/help", "/riff"];
     const isPublic = publicPaths.some((p) => path === p || path.startsWith(p + "/"));
     if (!sessionUser && !isPublic) {
       const { redirect } = await import("@tanstack/react-router");
@@ -45,7 +45,7 @@ export const Route = createRootRoute({
       { title: APP_NAME },
       {
         name: "description",
-        content: "UNIBUD — people, ideas, culture, and learning in one place.",
+        content: "UNIBUD · University Buddy — connect, share, and discover.",
       },
       { name: "theme-color", content: "#f7f7f8" },
     ],
