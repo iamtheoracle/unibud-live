@@ -1,12 +1,15 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { enterGuestMode } from "@/lib/auth/guest";
 import { Wordmark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/start")({
-  component: Welcome,
+  component: StartScreen,
 });
 
-function Welcome() {
+function StartScreen() {
+  const nav = useNavigate();
+
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-background px-6 py-12">
       <div className="flex w-full max-w-sm flex-col items-center text-center">
@@ -23,15 +26,22 @@ function Welcome() {
           <Button asChild className="w-full" size="lg">
             <Link to="/login">Sign In / Register</Link>
           </Button>
-          <Button asChild variant="outline" className="w-full" size="lg">
-            <Link to="/bud">
-              Continue as Guest
-            </Link>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            size="lg"
+            onClick={() => {
+              enterGuestMode();
+              void nav({ to: "/bud" });
+            }}
+          >
+            Continue as Guest
           </Button>
         </div>
 
         <p className="mt-6 text-[11px] text-muted-foreground">
-          Guest chats are not saved. Sign in anytime to keep your conversations.
+          Guests can use Bud only. Chats are not saved. Sign in for Square, Connect, Quad, and Chat.
         </p>
       </div>
     </main>
