@@ -1,7 +1,6 @@
-/** Client-side guest session helpers. Not a substitute for server auth. */
-
 const GUEST_KEY = "unibud-guest-mode";
 
+/** Client-side guest session flag. Server still enforces real auth on protected APIs. */
 export function isGuestMode(): boolean {
   if (typeof window === "undefined") return false;
   try {
@@ -15,9 +14,8 @@ export function enterGuestMode(): void {
   if (typeof window === "undefined") return;
   try {
     sessionStorage.setItem(GUEST_KEY, "1");
-    sessionStorage.setItem("unibud-guest-browse", "1");
   } catch {
-    /* private mode */
+    /* ignore */
   }
 }
 
@@ -25,15 +23,15 @@ export function clearGuestMode(): void {
   if (typeof window === "undefined") return;
   try {
     sessionStorage.removeItem(GUEST_KEY);
-    sessionStorage.removeItem("unibud-guest-browse");
   } catch {
-    /* private mode */
+    /* ignore */
   }
 }
 
-/** Paths guests may open without an account. */
+/** Paths guests may visit. Member-only actions remain server-enforced. */
 export function isGuestAllowedPath(pathname: string): boolean {
-  const allowed = ["/start", "/login", "/bud", "/help"];
+  // Guests: Bud + public Riff read. Member-only actions are enforced on the server.
+  const allowed = ["/start", "/login", "/bud", "/help", "/riff"];
   return allowed.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 

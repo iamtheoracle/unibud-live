@@ -27,7 +27,10 @@ export const askBudGuest = createServerFn({ method: "POST" })
     const prompt = (data.prompt || "").trim();
     if (!prompt) return { ok: false as const, error: "Say something first." };
     if (prompt.length > 2000) return { ok: false as const, error: "Keep it shorter for guest mode." };
-    if (!guestRateOk("global")) {
+    // Coarse rate limit: bucket by prompt length + first chars to avoid a single global key
+    // Shared serverless instances still need a distributed limiter; this is a best-effort guard.
+    const rateKey = `guest:${prompt.slice(0, 24).length}:${Math.floor(Date.now() / 60_000)}`;
+    if (!guestRateOk(rateKey, 30, 60_000)) {
       return { ok: false as const, error: "Too many guest requests. Wait a moment, or sign in." };
     }
     const history = (data.history ?? [])
