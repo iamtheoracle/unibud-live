@@ -142,78 +142,96 @@ function Login() {
             ))}
           </div>
         ) : (
-          <p className="mt-6 text-sm text-muted-foreground">Sign-in is disabled.</p>
+          <div className="mt-6 space-y-3 rounded-2xl border border-border bg-secondary/40 p-4 text-sm text-muted-foreground">
+            <p className="font-medium text-ink">Account sign-in is not available on this deployment.</p>
+            <p>
+              Authentication is turned off in this environment. You can still try Bud as a guest, or return when
+              sign-in has been enabled for this site.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <a href="/bud" className="rounded-full bg-ink px-4 py-2 text-sm text-paper">
+                Continue as Guest
+              </a>
+              <a href="/start" className="rounded-full bg-secondary px-4 py-2 text-sm text-ink">
+                Back to welcome
+              </a>
+            </div>
+          </div>
         )}
 
-        <div className="my-8 flex items-center gap-3 text-xs tracking-wide text-muted-foreground uppercase">
-          <span className="h-px flex-1 bg-border" />
-          or email
-          <span className="h-px flex-1 bg-border" />
-        </div>
-
-        <div className="mb-4 flex gap-2">
-          <button
-            type="button"
-            onClick={() => setMode("in")}
-            className={mode === "in" ? "text-sm font-medium" : "text-sm text-muted-foreground"}
-          >
-            Sign in
-          </button>
-          <span className="text-muted-foreground">/</span>
-          <button
-            type="button"
-            onClick={() => setMode("up")}
-            className={mode === "up" ? "text-sm font-medium" : "text-sm text-muted-foreground"}
-          >
-            Create account
-          </button>
-        </div>
-
-        <form onSubmit={onEmail} className="space-y-3">
-          {mode === "up" ? (
-            <div className="space-y-1.5">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Adaeze"
-                autoComplete="name"
-              />
+        {authEnabled ? (
+          <>
+            <div className="my-8 flex items-center gap-3 text-xs tracking-wide text-muted-foreground uppercase">
+              <span className="h-px flex-1 bg-border" />
+              or email
+              <span className="h-px flex-1 bg-border" />
             </div>
-          ) : null}
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@outlook.com"
-              autoComplete="email"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete={mode === "up" ? "new-password" : "current-password"}
-            />
-          </div>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <Button type="submit" className="w-full" disabled={busy}>
-            {busy ? "Working…" : mode === "up" ? "Create account" : "Sign in"}
-          </Button>
-          <p className="text-center text-[11px] text-muted-foreground">
-            Verification goes to your email (Outlook or campus mail).
-          </p>
-        </form>
+
+            <div className="mb-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setMode("in")}
+                className={mode === "in" ? "text-sm font-medium" : "text-sm text-muted-foreground"}
+              >
+                Sign in
+              </button>
+              <span className="text-muted-foreground">/</span>
+              <button
+                type="button"
+                onClick={() => setMode("up")}
+                className={mode === "up" ? "text-sm font-medium" : "text-sm text-muted-foreground"}
+              >
+                Create account
+              </button>
+            </div>
+
+            <form onSubmit={onEmail} className="space-y-3">
+              {mode === "up" ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Adaeze"
+                    autoComplete="name"
+                  />
+                </div>
+              ) : null}
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@outlook.com"
+                  autoComplete="email"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  required
+                  minLength={8}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete={mode === "up" ? "new-password" : "current-password"}
+                />
+              </div>
+              {error ? <p className="text-sm text-destructive">{error}</p> : null}
+              <Button type="submit" className="w-full" disabled={busy}>
+                {busy ? "Working…" : mode === "up" ? "Create account" : "Sign in"}
+              </Button>
+              <p className="text-center text-[11px] text-muted-foreground">
+                Verification goes to your email (Outlook or campus mail).
+              </p>
+            </form>
+          </>
+        ) : null}
       </section>
     </main>
   );
