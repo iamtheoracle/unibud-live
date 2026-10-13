@@ -45,8 +45,7 @@ export const deleteOwnPost = createServerFn({ method: "POST" })
   .handler(async ({ context, data: postId }) => {
     const sql = await getSql();
     const id = postId.split("~")[0] ?? postId;
-    const rows = await sql<{ id: string; owner_user_id: string | null }> `
-      select id, owner_user_id from posts where id = ${id} and deleted_at is null limit 1`;
+    const rows = await sql<{ id: string; owner_user_id: string | null }>`select id, owner_user_id from posts where id = ${id} and deleted_at is null limit 1`;
     const post = rows[0];
     if (!post) throw new Error("Post not found");
     if (post.owner_user_id && post.owner_user_id !== context.userId) {
