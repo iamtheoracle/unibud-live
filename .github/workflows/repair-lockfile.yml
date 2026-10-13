@@ -15,26 +15,56 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: fix/guest-access-enforcement-2026-10-13
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
+      - name: Restore Square index if placeholder or missing postsForLane
+        run: |
+          set -e
+          python3 <<'PY'
+          from pathlib import Path
+          import subprocess
+          p = Path("src/routes/_app/index.tsx")
+          t = p.read_text() if p.exists() else ""
+          if "postsForLane" not in t or "PLACEHOLDER" in t or len(t) < 1000:
+              t = subprocess.check_output(
+                  ["git", "show", "4ed7027850cff1024b42753147dbe157eff65be1:src/routes/_app/index.tsx"],
+                  text=True,
+              )
+          t = t.replace("  const searches = useCampusStore((s) => s.searches);\n", "")
+          t = t.replace(
+              "    () => postsForLane(merged, lane, { following, connections, interests, likeCounts, searches }),\n    [merged, lane, following, connections, interests, likeCounts, searches],",
+              "    () => postsForLane(merged, lane, { following, connections, interests, likeCounts }, connections),\n    [merged, lane, following, connections, interests, likeCounts],",
+          )
+          t = t.replace(
+              'addPostReply(key, body, "you");',
+              'addPostReply(key, { id: crypto.randomUUID(), body, authorHandle: "you", createdAt: new Date().toISOString() });',
+          )
+          p.write_text(t)
+          print("index length", len(t), "has postsForLane", "postsForLane" in t)
+          PY
       - name: Regenerate and verify lockfile
         run: |
           set -e
-          rm -f package-lock.json
-          # Two-pass install stabilizes nested optional deps (ajv / json-schema-traverse)
-          npm install
-          npm install
-          rm -rf node_modules
-          npm ci
-      - name: Commit lockfile if changed
+          # Keep existing lock if npm ci already works
+          if npm ci; then
+            echo "lockfile already good"
+          else
+            rm -f package-lock.json
+            npm install
+            npm install
+            rm -rf node_modules
+            npm ci
+          fi
+      - name: Commit fixes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
+          git add package-lock.json src/routes/_app/index.tsx || true
           if git diff --cached --quiet; then
-            echo "Lockfile already consistent"
+            echo "No changes"
             exit 0
           fi
-          git commit -m "fix: regenerate package-lock.json for reproducible npm ci (Node 22)"
+          git commit -m "fix: Square index typecheck + lockfile consistency"
           git push origin HEAD:fix/guest-access-enforcement-2026-10-13
