@@ -1,0 +1,78 @@
+name: Restore Bud workspace
+on:
+  push:
+    branches: [fix/guest-access-enforcement-2026-10-13]
+    paths:
+      - ".github/workflows/restore-workspace.yml"
+  workflow_dispatch:
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/guest-access-enforcement-2026-10-13
+          fetch-depth: 30
+      - name: Restore and patch workspace
+        run: |
+          set -e
+          # Last known good full file before accidental placeholder overwrite
+          git show 1d12de25e79fabf8b9b47718ef73f67ab613d932:src/components/bud/workspace.tsx > src/components/bud/workspace.tsx
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path("src/components/bud/workspace.tsx")
+          t = p.read_text()
+          assert "export function BudWorkspace" in t
+          t = t.replace(
+              '{busy ? <p className="text-xs text-muted-foreground">Bud is thinking…</p> : null}',
+              '{busy ? <p className="text-xs text-muted-foreground" aria-live="polite">Bud is typing…</p> : null}',
+          )
+          t = t.replace(
+              "onError: () => setPendingUser(null),",
+              """onError: () => {
+      setPendingUser(null);
+      if (!user) {
+        guest.appendAssistant("Bud could not reply right now. You can try again.");
+      }
+    },""",
+          )
+          old = """onSuccess: async (r) => {
+      setPrompt("");
+      setAttachment(null);
+      setPendingUser(null);
+      setFreshChat(false);
+      if (!user) {
+        guest.appendAssistant(guestReplyText(r as { ok?: boolean; text?: string; error?: string }));
+        return;
+      }"""
+          new = """onSuccess: async (r) => {
+      setAttachment(null);
+      setFreshChat(false);
+      if (!user) {
+        guest.appendAssistant(guestReplyText(r as { ok?: boolean; text?: string; error?: string }));
+        setPendingUser(null);
+        setPrompt("");
+        return;
+      }
+      setPendingUser(null);
+      setPrompt("");"""
+          if old in t:
+              t = t.replace(old, new)
+          p.write_text(t)
+          assert "Bud is typing" in t
+          assert "export function BudWorkspace" in t
+          print("restored ok", len(t))
+          PY
+          # Remove accidental placeholder payload if present
+          rm -f tmp/ws_part1.b64 tmp/ws_part2.b64 || true
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/bud/workspace.tsx
+          git add -u tmp || true
+          git status
+          git commit -m "fix: restore Bud workspace + guest typing lifecycle" || exit 0
+          git push origin HEAD:fix/guest-access-enforcement-2026-10-13
