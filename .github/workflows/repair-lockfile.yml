@@ -19,52 +19,31 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
-      - name: Restore Square index if placeholder or missing postsForLane
+      - name: Fix postsForLane RankContext shape
         run: |
           set -e
           python3 <<'PY'
           from pathlib import Path
-          import subprocess
           p = Path("src/routes/_app/index.tsx")
-          t = p.read_text() if p.exists() else ""
-          if "postsForLane" not in t or "PLACEHOLDER" in t or len(t) < 1000:
-              t = subprocess.check_output(
-                  ["git", "show", "4ed7027850cff1024b42753147dbe157eff65be1:src/routes/_app/index.tsx"],
-                  text=True,
-              )
-          t = t.replace("  const searches = useCampusStore((s) => s.searches);\n", "")
+          t = p.read_text()
+          # Correct call: ctx without connections; connections as 4th arg
           t = t.replace(
-              "    () => postsForLane(merged, lane, { following, connections, interests, likeCounts, searches }),\n    [merged, lane, following, connections, interests, likeCounts, searches],",
-              "    () => postsForLane(merged, lane, { following, connections, interests, likeCounts }, connections),\n    [merged, lane, following, connections, interests, likeCounts],",
+              "postsForLane(merged, lane, { following, connections, interests, likeCounts }, connections)",
+              "postsForLane(merged, lane, { following, interests, likeCounts }, connections)",
           )
           t = t.replace(
-              'addPostReply(key, body, "you");',
-              'addPostReply(key, { id: crypto.randomUUID(), body, authorHandle: "you", createdAt: new Date().toISOString() });',
+              "postsForLane(merged, lane, { following, connections, interests, likeCounts })",
+              "postsForLane(merged, lane, { following, interests, likeCounts }, connections)",
           )
           p.write_text(t)
-          print("index length", len(t), "has postsForLane", "postsForLane" in t)
+          assert "postsForLane(merged, lane, { following, interests, likeCounts }, connections)" in t
+          print("ok")
           PY
-      - name: Regenerate and verify lockfile
-        run: |
-          set -e
-          # Keep existing lock if npm ci already works
-          if npm ci; then
-            echo "lockfile already good"
-          else
-            rm -f package-lock.json
-            npm install
-            npm install
-            rm -rf node_modules
-            npm ci
-          fi
-      - name: Commit fixes
+      - name: Commit if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json src/routes/_app/index.tsx || true
-          if git diff --cached --quiet; then
-            echo "No changes"
-            exit 0
-          fi
-          git commit -m "fix: Square index typecheck + lockfile consistency"
+          git add src/routes/_app/index.tsx
+          if git diff --cached --quiet; then echo No changes; exit 0; fi
+          git commit -m "fix: postsForLane RankContext excludes connections"
           git push origin HEAD:fix/guest-access-enforcement-2026-10-13
