@@ -93,31 +93,4 @@ export const myCommunities = createServerFn({ method: "GET" })
     return rows.map((r) => r.community_id);
   });
 
-export const createPost = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator(
-    (input: {
-      communityId: string;
-      body: string;
-      image?: string;
-      video?: string;
-      kind?: "post" | "reel";
-    }) => input,
-  )
-  .handler(async ({ context, data }) => {
-    const body = data.body.trim() || (data.video ? "Reel" : data.image ? "Photo" : "");
-    if (!body) throw new Error("Write something first");
-    const sql = await getSql();
-    const profile = await sql<{ handle: string }>`select handle from student_profiles where user_id = ${context.userId} limit 1`;
-    const handle = profile[0]?.handle || "you";
-    const id = `p_${crypto.randomUUID().slice(0, 8)}`;
-    const kind = data.kind ?? (data.video ? "reel" : "post");
-    try {
-      await sql`insert into posts (id, community_id, author_handle, body, image, video, kind)
-        values (${id}, ${data.communityId}, ${handle}, ${body}, ${data.image ?? null}, ${data.video ?? null}, ${kind})`;
-    } catch {
-      await sql`insert into posts (id, community_id, author_handle, body, image)
-        values (${id}, ${data.communityId}, ${handle}, ${body}, ${data.image ?? null})`;
-    }
-    return { id, handle, body, kind };
-  });
+export { createPost, deleteOwnPost } from "./posts";
