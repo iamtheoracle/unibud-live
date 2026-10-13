@@ -14,7 +14,8 @@ export type AgentId =
   | 'pulse'
   | 'guardian'
   | 'voice'
-  | 'navigator';
+  | 'navigator'
+  | 'browser';
 
 import type { OrganizationAgentId } from '../specialists/definitions.ts';
 
