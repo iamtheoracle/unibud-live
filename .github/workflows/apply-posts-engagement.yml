@@ -1,0 +1,242 @@
+name: Apply posts engagement
+on:
+  workflow_dispatch:
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/square-posts-engagement-2026-10-13
+      - name: Patch social createPost + deleteOwnPost
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path("src/lib/social/server.ts")
+          t = p.read_text()
+          start = t.find("export const createPost")
+          if start < 0:
+              raise SystemExit("createPost missing")
+          head = t[:start]
+          new_tail = r'''export const createPost = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator(
+    (input: {
+      communityId?: string;
+      body: string;
+      image?: string;
+      video?: string;
+      kind?: "post" | "reel";
+    }) => input,
+  )
+  .handler(async ({ context, data }) => {
+    const body = data.body.trim() || (data.video ? "Reel" : data.image ? "Photo" : "");
+    if (!body) throw new Error("Write something first");
+    const sql = await getSql();
+    const profile = await sql<{ handle: string }>`select handle from student_profiles where user_id = ${context.userId} limit 1`;
+    const handle = profile[0]?.handle || "you";
+    const id = `p_${crypto.randomUUID().slice(0, 12)}`;
+    const kind = data.kind ?? (data.video ? "reel" : "post");
+    const communityId = (data.communityId || "square").trim() || "square";
+    try {
+      await sql`insert into posts (id, community_id, author_handle, body, image, video, kind, owner_user_id)
+        values (${id}, ${communityId}, ${handle}, ${body}, ${data.image ?? null}, ${data.video ?? null}, ${kind}, ${context.userId})`;
+    } catch {
+      try {
+        await sql`insert into posts (id, community_id, author_handle, body, image, video, kind)
+          values (${id}, ${communityId}, ${handle}, ${body}, ${data.image ?? null}, ${data.video ?? null}, ${kind})`;
+      } catch {
+        await sql`insert into posts (id, community_id, author_handle, body, image)
+          values (${id}, ${communityId}, ${handle}, ${body}, ${data.image ?? null})`;
+      }
+    }
+    return { id, handle, body, kind, communityId, ownerUserId: context.userId };
+  });
+
+/** Soft-delete own post. Only the owner can delete. */
+export const deleteOwnPost = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((postId: string) => postId)
+  .handler(async ({ context, data: postId }) => {
+    const sql = await getSql();
+    const id = postId.split("~")[0] ?? postId;
+    const rows = await sql<{ id: string; owner_user_id: string | null }> `
+      select id, owner_user_id from posts where id = ${id} and deleted_at is null limit 1`;
+    const post = rows[0];
+    if (!post) throw new Error("Post not found");
+    if (post.owner_user_id && post.owner_user_id !== context.userId) {
+      throw new Error("You can only delete your own posts");
+    }
+    if (!post.owner_user_id) {
+      const profile = await sql<{ handle: string }>`select handle from student_profiles where user_id = ${context.userId} limit 1`;
+      const handle = profile[0]?.handle;
+      const authored = await sql`select id from posts where id = ${id} and author_handle = ${handle ?? ""} limit 1`;
+      if (!authored[0]) throw new Error("You can only delete your own posts");
+    }
+    try {
+      await sql`update posts set deleted_at = now() where id = ${id}`;
+    } catch {
+      await sql`delete from posts where id = ${id}`;
+    }
+    return { ok: true as const, id };
+  });
+'''
+          # Fix accidental space in sql template
+          new_tail = new_tail.replace("> `\n", ">`\n")
+          p.write_text(head + new_tail)
+          print("social patched", len(head + new_tail))
+          PY
+      - name: Patch unibud server engagement
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path("src/lib/unibud/server.ts")
+          t = p.read_text()
+          t = t.replace(
+              "await sql`select * from posts order by created_at desc limit 80`",
+              "await sql`select * from posts where deleted_at is null order by created_at desc limit 80`",
+          )
+          t = t.replace(
+              "order by created_at asc limit 800",
+              "order by created_at desc limit 800",
+          )
+          old_like = '''export const togglePostLike = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((postId: string) => postId)
+  .handler(async ({ context, data: postId }) => {
+    const sql = await getSql();
+    const existing = await sql`select post_id from post_likes where user_id = ${context.userId} and post_id = ${postId}`;
+    if (existing[0]) {
+      await sql`delete from post_likes where user_id = ${context.userId} and post_id = ${postId}`;
+      return { liked: false };
+    }
+    await sql`insert into post_likes (user_id, post_id) values (${context.userId}, ${postId})`;
+    return { liked: true };
+  });'''
+          new_like = '''export const togglePostLike = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((postId: string) => postId)
+  .handler(async ({ context, data: postId }) => {
+    const sql = await getSql();
+    const id = postId.split("~")[0] ?? postId;
+    const existing = await sql`select post_id from post_likes where user_id = ${context.userId} and post_id = ${id}`;
+    let liked: boolean;
+    if (existing[0]) {
+      await sql`delete from post_likes where user_id = ${context.userId} and post_id = ${id}`;
+      liked = false;
+    } else {
+      await sql`insert into post_likes (user_id, post_id) values (${context.userId}, ${id}) on conflict do nothing`;
+      liked = true;
+    }
+    const countRows = await sql<{ n: string }>`select count(*)::text as n from post_likes where post_id = ${id}`;
+    const count = Number(countRows[0]?.n ?? 0);
+    return { liked, count, postId: id };
+  });'''
+          if old_like in t:
+              t = t.replace(old_like, new_like)
+          if "listPostReplies" not in t:
+              t = t.rstrip() + '''
+
+export const listPostReplies = createServerFn({ method: "GET" })
+  .validator((postId: string) => postId)
+  .handler(async ({ data: postId }) => {
+    const sql = await getSql();
+    const id = postId.split("~")[0] ?? postId;
+    const rows = await sql`select * from post_replies where post_id = ${id} order by created_at desc limit 200`;
+    return rows.map(mapPostReply);
+  });
+
+export const getPostLikeCount = createServerFn({ method: "GET" })
+  .validator((postId: string) => postId)
+  .handler(async ({ data: postId }) => {
+    const sql = await getSql();
+    const id = postId.split("~")[0] ?? postId;
+    const rows = await sql<{ n: string }>`select count(*)::text as n from post_likes where post_id = ${id}`;
+    return { postId: id, count: Number(rows[0]?.n ?? 0) };
+  });
+'''
+          p.write_text(t)
+          print("unibud server patched")
+          PY
+      - name: Patch publish + Square UI
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          for f in ["src/components/studio/publish-desk.tsx", "src/components/studio/write-desk.tsx"]:
+              p = Path(f)
+              if p.exists():
+                  t = p.read_text().replace('communityId: "unilag-campus"', 'communityId: "square"')
+                  p.write_text(t)
+          p = Path("src/routes/_app/index.tsx")
+          t = p.read_text()
+          if "deleteOwnPost" not in t:
+              t = t.replace(
+                  'import { addSquareReply, toggleCommentLike as toggleDbCommentLike, togglePostLike, toggleSave } from "@/lib/unibud/server";',
+                  'import { addSquareReply, toggleCommentLike as toggleDbCommentLike, togglePostLike, toggleSave } from "@/lib/unibud/server";\nimport { deleteOwnPost } from "@/lib/social/server";',
+              )
+          t = t.replace(
+              'onClick={() => { toggleLike(key); if (user) void togglePostLike({ data: key }).catch(() => {}); }}',
+              '''onClick={() => {
+                if (!user) { toast.message("Sign in to like posts."); return; }
+                toggleLike(key);
+                void togglePostLike({ data: key }).catch(() => toast.error("Could not update like."));
+              }}''',
+          )
+          t = t.replace(
+              'onClick={() => { toggleSavePost(key); if (user) void toggleSave({ data: { kind: "post", itemId: key, title: post.body.slice(0, 80), href: postUrl(post.id) } }).catch(() => {}); }}',
+              '''onClick={() => {
+                if (!user) { toast.message("Sign in to save posts."); return; }
+                toggleSavePost(key);
+                void toggleSave({ data: { kind: "post", itemId: key, title: post.body.slice(0, 80), href: postUrl(post.id) } }).catch(() => toast.error("Could not save."));
+              }}''',
+          )
+          t = t.replace(
+              '''addPostReply(key, { id: crypto.randomUUID(), body, authorHandle: "you", createdAt: new Date().toISOString() });
+                  if (user) void addSquareReply({ data: { postId: key, body } }).catch(() => {});
+                  setReply("");''',
+              '''if (!user) { toast.message("Sign in to reply."); return; }
+                  addPostReply(key, { id: crypto.randomUUID(), body, authorHandle: "you", createdAt: new Date().toISOString() });
+                  void addSquareReply({ data: { postId: key, body } }).catch(() => toast.error("Could not post reply."));
+                  setReply("");''',
+          )
+          old_hide = '''              <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { hidePost(key); setMenu(false); }}>
+                Hide
+              </button>
+              <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { reportPost(key); toast.message("Report noted."); setMenu(false); }}>
+                Report
+              </button>'''
+          new_hide = '''              <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { hidePost(key); setMenu(false); }}>
+                Hide
+              </button>
+              {user ? (
+                <button
+                  type="button"
+                  className="rounded-full bg-secondary px-3 py-1 text-destructive"
+                  onClick={() => {
+                    void deleteOwnPost({ data: key })
+                      .then(() => { hidePost(key); toast.success("Post removed."); })
+                      .catch((e) => toast.error(e instanceof Error ? e.message : "Could not delete."));
+                    setMenu(false);
+                  }}
+                >
+                  Delete
+                </button>
+              ) : null}
+              <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { reportPost(key); toast.message("Report noted."); setMenu(false); }}>
+                Report
+              </button>'''
+          if old_hide in t:
+              t = t.replace(old_hide, new_hide)
+          p.write_text(t)
+          print("UI patched")
+          PY
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git status
+          git commit -m "feat(square): wire posts engagement — create ownership, likes count, replies, delete" || exit 0
+          git push origin HEAD:feat/square-posts-engagement-2026-10-13
