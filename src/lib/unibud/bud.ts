@@ -3,9 +3,9 @@ import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
 import { mapBud } from "./map";
 
-const SYSTEM = `You are Bud, the campus assistant inside UNIBUD — a student operating environment for Nigerian universities (UNILAG, UNN, UI, ABU, OAU, UNIBEN, LASU, FUTA, UNIPORT, Covenant, and others).
+const SYSTEM = `You are Bud, the intelligent companion inside UNIBUD (University Buddy) — a social network for connecting, sharing, learning, and discovery. People from any background can use UNIBUD; academic context is optional and only applied when the user provides it.
 
-You help with: the campus marketplace (hostels, food, thrift, services), study planning, communities, and student life. Money inside UNIBUD is a demo ledger only — never imply that real naira, banks, cards, or NELFUND disbursements moved.
+You help with: conversation, learning, communities, discovery, and everyday questions. When academic context is provided, use it. Money features in UNIBUD are demo-only — never imply real bank transfers or payments completed without confirmation.
 
 Rules:
 - Be concise, specific, and warm. No slang overload, no emoji.
@@ -18,80 +18,8 @@ export const listBudMessages = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {
     const sql = await getSql();
-    const rows = await sql`select * from bud_messages where user_id = ${context.userId} order by created_at asc limit 40`;
+    const rows = await sql`select * from bud_messages where user_id = ${context.userId} order by created_at asc limit 200`;
     return rows.map(mapBud);
   });
 
-export const sendBudMessage = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
-  .validator((content: string) => content.trim().slice(0, 2000))
-  .handler(async ({ context, data: content }) => {
-    if (!content) throw new Error("Write something first");
-    const sql = await getSql();
-    await sql`insert into bud_messages (id, user_id, role, content)
-      values (${crypto.randomUUID()}, ${context.userId}, ${"user"}, ${content})`;
-
-    const history = await sql<{ role: string; content: string }>`
-      select role, content from bud_messages
-      where user_id = ${context.userId}
-      order by created_at desc
-      limit 12`;
-    const messages = history
-      .reverse()
-      .map((r) => ({ role: r.role as "user" | "assistant", content: r.content }));
-
-    const xaiKey = process.env.XAI_API_KEY?.trim();
-    const openaiKey = process.env.OPENAI_API_KEY?.trim();
-    let reply: string;
-    if (!xaiKey && !openaiKey) {
-      reply =
-        "Bud is offline in this environment. Browse Square, Connect, or Chat — then ask again when the model is connected.";
-    } else if (xaiKey) {
-      const res = await fetch("https://api.x.ai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${xaiKey}`,
-        },
-        body: JSON.stringify({
-          model: "grok-4.5",
-          max_tokens: 500,
-          messages: [{ role: "system", content: SYSTEM }, ...messages],
-        }),
-      });
-      if (!res.ok) {
-        reply = "Bud hit a snag talking to the model. Try again in a moment.";
-      } else {
-        const body = (await res.json()) as {
-          choices?: { message?: { content?: string } }[];
-        };
-        reply = body.choices?.[0]?.message?.content?.trim() || "I went quiet. Ask me again.";
-      }
-    } else {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${openaiKey}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          max_tokens: 500,
-          messages: [{ role: "system", content: SYSTEM }, ...messages],
-        }),
-      });
-      if (!res.ok) {
-        reply = "Bud hit a snag talking to the model. Try again in a moment.";
-      } else {
-        const body = (await res.json()) as {
-          choices?: { message?: { content?: string } }[];
-        };
-        reply = body.choices?.[0]?.message?.content?.trim() || "I went quiet. Ask me again.";
-      }
-    }
-
-    await sql`insert into bud_messages (id, user_id, role, content)
-      values (${crypto.randomUUID()}, ${context.userId}, ${"assistant"}, ${reply})`;
-    const rows = await sql`select * from bud_messages where user_id = ${context.userId} order by created_at asc limit 40`;
-    return rows.map(mapBud);
-  });
+export { SYSTEM as BUD_SYSTEM_PROMPT };
