@@ -28,5 +28,11 @@ export const GROK_ISSUER_DEFAULT = "https://auth.grok.me";
  * the live preview's real origin from the request host and validates it against
  * this list (wildcard-matched), so the OAuth `redirect_uri` becomes the concrete
  * `https://<preview-host>/api/auth/oauth2/callback/...` the broker allows.
+ * Netlify Deploy Previews (`*.netlify.app`) are included so email/password and
+ * credentialed POSTs are not rejected with "Invalid origin".
  */
-export const PREVIEW_ALLOWED_HOSTS = ["*.grok-sandbox.com"] as const;
+export const PREVIEW_ALLOWED_HOSTS = [
+  "*.grok-sandbox.com",
+  "*.netlify.app",
+  "*.netlify.com",
+] as const;
