@@ -1,60 +1,42 @@
 import { useState } from "react";
-import { useNavigate, useRouter } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { createPost } from "@/lib/social/server";
 import { useCampusStore } from "@/lib/unibud/campus-store";
-import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { useStudioStore } from "@/lib/studio/store";
-import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
-export function WriteDesk({ onClose }: { onClose: () => void }) {
-  const setView = useStudioStore((s) => s.setView);
-  const addPost = useCampusStore((s) => s.addPost);
-  const { user } = useCurrentUserState();
-  const navigate = useNavigate();
-  const router = useRouter();
+export function WriteDesk() {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const addPost = useCampusStore((s) => s.addPost);
+  const setComposeOpen = useCampusStore((s) => s.setComposeOpen);
 
-  async function submit() {
-    if (!user) {
-      onClose();
-      void navigate({ to: "/login" });
-      return;
-    }
-    if (!draft.trim()) return;
+  async function publish() {
+    if (!draft.trim() || busy) return;
     setBusy(true);
     try {
-      const r = await createPost({ data: { communityId: "unilag-campus", body: draft.trim() } });
+      const r = await createPost({ data: { communityId: "square", body: draft.trim() } });
       addPost(r.body, r.handle, { id: r.id });
-      await router.invalidate();
-      onClose();
-      void navigate({ to: "/" });
+      toast.success("Posted to Square.");
+      setDraft("");
+      setComposeOpen(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not post.");
+      toast.error(e instanceof Error ? e.message : "Could not publish.");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="flex h-dvh flex-col bg-background pt-[env(safe-area-inset-top)]">
-      <div className="flex h-12 items-center justify-between px-2">
-        <button type="button" className="h-11 px-2 text-sm" onClick={() => setView("camera")}>
-          Camera
-        </button>
-        <p className="text-sm font-semibold">Write</p>
-        <Button size="sm" disabled={busy || !draft.trim()} onClick={() => void submit()}>
-          Post
-        </Button>
-      </div>
+    <div className="flex flex-col gap-3 p-4">
       <textarea
-        autoFocus
+        className="min-h-32 w-full rounded-2xl bg-secondary p-4 text-sm outline-none"
+        placeholder="Share something…"
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
-        placeholder="What’s moving you right now?"
-        className="min-h-40 flex-1 resize-none bg-transparent px-5 py-4 text-base outline-none"
       />
+      <Button disabled={busy || !draft.trim()} onClick={() => void publish()}>
+        {busy ? "Posting…" : "Post"}
+      </Button>
     </div>
   );
 }
