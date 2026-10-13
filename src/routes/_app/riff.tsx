@@ -10,7 +10,6 @@ import { useCampusStore } from "@/lib/unibud/campus-store";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { cn } from "@/lib/utils";
 import type { SpillPost } from "@/lib/unibud/spill-data";
-import { CHALLENGES } from "@/lib/unibud/discover-data";
 import { setBudDraft } from "@/lib/bud/draft";
 import { RiffMark } from "@/components/brand/identity-marks";
 
@@ -66,20 +65,6 @@ function Riff() {
         ))}
       </div>
 
-      <div className="mt-4 flex gap-2 overflow-x-auto px-5 pb-2">
-        {CHALLENGES.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            className="w-44 shrink-0 rounded-2xl bg-secondary p-3 text-left"
-            onClick={() => setDraft((d) => d || `${c.title}: ${c.body}`)}
-          >
-            <p className="text-[11px] font-medium text-bud">{c.joins.toLocaleString()} in</p>
-            <p className="mt-1 text-sm font-medium">{c.title}</p>
-          </button>
-        ))}
-      </div>
-
       {user ? (
         <form
           className="mt-2 border-y border-border px-5 py-4"
@@ -122,9 +107,13 @@ function Riff() {
       ) : null}
 
       <div>
-        {list.map((s) => (
-          <RiffCard key={s.id} spill={s} onQuote={() => setQuoting(s.id)} />
-        ))}
+        {list.length ? (
+          list.map((s) => <RiffCard key={s.id} spill={s} onQuote={() => setQuoting(s.id)} />)
+        ) : (
+          <p className="px-5 py-12 text-center text-sm text-muted-foreground">
+            No Riffs yet. Be the first to start a conversation.
+          </p>
+        )}
       </div>
     </main>
   );
