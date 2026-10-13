@@ -2,16 +2,18 @@
 # Server secrets (set in Netlify UI, never commit): OPENAI_API_KEY, XAI_API_KEY, DATABASE_URL
 
 [build]
-  # Include devDependencies (nitro, vite plugins) — required for TanStack Start build.
-  command = "npm install --legacy-peer-deps --include=dev && npm run build:netlify"
+  # Netlify installs dependencies before this command. NPM_FLAGS below must therefore
+  # carry the peer-dependency and dev-dependency settings into Netlify's install stage.
+  command = "npm run build:netlify"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
-  VITE_AUTH_ENABLED = "true"
+  NPM_FLAGS = "--legacy-peer-deps --include=dev"
   NPM_CONFIG_LEGACY_PEER_DEPS = "true"
   NPM_CONFIG_PRODUCTION = "false"
   NODE_OPTIONS = "--max-old-space-size=4096"
+  VITE_AUTH_ENABLED = "true"
 
 # Authentication must be enabled for deployed sign-up/sign-in flows.
 [context.production.environment]
