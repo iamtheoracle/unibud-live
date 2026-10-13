@@ -22,6 +22,8 @@ jobs:
         run: |
           set -e
           rm -f package-lock.json
+          # Two-pass install stabilizes nested optional deps (ajv / json-schema-traverse)
+          npm install
           npm install
           rm -rf node_modules
           npm ci
