@@ -1,0 +1,38 @@
+name: Repair lockfile
+on:
+  workflow_dispatch:
+  push:
+    branches: ["fix/guest-access-enforcement-2026-10-13"]
+    paths:
+      - "package.json"
+      - ".github/workflows/repair-lockfile.yml"
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/guest-access-enforcement-2026-10-13
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+      - name: Regenerate and verify lockfile
+        run: |
+          set -e
+          rm -f package-lock.json
+          npm install
+          rm -rf node_modules
+          npm ci
+      - name: Commit lockfile if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          if git diff --cached --quiet; then
+            echo "Lockfile already consistent"
+            exit 0
+          fi
+          git commit -m "fix: regenerate package-lock.json for reproducible npm ci (Node 22)"
+          git push origin HEAD:fix/guest-access-enforcement-2026-10-13
