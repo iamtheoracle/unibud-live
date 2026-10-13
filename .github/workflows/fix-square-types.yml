@@ -1,0 +1,41 @@
+name: Fix Square typecheck
+on:
+  workflow_dispatch:
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/guest-access-enforcement-2026-10-13
+      - name: Restore index from last good commit and patch types
+        run: |
+          set -e
+          git show 4ed7027850cff1024b42753147dbe157eff65be1:src/routes/_app/index.tsx > src/routes/_app/index.tsx
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path("src/routes/_app/index.tsx")
+          t = p.read_text()
+          t = t.replace("  const searches = useCampusStore((s) => s.searches);\n", "")
+          t = t.replace(
+              "    () => postsForLane(merged, lane, { following, connections, interests, likeCounts, searches }),\n    [merged, lane, following, connections, interests, likeCounts, searches],",
+              "    () => postsForLane(merged, lane, { following, connections, interests, likeCounts }, connections),\n    [merged, lane, following, connections, interests, likeCounts],",
+          )
+          t = t.replace(
+              'addPostReply(key, body, "you");',
+              'addPostReply(key, { id: crypto.randomUUID(), body, authorHandle: "you", createdAt: new Date().toISOString() });',
+          )
+          assert "PLACEHOLDER" not in t
+          assert "postsForLane" in t
+          p.write_text(t)
+          print("patched", len(t))
+          PY
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/routes/_app/index.tsx
+          git commit -m "fix: restore Square index with typecheck patches" || exit 0
+          git push origin HEAD:fix/guest-access-enforcement-2026-10-13

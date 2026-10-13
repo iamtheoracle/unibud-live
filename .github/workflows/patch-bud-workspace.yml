@@ -1,0 +1,75 @@
+name: Patch Bud workspace lifecycle
+on:
+  push:
+    branches: [fix/guest-access-enforcement-2026-10-13]
+  workflow_dispatch:
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/guest-access-enforcement-2026-10-13
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Patch workspace.tsx
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path("src/components/bud/workspace.tsx")
+          t = p.read_text()
+          if "Bud is typing" in t and "could not reply right now" in t:
+              print("already patched")
+              raise SystemExit(0)
+          t2 = t.replace(
+              '{busy ? <p className="text-xs text-muted-foreground">Bud is thinking…</p> : null}',
+              '{busy ? <p className="text-xs text-muted-foreground" aria-live="polite">Bud is typing…</p> : null}',
+          )
+          t2 = t2.replace(
+              "onError: () => setPendingUser(null),",
+              """onError: () => {
+      setPendingUser(null);
+      if (!user) {
+        guest.appendAssistant("Bud could not reply right now. You can try again.");
+      }
+    },""",
+          )
+          old = """onSuccess: async (r) => {
+      setPrompt("");
+      setAttachment(null);
+      setPendingUser(null);
+      setFreshChat(false);
+      if (!user) {
+        guest.appendAssistant(guestReplyText(r as { ok?: boolean; text?: string; error?: string }));
+        return;
+      }"""
+          new = """onSuccess: async (r) => {
+      setAttachment(null);
+      setFreshChat(false);
+      if (!user) {
+        guest.appendAssistant(guestReplyText(r as { ok?: boolean; text?: string; error?: string }));
+        setPendingUser(null);
+        setPrompt("");
+        return;
+      }
+      setPendingUser(null);
+      setPrompt("");"""
+          if old in t2:
+              t2 = t2.replace(old, new)
+          p.write_text(t2)
+          print("patched", "Bud is typing" in t2, "could not reply" in t2)
+          if "Bud is thinking" in t2:
+              raise SystemExit("typing replace failed")
+          PY
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/bud/workspace.tsx
+          if git diff --staged --quiet; then
+            echo "no changes"
+            exit 0
+          fi
+          git commit -m "fix: guest Bud keeps question, Bud is typing, honest error"
+          git push origin HEAD:fix/guest-access-enforcement-2026-10-13

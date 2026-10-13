@@ -28,7 +28,7 @@ const items = [
   { to: "/profile", label: "Profile", icon: CircleUser },
   { to: "/messages", label: "Chat", icon: MessageSquareText },
   { to: "/bud", label: "Bud", icon: Sparkles },
-  { to: "/riff", label: "Riff", icon: Megaphone },
+  { to: "/riff", label: "Riff · public discovery", icon: Megaphone },
   { to: "/search", label: "Search", icon: Search },
   { to: "/board", label: "Board", icon: Clapperboard },
   { to: "/studies", label: "Studies", icon: BookOpen },
