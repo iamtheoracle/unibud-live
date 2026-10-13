@@ -28,9 +28,11 @@ const fetchSessionUser = createServerFn({ method: "GET" }).handler(async () => {
 export const Route = createRootRoute({
   beforeLoad: async ({ location }) => {
     const sessionUser = await fetchSessionUser();
-    const publicPaths = ["/start", "/login", "/bud"];
-    const isPublic = publicPaths.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"));
-    if (!sessionUser && location.pathname === "/") {
+    const path = location.pathname;
+    // Guests may only use start, login, bud, and help. Everything else requires sign-in.
+    const publicPaths = ["/start", "/login", "/bud", "/help"];
+    const isPublic = publicPaths.some((p) => path === p || path.startsWith(p + "/"));
+    if (!sessionUser && !isPublic) {
       const { redirect } = await import("@tanstack/react-router");
       throw redirect({ to: "/start" });
     }
