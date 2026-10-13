@@ -63,7 +63,7 @@ function Square() {
   }, [catalog.posts, localPosts]);
 
   const lanePosts = useMemo(
-    () => postsForLane(merged, lane, { following, connections, interests, likeCounts }, connections),
+    () => postsForLane(merged, lane, { following, interests, likeCounts }, connections),
     [merged, lane, following, connections, interests, likeCounts],
   );
 
