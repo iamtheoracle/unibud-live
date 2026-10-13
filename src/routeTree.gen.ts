@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as StartRouteImport } from './routes/start'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppBoardRouteImport } from './routes/_app/board'
 import { Route as AppBudRouteImport } from './routes/_app/bud'
@@ -63,6 +64,11 @@ const AppRoute = AppRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StartRoute = StartRouteImport.update({
+  id: '/start',
+  path: '/start',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -290,6 +296,7 @@ const ApiMediaIdRoute = ApiMediaIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
+  '/start': typeof StartRoute
   '/board': typeof AppBoardRouteWithChildren
   '/bud': typeof AppBudRouteWithChildren
   '/communities': typeof AppCommunitiesRouteWithChildren
@@ -336,6 +343,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/start': typeof StartRoute
   '/board': typeof AppBoardRouteWithChildren
   '/bud': typeof AppBudRouteWithChildren
   '/communities': typeof AppCommunitiesRouteWithChildren
@@ -384,6 +392,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/start': typeof StartRoute
   '/_app/board': typeof AppBoardRouteWithChildren
   '/_app/bud': typeof AppBudRouteWithChildren
   '/_app/communities': typeof AppCommunitiesRouteWithChildren
@@ -434,6 +443,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/start'
     | '/board'
     | '/bud'
     | '/communities'
@@ -480,6 +490,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/start'
     | '/board'
     | '/bud'
     | '/communities'
@@ -527,6 +538,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/login'
+    | '/start'
     | '/_app/board'
     | '/_app/bud'
     | '/_app/communities'
@@ -576,6 +588,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  StartRoute: typeof StartRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiMediaIdRoute: typeof ApiMediaIdRoute
 }
@@ -594,6 +607,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/start': {
+      id: '/start'
+      path: '/start'
+      fullPath: '/start'
+      preLoaderRoute: typeof StartRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/': {
@@ -1070,6 +1090,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  StartRoute: StartRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiMediaIdRoute: ApiMediaIdRoute,
 }
