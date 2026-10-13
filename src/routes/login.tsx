@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { GROK_PROVIDERS, authClient, authEnabled, signIn } from "@/lib/auth/client";
+import { clearGuestMode } from "@/lib/auth/guest";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -79,9 +80,11 @@ function Login() {
           name: name.trim() || "Student",
         });
         if (err) throw new Error(err.message);
+        clearGuestMode();
       } else {
         const { error: err } = await authClient.signIn.email({ email, password });
         if (err) throw new Error(err.message);
+        clearGuestMode();
       }
       await authClient.getSession();
       await router.invalidate();
