@@ -43,6 +43,11 @@ const freeProvider: AIProvider = {
   },
 };
 
+function canUseOfflineFallback(messages: ProviderMessage[]): boolean {
+  const prompt = messages.filter((m) => m.role === "user").at(-1)?.content?.trim().toLowerCase().replace(/[.!?]+$/, "") ?? "";
+  return /^(hi|hello|hey|good morning|good afternoon|good evening|how far|how are you|thanks|thank you|thx|bye|goodbye|see you|who are you|what can you do|what are you able to do|what is photosynthesis|what is gravity|what is inflation|what is an algorithm|what is ai|what is artificial intelligence|2\s*\+\s*2|what is 2 plus 2)$/.test(prompt);
+}
+
 function remoteProvider(id: "xai" | "openai", apiKey: string): AIProvider {
   const isXai = id === "xai";
   return {
@@ -57,12 +62,16 @@ function remoteProvider(id: "xai" | "openai", apiKey: string): AIProvider {
           signal: opts?.signal,
           body: JSON.stringify({ model: isXai ? "grok-4.5" : "gpt-4o-mini", max_tokens: opts?.maxTokens ?? 700, messages }),
         });
-        if (!res.ok) return { ok: false, error: res.status >= 500 ? "Bud couldn’t reach the model. Try again in a moment." : "Bud couldn’t reply just now. Check the model connection and try again.", providerId: id };
+        if (!res.ok) {
+          if (canUseOfflineFallback(messages)) return freeProvider.complete(messages);
+          return { ok: false, error: res.status >= 500 ? "Bud couldn’t reach the model. Try again in a moment." : "Bud couldn’t reply just now. Check the model connection and try again.", providerId: id };
+        }
         const body = (await res.json()) as { choices?: { message?: { content?: string | null } }[] };
         const text = body.choices?.[0]?.message?.content;
         if (!text?.trim()) return { ok: false, error: "Bud received an empty reply. Try again.", providerId: id };
         return { ok: true, text, providerId: id };
       } catch (err) {
+        if (canUseOfflineFallback(messages)) return freeProvider.complete(messages);
         if (err instanceof Error && err.name === "AbortError") return { ok: false, error: "The request timed out before Bud could finish. Try again.", providerId: id };
         return { ok: false, error: "Looks like the connection dropped. Check your network and try again.", providerId: id };
       }
