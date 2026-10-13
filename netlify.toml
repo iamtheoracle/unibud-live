@@ -2,17 +2,15 @@
 # Server secrets (set in Netlify UI, never commit): OPENAI_API_KEY, XAI_API_KEY, DATABASE_URL
 
 [build]
-  # Use lockfile-verified install. Include devDependencies (nitro, vite) for TanStack Start.
-  command = "npm ci --legacy-peer-deps && npm run build:netlify"
+  # Disable Corepack before install; use lockfile-verified npm ci.
+  command = "command -v corepack >/dev/null && corepack disable || true; npm ci --legacy-peer-deps && npm run build:netlify"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
   NPM_FLAGS = "--legacy-peer-deps"
   NPM_CONFIG_LEGACY_PEER_DEPS = "true"
-  NPM_CONFIG_PRODUCTION = "false"
   NODE_OPTIONS = "--max-old-space-size=4096"
-  # Avoid Corepack resolving an undefined packageManager field during install.
   NETLIFY_COREPACK_ENABLED = "false"
   VITE_AUTH_ENABLED = "false"
 

@@ -16,31 +16,34 @@ jobs:
         with:
           ref: fix/guest-access-enforcement-2026-10-13
           fetch-depth: 0
-      - name: Fix RankContext object
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+      - name: Align package.json and regenerate lockfile
         run: |
           set -e
+          node -v
+          npm -v
           python3 <<'PY'
+          import json
           from pathlib import Path
-          p = Path("src/routes/_app/index.tsx")
-          t = p.read_text()
-          old = "postsForLane(merged, lane, { following, interests, likeCounts }, connections)"
-          new = "postsForLane(merged, lane, { following, interests, likeCounts, universityId: \"\", searches: [] }, connections)"
-          if old in t:
-              t = t.replace(old, new)
-          else:
-              t = t.replace(
-                  "postsForLane(merged, lane, { following, connections, interests, likeCounts }, connections)",
-                  new,
-              )
-          p.write_text(t)
-          assert "universityId" in t and "searches: []" in t
-          print("ok")
+          p = Path("package.json")
+          pkg = json.loads(p.read_text())
+          pkg["packageManager"] = "npm@10.9.2"
+          pkg.pop("overrides", None)
+          p.write_text(json.dumps(pkg, indent=2) + "\n")
+          print("package.json ready")
           PY
+          rm -f package-lock.json
+          npm install --legacy-peer-deps
+          npm install --legacy-peer-deps
+          rm -rf node_modules
+          npm ci --legacy-peer-deps
       - name: Commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/routes/_app/index.tsx
+          git add package.json package-lock.json
           if git diff --cached --quiet; then echo No changes; exit 0; fi
-          git commit -m "fix: RankContext includes universityId and searches"
+          git commit -m "fix: regenerate lockfile for Netlify npm 10.9 / Node 22 (drop overrides)"
           git push origin HEAD:fix/guest-access-enforcement-2026-10-13
