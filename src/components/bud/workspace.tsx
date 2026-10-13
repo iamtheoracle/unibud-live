@@ -16,7 +16,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
 import {
-  askBud,
+  askBud, askBudGuest,
   deleteBudConversation,
   getBudThread,
   listBudConversations,
@@ -156,8 +156,11 @@ export function BudWorkspace() {
   }, [messages.length, thread.isFetching]);
 
   const ask = useMutation({
-    mutationFn: (input: { text: string; media?: BudThreadMedia }) =>
-      askBud({
+    mutationFn: async (input: { text: string; media?: BudThreadMedia }) => {
+      if (!user) {
+        return askBudGuest({ data: { prompt: input.text } });
+      }
+      return askBud({
         data: {
           prompt: input.text,
           conversationId: activeId ?? undefined,
@@ -175,7 +178,8 @@ export function BudWorkspace() {
             likes: atlas?.likes?.length ? atlas.likes : interests,
           },
         },
-      }),
+      });
+    },
     onSuccess: async (r) => {
       setPrompt("");
       setAttachment(null);
@@ -298,19 +302,7 @@ export function BudWorkspace() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="fixed inset-0 z-40 flex flex-col bg-background pt-[env(safe-area-inset-top)]">
-        <BudTop onClose={close} onMenu={() => {}} />
-        <div className="mx-auto w-full max-w-3xl px-5 py-10">
-          <SignInCard
-            title="Talk to Bud"
-            body="Sign in so Bud can keep this conversation with you."
-          />
-        </div>
-      </div>
-    );
-  }
+  const isGuest = !user;
 
   const failed = ask.isError || (ask.data && ask.data.ok === false);
   const busy = ask.isPending || retry.isPending;
@@ -326,6 +318,12 @@ export function BudWorkspace() {
           }}
         />
       </div>
+
+      {isGuest ? (
+        <div className="border-b border-border bg-secondary/60 px-4 py-2 text-center text-xs text-muted-foreground">
+          Guest mode: your conversations are not saved. <a href="/login" className="underline">Sign in</a> to keep them.
+        </div>
+      ) : null}
 
       {menuOpen ? (
         <div className="absolute top-[calc(env(safe-area-inset-top)+3rem)] right-3 z-50 w-56 rounded-2xl bg-card p-1 shadow-soft ring-1 ring-border">

@@ -26,7 +26,16 @@ const fetchSessionUser = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 export const Route = createRootRoute({
-  beforeLoad: async () => ({ sessionUser: await fetchSessionUser() }),
+  beforeLoad: async ({ location }) => {
+    const sessionUser = await fetchSessionUser();
+    const publicPaths = ["/start", "/login", "/bud"];
+    const isPublic = publicPaths.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"));
+    if (!sessionUser && location.pathname === "/") {
+      const { redirect } = await import("@tanstack/react-router");
+      throw redirect({ to: "/start" });
+    }
+    return { sessionUser };
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
