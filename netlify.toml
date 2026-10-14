@@ -1,20 +1,23 @@
 # UNIBUD — Netlify (TanStack Start + Nitro SSR)
-# Server secrets (set in Netlify UI, never commit): OPENAI_API_KEY, XAI_API_KEY, DATABASE_URL
+# Server secrets must be set in Netlify UI, never committed.
 
 [build]
-  # Netlify installs dependencies before this command. NPM_FLAGS below must therefore
-  # carry the peer-dependency and dev-dependency settings into Netlify's install stage.
+  # Netlify installs dependencies before this command. Keep install flags explicit
+  # so Vite/Nitro devDependencies are present and npm audit/fund calls cannot block builds.
   command = "npm run build:netlify"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
-  NPM_FLAGS = "--legacy-peer-deps --include=dev"
+  NPM_FLAGS = "--legacy-peer-deps --include=dev --no-audit --no-fund"
   NPM_CONFIG_LEGACY_PEER_DEPS = "true"
   NPM_CONFIG_PRODUCTION = "false"
+  NPM_CONFIG_AUDIT = "false"
+  NPM_CONFIG_FUND = "false"
+  NPM_CONFIG_FETCH_RETRIES = "5"
+  NPM_CONFIG_FETCH_TIMEOUT = "120000"
   NODE_OPTIONS = "--max-old-space-size=4096"
   VITE_AUTH_ENABLED = "true"
 
-# Authentication must be enabled for deployed sign-up/sign-in flows.
 [context.production.environment]
   VITE_AUTH_ENABLED = "true"
