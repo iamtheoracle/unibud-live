@@ -40,4 +40,7 @@ jobs:
       - name: Agent and Spark tests (pre-UI gate)
         run: npm run test:agents
 
+      - name: Academic registry contract tests
+        run: npm run test:academic-registry
+
       # Full UI/template tests and production build remain deferred until UI implementation begins.
