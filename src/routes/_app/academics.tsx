@@ -8,6 +8,7 @@ import {
   getAcademicInstitutionDetails,
   searchAcademicInstitutions,
 } from "@/lib/academic-registry/server";
+import { WEST_AFRICA_COUNTRY_SCOPE } from "@/lib/academic-registry/ingestion/west-africa-scope";
 
 export const Route = createFileRoute("/_app/academics")({ component: AcademicRegistry });
 
@@ -16,6 +17,7 @@ function AcademicRegistry() {
   const [searchText, setSearchText] = useState("");
   const [ownershipType, setOwnershipType] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedCountry = WEST_AFRICA_COUNTRY_SCOPE.find((country) => country.countryCode === countryCode);
 
   const registry = useQuery({
     queryKey: ["academic-registry", countryCode, searchText, ownershipType],
@@ -46,23 +48,42 @@ function AcademicRegistry() {
 
       <section className="mt-6 rounded-3xl bg-card p-4 ring-1 ring-border">
         <label className="block text-xs font-medium text-muted-foreground" htmlFor="registry-country">
-          Country code (ISO alpha-2)
+          Browse West Africa by country
         </label>
-        <div className="mt-1 grid grid-cols-[5rem_1fr] gap-2">
-          <Input
-            id="registry-country"
-            value={countryCode}
-            onChange={(event) => {
-              setCountryCode(event.target.value.toUpperCase().slice(0, 2));
-              setSelectedId(null);
-            }}
-            maxLength={2}
-            placeholder="NG"
-            aria-label="Country code"
-          />
-          <div className="flex items-center rounded-xl bg-secondary px-3 text-xs text-muted-foreground">
-            Examples: NG Nigeria · US United States · GB United Kingdom
-          </div>
+        <select
+          id="registry-country"
+          value={countryCode}
+          onChange={(event) => {
+            setCountryCode(event.target.value);
+            setSelectedId(null);
+          }}
+          className="mt-1 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"
+        >
+          {WEST_AFRICA_COUNTRY_SCOPE.map((country) => (
+            <option key={country.countryCode} value={country.countryCode}>
+              {country.countryName} ({country.countryCode})
+            </option>
+          ))}
+        </select>
+        <div className="mt-2 rounded-xl bg-secondary p-3 text-xs text-muted-foreground">
+          <p className="font-medium text-foreground">
+            {selectedCountry?.sourceDiscoveryStatus === "source_identified"
+              ? "Official source located · data import still pending"
+              : "Official source discovery still in progress"}
+          </p>
+          <p className="mt-1">
+            {selectedCountry?.sourceNotes ?? "Choose a country to view its source-discovery status."}
+          </p>
+          {selectedCountry?.officialSourceUrl ? (
+            <a
+              className="mt-2 inline-flex items-center gap-1 underline"
+              href={selectedCountry.officialSourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open official source <ExternalLink className="size-3" />
+            </a>
+          ) : null}
         </div>
 
         <label className="mt-4 block text-xs font-medium text-muted-foreground" htmlFor="registry-search">
