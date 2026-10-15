@@ -343,6 +343,26 @@ alter table academic_accreditations
   add constraint academic_accreditations_programme_fk
   foreign key (programme_id) references academic_programmes(id) on delete cascade;
 
+-- Coverage ledger prevents a partially indexed country from being mistaken
+-- for a complete directory. Coverage is tracked per source and data domain.
+create table if not exists academic_source_coverage (
+  id text primary key,
+  country_code char(2) not null references academic_countries(code),
+  source_id text references academic_sources(id) on delete set null,
+  coverage_domain text not null
+    check (coverage_domain in ('institutions','campuses','accreditation','qualification_frameworks','programmes','courses','syllabi','standards')),
+  status text not null default 'discovered'
+    check (status in ('discovered','configured','importing','partial','verified','stale','unavailable')),
+  last_checked_at timestamptz,
+  last_success_at timestamptz,
+  expected_refresh_days integer check (expected_refresh_days is null or expected_refresh_days > 0),
+  records_expected integer check (records_expected is null or records_expected >= 0),
+  records_verified integer not null default 0 check (records_verified >= 0),
+  coverage_notes text,
+  updated_at timestamptz not null default now(),
+  unique (country_code, source_id, coverage_domain)
+);
+
 create index if not exists academic_institutions_country_type_idx
   on academic_institutions (country_code, institution_type_id, verification_status);
 create index if not exists academic_institutions_name_idx
