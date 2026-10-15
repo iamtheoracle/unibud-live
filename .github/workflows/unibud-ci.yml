@@ -3,7 +3,7 @@ name: UNIBUD Pre-UI Verification Gate
 
 on:
   push:
-    branches: [main, rebuild/unibud-mini-apps-2026-10-16]
+    branches: [main, rebuild/unibud-mini-apps-2026-10-16, architecture/unibud-next-era-foundation]
   pull_request:
     branches: [main, rebuild/unibud-mini-apps-2026-10-16]
 
