@@ -48,8 +48,7 @@ function Login() {
       }
       await authClient.getSession();
       await router.invalidate();
-      const done = useCampusStore.getState().onboardingDone;
-      await router.navigate({ to: done ? "/" : "/welcome" });
+      await router.navigate({ to: "/welcome" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not complete account access");
     } finally {
