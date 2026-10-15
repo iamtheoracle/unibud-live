@@ -18,8 +18,11 @@ The registry covers, where present in a country's system:
 | Concern | Canonical path | Responsibility |
 | --- | --- | --- |
 | Shared schema | `migrations/0030_global_academic_registry.sql` | Durable global reference tables, foreign keys, checks, and indexes. Apply only after migration-number collision review and isolated database testing. |
-| Domain contracts | `src/lib/academic-registry/types.ts` | Typed country, authority, institution, campus, framework, level, programme, curriculum, course, syllabus, source, and query-filter contracts. |
-| Contract tests | `src/lib/academic-registry/types.test.ts` | Country-code normalization and invalid-input tests. |
+| Domain contracts | `src/lib/academic-registry/types.ts` | Typed country, authority, institution, campus, framework, level, programme, curriculum, course, syllabus, standard, source, import, and query-filter contracts. |
+| Public read handlers | `src/lib/academic-registry/server.ts` | Parameterized country-scoped search and verified institution detail reads, including programmes, courses, syllabus topics, accreditations, and accepted standards. No writes or import execution are exposed here. |
+| Ingestion contracts | `src/lib/academic-registry/ingestion/contracts.ts` | Contract for country/source-specific adapters and source record envelopes. |
+| Source normalization | `src/lib/academic-registry/ingestion/normalize.ts` | Normalize candidate institution records, preserve source-scoped IDs, produce stable slugs, and force imported candidates into review. |
+| Contract tests | `src/lib/academic-registry/types.test.ts` and `src/lib/academic-registry/ingestion/normalize.test.ts` | Country-code normalization, source-record validation, slugging, and review-state tests. |
 | Server data access (next implementation step) | `src/lib/academic-registry/server.ts` | Authenticated/authorized server functions for search, detail pages, evidence review, and imports. Never expose raw database access in client components. |
 | Ingestion adapters (next implementation step) | `src/lib/academic-registry/ingestion/` | One adapter per official regulator/government source or documented public dataset. Every adapter records source, retrieval time, source hash, and import-run statistics. |
 | Registry UI (next implementation step) | `src/routes/_app/academics/` or the established route structure after route-tree inspection | Country selector, institution search, institution detail, programme/curriculum view, source citations, and review queue. Must follow existing auth and route conventions. |
@@ -55,7 +58,7 @@ The registry covers, where present in a country's system:
 
 ## Current scope and honest status
 
-This commit establishes the schema and TypeScript contracts only. It does **not** yet implement the live ingestion adapters, server query handlers, country coverage datasets, admin review interface, or user-facing registry routes. Those must be implemented and tested before the feature is called complete.
+This branch establishes the schema, TypeScript contracts, public read handlers, and source-record normalization foundation. It does **not** yet implement live country/regulator ingestion adapters, verified country coverage datasets, import persistence/orchestration, an admin review interface, or user-facing registry routes. The server read handlers and SQL migration also have not passed a clean install/typecheck/build/database test yet. Those gaps must be closed before the feature is called complete.
 
 The schema migration number `0030` is deliberately conservative because this repository has multiple active branches and migration history has not yet been reconciled. Before merge, compare all migrations on the selected consolidated branch, verify that no migration number/name conflicts, apply it to a disposable isolated PostgreSQL/PGlite database, and test upgrade behavior. Do not run it against production as part of this work.
 
