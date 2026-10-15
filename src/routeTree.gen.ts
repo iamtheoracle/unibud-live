@@ -13,6 +13,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as StartRouteImport } from './routes/start'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
+import { Route as AppAcademicsRouteImport } from './routes/_app/academics'
 import { Route as AppBoardRouteImport } from './routes/_app/board'
 import { Route as AppBudRouteImport } from './routes/_app/bud'
 import { Route as AppCommunitiesRouteImport } from './routes/_app/communities'
@@ -74,6 +75,11 @@ const StartRoute = StartRouteImport.update({
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAcademicsRoute = AppAcademicsRouteImport.update({
+  id: '/academics',
+  path: '/academics',
   getParentRoute: () => AppRoute,
 } as any)
 const AppBoardRoute = AppBoardRouteImport.update({
@@ -295,6 +301,7 @@ const ApiMediaIdRoute = ApiMediaIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/academics': typeof AppAcademicsRoute
   '/login': typeof LoginRoute
   '/start': typeof StartRoute
   '/board': typeof AppBoardRouteWithChildren
@@ -343,6 +350,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/academics': typeof AppAcademicsRoute
   '/start': typeof StartRoute
   '/board': typeof AppBoardRouteWithChildren
   '/bud': typeof AppBudRouteWithChildren
@@ -391,6 +399,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/_app/academics': typeof AppAcademicsRoute
   '/login': typeof LoginRoute
   '/start': typeof StartRoute
   '/_app/board': typeof AppBoardRouteWithChildren
@@ -442,6 +451,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/academics'
     | '/login'
     | '/start'
     | '/board'
@@ -489,6 +499,7 @@ export interface FileRouteTypes {
     | '/market/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/academics'
     | '/login'
     | '/start'
     | '/board'
@@ -537,6 +548,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_app'
+    | '/_app/academics'
     | '/login'
     | '/start'
     | '/_app/board'
@@ -621,6 +633,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/academics': {
+      id: '/_app/academics'
+      path: '/academics'
+      fullPath: '/academics'
+      preLoaderRoute: typeof AppAcademicsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/board': {
@@ -1018,6 +1037,7 @@ const AppSpillRouteWithChildren = AppSpillRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppAcademicsRoute: typeof AppAcademicsRoute
   AppBoardRoute: typeof AppBoardRouteWithChildren
   AppBudRoute: typeof AppBudRouteWithChildren
   AppCommunitiesRoute: typeof AppCommunitiesRouteWithChildren
@@ -1052,6 +1072,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAcademicsRoute: AppAcademicsRoute,
   AppBoardRoute: AppBoardRouteWithChildren,
   AppBudRoute: AppBudRouteWithChildren,
   AppCommunitiesRoute: AppCommunitiesRouteWithChildren,

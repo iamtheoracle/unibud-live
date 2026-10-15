@@ -49,9 +49,10 @@ function Square() {
   const localPosts = useCampusStore((s) => s.localPosts);
   const following = useCampusStore((s) => s.following);
   const connections = useCampusStore((s) => s.connections);
+  const homeCampusId = useCampusStore((s) => s.homeCampusId);
   const interests = useCampusStore((s) => s.interests);
   const likeCounts = useCampusStore((s) => s.likeCounts);
-  const searches = useCampusStore((s) => s.searches);
+  const searches = useCampusStore((s) => s.recentSearches);
   const setComposeOpen = useCampusStore((s) => s.setComposeOpen);
   const setDropOpen = useCampusStore((s) => s.setDropOpen);
   const setSquareView = useCampusStore((s) => s.setSquareView);
@@ -64,8 +65,8 @@ function Square() {
   }, [catalog.posts, localPosts]);
 
   const lanePosts = useMemo(
-    () => postsForLane(merged, lane, { following, connections, interests, likeCounts, searches }),
-    [merged, lane, following, connections, interests, likeCounts, searches],
+    () => postsForLane(merged, lane, { following, interests, universityId: homeCampusId, likeCounts, searches }, connections),
+    [merged, lane, following, connections, interests, homeCampusId, likeCounts, searches],
   );
 
   const stream = useMemo(() => loopStream(lanePosts, shown), [lanePosts, shown]);
@@ -388,7 +389,7 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
                   e.preventDefault();
                   if (!reply.trim()) return;
                   const body = reply.trim();
-                  addPostReply(key, body, "you");
+                  addPostReply(key, { id: `local-reply-${Date.now()}`, authorHandle: "you", body, createdAt: new Date().toISOString() });
                   if (user) void addSquareReply({ data: { postId: key, body } }).catch(() => {});
                   setReply("");
                 }}
