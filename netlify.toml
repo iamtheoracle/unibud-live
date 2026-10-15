@@ -10,6 +10,7 @@
   NODE_VERSION = "22"
   VITE_AUTH_ENABLED = "false"
   NPM_CONFIG_LEGACY_PEER_DEPS = "true"
+  NPM_FLAGS = "--legacy-peer-deps --include=dev --no-audit --no-fund"
   NPM_CONFIG_PRODUCTION = "false"
   NODE_OPTIONS = "--max-old-space-size=4096"
 
