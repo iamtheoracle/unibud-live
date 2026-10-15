@@ -14,6 +14,34 @@
 - No secrets, private user content, or sensitive data in source control, client bundles, logs, analytics, or test fixtures.
 - Changes ship through isolated previews and explicit verification gates. Production is not the test environment.
 
+## Centuries-ahead engineering principles
+
+The horizon is long-term adaptability, not a claim that today's technology can predict centuries of change. UNIBUD should preserve its core purpose while allowing its interfaces, models, vendors, protocols, and infrastructure to change without destabilizing the whole platform.
+
+- **Speed is a feature.** Measure user-perceived performance, server latency, database query time, queue delay, and payload size. Set budgets, profile real bottlenecks, and prevent regressions in CI.
+- **Intelligence belongs in the workflow.** Use context, verified evidence, explicit rules, ranking, personalization controls, and bounded orchestration to reduce effort and help users make better decisions. Do not add a conversational layer where a direct, faster interface is better.
+- **Small core, expandable capabilities.** Keep a dependable core and attach capabilities through typed contracts, versioned APIs, events, and replaceable adapters. Avoid tight coupling to any single model, cloud, database vendor, or external provider.
+- **Async by design where waiting adds no value.** Move imports, notifications, media processing, indexing, and long-running provider operations to durable jobs with idempotency, bounded retries, dead-letter handling, and visible status. Keep interactive paths short.
+- **Cache deliberately.** Use measured, invalidation-aware caching for public reference data and safe read paths. Never trade correctness, authorization, or private-data isolation for a faster response.
+- **Design for graceful degradation.** When a provider, network, or optional capability fails, preserve the rest of the product and clearly identify what is unavailable. No silent data loss or pretend success.
+- **Make change reversible.** Use backward-compatible migrations, feature flags, staged rollouts, exportable data, documented rollback, and tested recovery. A future replacement should not require a platform-wide rewrite.
+- **Learn from evidence, not hype.** Instrument real user journeys and evaluate quality, latency, reliability, privacy, and cost before adopting a new technique or infrastructure layer.
+
+### Initial performance budgets to validate
+
+These are proposed starting guardrails, not claims about current production performance. Record a baseline first, test on representative mid-range phones and weak networks, then ratify targets using real measurements.
+
+| Measure | Initial target |
+|---|---|
+| Cached/read API response, p95 | 300 ms or less, excluding external-provider time |
+| First meaningful interaction | Within 2.5 seconds on a representative mobile 4G profile |
+| Core route transition | 200 ms or less for local interaction feedback; network completion measured separately |
+| User-facing write acknowledgement | 500 ms or less when the durable write completes locally on the server; long work returns a truthful pending state |
+| Repeated submission | No duplicate effect when the same idempotency key is retried |
+| Failure recovery | Every queued job has bounded retries, observable status, and a defined terminal failure path |
+
+Targets must be segmented by journey and device class. External-provider latency must be measured separately rather than hidden inside an application metric. Any budget change should include the baseline, rationale, and regression impact.
+
 ## Target architecture
 
 Build a **modular, PostgreSQL-first platform** before considering distributed services. Modules have explicit contracts and ownership, but remain in the existing deployable application until operational evidence justifies separation.
