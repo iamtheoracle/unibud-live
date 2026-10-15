@@ -297,6 +297,52 @@ create table if not exists academic_import_runs (
   metadata jsonb not null default '{}'::jsonb
 );
 
+-- Country-specific quality/accreditation standards and evidence-backed mappings.
+-- A standard's local identifier and wording are preserved; cross-country equivalence
+-- must be represented by a separate reviewed claim, never inferred from its label.
+create table if not exists academic_standards (
+  id text primary key,
+  country_code char(2) references academic_countries(code),
+  authority_id text references academic_authorities(id),
+  code text,
+  title text not null,
+  standard_type text not null,
+  version_label text,
+  description text,
+  effective_from date,
+  effective_until date,
+  official_source_url text,
+  verification_status text not null default 'unverified'
+    check (verification_status in ('unverified','pending_review','verified','stale')),
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (effective_until is null or effective_from is null or effective_until >= effective_from)
+);
+
+create table if not exists academic_standard_mappings (
+  id text primary key,
+  standard_id text not null references academic_standards(id) on delete cascade,
+  entity_type text not null
+    check (entity_type in ('institution','campus','accreditation','framework','level','programme','curriculum','course','syllabus_topic')),
+  entity_id text not null,
+  compliance_status text not null default 'unknown'
+    check (compliance_status in ('meets','partially_meets','does_not_meet','not_assessed','unknown')),
+  source_id text references academic_sources(id),
+  evidence_note text,
+  assessed_at timestamptz,
+  reviewer_id text,
+  review_status text not null default 'pending_review'
+    check (review_status in ('pending_review','accepted','rejected','superseded')),
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+-- Programme-specific accreditation is linked after the programme table exists.
+alter table academic_accreditations
+  add constraint academic_accreditations_programme_fk
+  foreign key (programme_id) references academic_programmes(id) on delete cascade;
+
 create index if not exists academic_institutions_country_type_idx
   on academic_institutions (country_code, institution_type_id, verification_status);
 create index if not exists academic_institutions_name_idx
