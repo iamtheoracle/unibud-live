@@ -21,6 +21,7 @@ import { Route as AppCreatorRouteImport } from './routes/_app/creator'
 import { Route as AppDiscoveryRouteImport } from './routes/_app/discovery'
 import { Route as AppFeedbackRouteImport } from './routes/_app/feedback'
 import { Route as AppFixerRouteImport } from './routes/_app/fixer'
+import { Route as AppGuildRouteImport } from './routes/_app/guild'
 import { Route as AppHelpRouteImport } from './routes/_app/help'
 import { Route as AppLiveRouteImport } from './routes/_app/live'
 import { Route as AppMarketRouteImport } from './routes/_app/market'
@@ -36,10 +37,12 @@ import { Route as AppSearchRouteImport } from './routes/_app/search'
 import { Route as AppSellRouteImport } from './routes/_app/sell'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppSocialRouteImport } from './routes/_app/social'
+import { Route as AppSoulyncRouteImport } from './routes/_app/soulync'
 import { Route as AppSpillRouteImport } from './routes/_app/spill'
 import { Route as AppStudiesRouteImport } from './routes/_app/studies'
 import { Route as AppTutorRouteImport } from './routes/_app/tutor'
 import { Route as AppWatchRouteImport } from './routes/_app/watch'
+import { Route as AppWaywardRouteImport } from './routes/_app/wayward'
 import { Route as AppWelcomeRouteImport } from './routes/_app/welcome'
 import { Route as AppAudioIdRouteImport } from './routes/_app/audio.$id'
 import { Route as AppBoardIdRouteImport } from './routes/_app/board.$id'
@@ -47,6 +50,8 @@ import { Route as AppBudCommunitiesRouteImport } from './routes/_app/bud.communi
 import { Route as AppBudFixerRouteImport } from './routes/_app/bud.fixer'
 import { Route as AppCommunitiesCommunityIdRouteImport } from './routes/_app/communities/$communityId'
 import { Route as AppCommunitiesIdRouteImport } from './routes/_app/communities.$id'
+import { Route as AppGuildConciergeRouteImport } from './routes/_app/guild.concierge'
+import { Route as AppGuildQuarterRouteImport } from './routes/_app/guild.quarter'
 import { Route as AppMarketIndexRouteImport } from './routes/_app/market/index'
 import { Route as AppMarketIdRouteImport } from './routes/_app/market.$id'
 import { Route as AppMarketListingIdRouteImport } from './routes/_app/market/$listingId'
@@ -114,6 +119,11 @@ const AppFeedbackRoute = AppFeedbackRouteImport.update({
 const AppFixerRoute = AppFixerRouteImport.update({
   id: '/fixer',
   path: '/fixer',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppGuildRoute = AppGuildRouteImport.update({
+  id: '/guild',
+  path: '/guild',
   getParentRoute: () => AppRoute,
 } as any)
 const AppHelpRoute = AppHelpRouteImport.update({
@@ -191,6 +201,11 @@ const AppSocialRoute = AppSocialRouteImport.update({
   path: '/social',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSoulyncRoute = AppSoulyncRouteImport.update({
+  id: '/soulync',
+  path: '/soulync',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSpillRoute = AppSpillRouteImport.update({
   id: '/spill',
   path: '/spill',
@@ -209,6 +224,11 @@ const AppTutorRoute = AppTutorRouteImport.update({
 const AppWatchRoute = AppWatchRouteImport.update({
   id: '/watch',
   path: '/watch',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppWaywardRoute = AppWaywardRouteImport.update({
+  id: '/wayward',
+  path: '/wayward',
   getParentRoute: () => AppRoute,
 } as any)
 const AppWelcomeRoute = AppWelcomeRouteImport.update({
@@ -246,6 +266,16 @@ const AppCommunitiesIdRoute = AppCommunitiesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => AppCommunitiesRoute,
+} as any)
+const AppGuildConciergeRoute = AppGuildConciergeRouteImport.update({
+  id: '/concierge',
+  path: '/concierge',
+  getParentRoute: () => AppGuildRoute,
+} as any)
+const AppGuildQuarterRoute = AppGuildQuarterRouteImport.update({
+  id: '/quarter',
+  path: '/quarter',
+  getParentRoute: () => AppGuildRoute,
 } as any)
 const AppMarketIndexRoute = AppMarketIndexRouteImport.update({
   id: '/',
@@ -305,6 +335,7 @@ export interface FileRoutesByFullPath {
   '/discovery': typeof AppDiscoveryRoute
   '/feedback': typeof AppFeedbackRoute
   '/fixer': typeof AppFixerRoute
+  '/guild': typeof AppGuildRouteWithChildren
   '/help': typeof AppHelpRoute
   '/live': typeof AppLiveRoute
   '/market': typeof AppMarketRouteWithChildren
@@ -320,10 +351,12 @@ export interface FileRoutesByFullPath {
   '/sell': typeof AppSellRoute
   '/settings': typeof AppSettingsRoute
   '/social': typeof AppSocialRoute
+  '/soulync': typeof AppSoulyncRoute
   '/spill': typeof AppSpillRouteWithChildren
   '/studies': typeof AppStudiesRoute
   '/tutor': typeof AppTutorRoute
   '/watch': typeof AppWatchRoute
+  '/wayward': typeof AppWaywardRoute
   '/welcome': typeof AppWelcomeRoute
   '/audio/$id': typeof AppAudioIdRoute
   '/board/$id': typeof AppBoardIdRoute
@@ -331,6 +364,8 @@ export interface FileRoutesByFullPath {
   '/bud/fixer': typeof AppBudFixerRoute
   '/communities/$communityId': typeof AppCommunitiesCommunityIdRoute
   '/communities/$id': typeof AppCommunitiesIdRoute
+  '/guild/concierge': typeof AppGuildConciergeRoute
+  '/guild/quarter': typeof AppGuildQuarterRoute
   '/market/$id': typeof AppMarketIdRoute
   '/market/$listingId': typeof AppMarketListingIdRoute
   '/messages/$id': typeof AppMessagesIdRoute
@@ -352,6 +387,7 @@ export interface FileRoutesByTo {
   '/discovery': typeof AppDiscoveryRoute
   '/feedback': typeof AppFeedbackRoute
   '/fixer': typeof AppFixerRoute
+  '/guild': typeof AppGuildRouteWithChildren
   '/help': typeof AppHelpRoute
   '/live': typeof AppLiveRoute
   '/messages': typeof AppMessagesRouteWithChildren
@@ -366,10 +402,12 @@ export interface FileRoutesByTo {
   '/sell': typeof AppSellRoute
   '/settings': typeof AppSettingsRoute
   '/social': typeof AppSocialRoute
+  '/soulync': typeof AppSoulyncRoute
   '/spill': typeof AppSpillRouteWithChildren
   '/studies': typeof AppStudiesRoute
   '/tutor': typeof AppTutorRoute
   '/watch': typeof AppWatchRoute
+  '/wayward': typeof AppWaywardRoute
   '/welcome': typeof AppWelcomeRoute
   '/': typeof AppIndexRoute
   '/audio/$id': typeof AppAudioIdRoute
@@ -378,6 +416,8 @@ export interface FileRoutesByTo {
   '/bud/fixer': typeof AppBudFixerRoute
   '/communities/$communityId': typeof AppCommunitiesCommunityIdRoute
   '/communities/$id': typeof AppCommunitiesIdRoute
+  '/guild/concierge': typeof AppGuildConciergeRoute
+  '/guild/quarter': typeof AppGuildQuarterRoute
   '/market/$id': typeof AppMarketIdRoute
   '/market/$listingId': typeof AppMarketListingIdRoute
   '/messages/$id': typeof AppMessagesIdRoute
@@ -401,6 +441,7 @@ export interface FileRoutesById {
   '/_app/discovery': typeof AppDiscoveryRoute
   '/_app/feedback': typeof AppFeedbackRoute
   '/_app/fixer': typeof AppFixerRoute
+  '/_app/guild': typeof AppGuildRouteWithChildren
   '/_app/help': typeof AppHelpRoute
   '/_app/live': typeof AppLiveRoute
   '/_app/market': typeof AppMarketRouteWithChildren
@@ -416,10 +457,12 @@ export interface FileRoutesById {
   '/_app/sell': typeof AppSellRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/social': typeof AppSocialRoute
+  '/_app/soulync': typeof AppSoulyncRoute
   '/_app/spill': typeof AppSpillRouteWithChildren
   '/_app/studies': typeof AppStudiesRoute
   '/_app/tutor': typeof AppTutorRoute
   '/_app/watch': typeof AppWatchRoute
+  '/_app/wayward': typeof AppWaywardRoute
   '/_app/welcome': typeof AppWelcomeRoute
   '/_app/': typeof AppIndexRoute
   '/_app/audio/$id': typeof AppAudioIdRoute
@@ -428,6 +471,8 @@ export interface FileRoutesById {
   '/_app/bud/fixer': typeof AppBudFixerRoute
   '/_app/communities/$communityId': typeof AppCommunitiesCommunityIdRoute
   '/_app/communities/$id': typeof AppCommunitiesIdRoute
+  '/_app/guild/concierge': typeof AppGuildConciergeRoute
+  '/_app/guild/quarter': typeof AppGuildQuarterRoute
   '/_app/market/$id': typeof AppMarketIdRoute
   '/_app/market/$listingId': typeof AppMarketListingIdRoute
   '/_app/messages/$id': typeof AppMessagesIdRoute
@@ -452,6 +497,7 @@ export interface FileRouteTypes {
     | '/discovery'
     | '/feedback'
     | '/fixer'
+    | '/guild'
     | '/help'
     | '/live'
     | '/market'
@@ -467,10 +513,12 @@ export interface FileRouteTypes {
     | '/sell'
     | '/settings'
     | '/social'
+    | '/soulync'
     | '/spill'
     | '/studies'
     | '/tutor'
     | '/watch'
+    | '/wayward'
     | '/welcome'
     | '/audio/$id'
     | '/board/$id'
@@ -478,6 +526,8 @@ export interface FileRouteTypes {
     | '/bud/fixer'
     | '/communities/$communityId'
     | '/communities/$id'
+    | '/guild/concierge'
+    | '/guild/quarter'
     | '/market/$id'
     | '/market/$listingId'
     | '/messages/$id'
@@ -499,6 +549,7 @@ export interface FileRouteTypes {
     | '/discovery'
     | '/feedback'
     | '/fixer'
+    | '/guild'
     | '/help'
     | '/live'
     | '/messages'
@@ -513,10 +564,12 @@ export interface FileRouteTypes {
     | '/sell'
     | '/settings'
     | '/social'
+    | '/soulync'
     | '/spill'
     | '/studies'
     | '/tutor'
     | '/watch'
+    | '/wayward'
     | '/welcome'
     | '/'
     | '/audio/$id'
@@ -525,6 +578,8 @@ export interface FileRouteTypes {
     | '/bud/fixer'
     | '/communities/$communityId'
     | '/communities/$id'
+    | '/guild/concierge'
+    | '/guild/quarter'
     | '/market/$id'
     | '/market/$listingId'
     | '/messages/$id'
@@ -547,6 +602,7 @@ export interface FileRouteTypes {
     | '/_app/discovery'
     | '/_app/feedback'
     | '/_app/fixer'
+    | '/_app/guild'
     | '/_app/help'
     | '/_app/live'
     | '/_app/market'
@@ -562,10 +618,12 @@ export interface FileRouteTypes {
     | '/_app/sell'
     | '/_app/settings'
     | '/_app/social'
+    | '/_app/soulync'
     | '/_app/spill'
     | '/_app/studies'
     | '/_app/tutor'
     | '/_app/watch'
+    | '/_app/wayward'
     | '/_app/welcome'
     | '/_app/'
     | '/_app/audio/$id'
@@ -574,6 +632,8 @@ export interface FileRouteTypes {
     | '/_app/bud/fixer'
     | '/_app/communities/$communityId'
     | '/_app/communities/$id'
+    | '/_app/guild/concierge'
+    | '/_app/guild/quarter'
     | '/_app/market/$id'
     | '/_app/market/$listingId'
     | '/_app/messages/$id'
@@ -677,6 +737,13 @@ declare module '@tanstack/react-router' {
       path: '/fixer'
       fullPath: '/fixer'
       preLoaderRoute: typeof AppFixerRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/guild': {
+      id: '/_app/guild'
+      path: '/guild'
+      fullPath: '/guild'
+      preLoaderRoute: typeof AppGuildRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/help': {
@@ -784,6 +851,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSocialRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/soulync': {
+      id: '/_app/soulync'
+      path: '/soulync'
+      fullPath: '/soulync'
+      preLoaderRoute: typeof AppSoulyncRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/spill': {
       id: '/_app/spill'
       path: '/spill'
@@ -810,6 +884,13 @@ declare module '@tanstack/react-router' {
       path: '/watch'
       fullPath: '/watch'
       preLoaderRoute: typeof AppWatchRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/wayward': {
+      id: '/_app/wayward'
+      path: '/wayward'
+      fullPath: '/wayward'
+      preLoaderRoute: typeof AppWaywardRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/welcome': {
@@ -860,6 +941,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/communities/$id'
       preLoaderRoute: typeof AppCommunitiesIdRouteImport
       parentRoute: typeof AppCommunitiesRoute
+    }
+    '/_app/guild/concierge': {
+      id: '/_app/guild/concierge'
+      path: '/concierge'
+      fullPath: '/guild/concierge'
+      preLoaderRoute: typeof AppGuildConciergeRouteImport
+      parentRoute: typeof AppGuildRoute
+    }
+    '/_app/guild/quarter': {
+      id: '/_app/guild/quarter'
+      path: '/quarter'
+      fullPath: '/guild/quarter'
+      preLoaderRoute: typeof AppGuildQuarterRouteImport
+      parentRoute: typeof AppGuildRoute
     }
     '/_app/market/': {
       id: '/_app/market/'
@@ -966,6 +1061,20 @@ const AppCommunitiesRouteWithChildren = AppCommunitiesRoute._addFileChildren(
   AppCommunitiesRouteChildren,
 )
 
+interface AppGuildRouteChildren {
+  AppGuildConciergeRoute: typeof AppGuildConciergeRoute
+  AppGuildQuarterRoute: typeof AppGuildQuarterRoute
+}
+
+const AppGuildRouteChildren: AppGuildRouteChildren = {
+  AppGuildConciergeRoute: AppGuildConciergeRoute,
+  AppGuildQuarterRoute: AppGuildQuarterRoute,
+}
+
+const AppGuildRouteWithChildren = AppGuildRoute._addFileChildren(
+  AppGuildRouteChildren,
+)
+
 interface AppMarketRouteChildren {
   AppMarketIdRoute: typeof AppMarketIdRoute
   AppMarketListingIdRoute: typeof AppMarketListingIdRoute
@@ -1026,6 +1135,7 @@ interface AppRouteChildren {
   AppDiscoveryRoute: typeof AppDiscoveryRoute
   AppFeedbackRoute: typeof AppFeedbackRoute
   AppFixerRoute: typeof AppFixerRoute
+  AppGuildRoute: typeof AppGuildRouteWithChildren
   AppHelpRoute: typeof AppHelpRoute
   AppLiveRoute: typeof AppLiveRoute
   AppMarketRoute: typeof AppMarketRouteWithChildren
@@ -1041,10 +1151,12 @@ interface AppRouteChildren {
   AppSellRoute: typeof AppSellRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppSocialRoute: typeof AppSocialRoute
+  AppSoulyncRoute: typeof AppSoulyncRoute
   AppSpillRoute: typeof AppSpillRouteWithChildren
   AppStudiesRoute: typeof AppStudiesRoute
   AppTutorRoute: typeof AppTutorRoute
   AppWatchRoute: typeof AppWatchRoute
+  AppWaywardRoute: typeof AppWaywardRoute
   AppWelcomeRoute: typeof AppWelcomeRoute
   AppIndexRoute: typeof AppIndexRoute
   AppAudioIdRoute: typeof AppAudioIdRoute
@@ -1060,6 +1172,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDiscoveryRoute: AppDiscoveryRoute,
   AppFeedbackRoute: AppFeedbackRoute,
   AppFixerRoute: AppFixerRoute,
+  AppGuildRoute: AppGuildRouteWithChildren,
   AppHelpRoute: AppHelpRoute,
   AppLiveRoute: AppLiveRoute,
   AppMarketRoute: AppMarketRouteWithChildren,
@@ -1075,10 +1188,12 @@ const AppRouteChildren: AppRouteChildren = {
   AppSellRoute: AppSellRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppSocialRoute: AppSocialRoute,
+  AppSoulyncRoute: AppSoulyncRoute,
   AppSpillRoute: AppSpillRouteWithChildren,
   AppStudiesRoute: AppStudiesRoute,
   AppTutorRoute: AppTutorRoute,
   AppWatchRoute: AppWatchRoute,
+  AppWaywardRoute: AppWaywardRoute,
   AppWelcomeRoute: AppWelcomeRoute,
   AppIndexRoute: AppIndexRoute,
   AppAudioIdRoute: AppAudioIdRoute,
@@ -1097,12 +1212,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

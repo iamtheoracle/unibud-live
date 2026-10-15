@@ -159,7 +159,7 @@ function RiffCard({ spill, onQuote }: { spill: SpillPost; onQuote: () => void })
   return (
     <article className="border-b border-border px-5 py-4">
       <div className="flex items-start gap-3">
-        <Avatar handle={spill.authorHandle} name={name} />
+        <Avatar name={name} />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
             <p className="truncate text-sm font-medium">{name}</p>
@@ -170,9 +170,7 @@ function RiffCard({ spill, onQuote }: { spill: SpillPost; onQuote: () => void })
             <p className="text-xs text-muted-foreground">{community.name}</p>
           ) : null}
           <p className="mt-1 text-sm leading-relaxed">{spill.body}</p>
-          {spill.image ? (
-            <img src={spill.image} alt="" className="mt-3 h-40 w-full rounded-2xl object-cover" />
-          ) : spill.quotedFrom ? (
+          {spill.quotedFrom ? (
             <div className="mt-2 rounded-xl bg-secondary px-3 py-2 text-xs text-muted-foreground">
               From Square · @{spill.quotedFrom.handle}: {spill.quotedFrom.body}
             </div>
