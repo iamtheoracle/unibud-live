@@ -1,9 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Wordmark } from "@/components/brand/logo";
-import { useCampusStore, type LifeStage } from "@/lib/unibud/campus-store";
-import { upsertMyProfile } from "@/lib/unibud/server";
+import { useCampusStore } from "@/lib/unibud/campus-store";
+import { getMyProfile, upsertMyProfile } from "@/lib/unibud/server";
 import { useAuthReady } from "@/components/unibud/sign-in-gate";
 import { cn } from "@/lib/utils";
 
@@ -24,106 +26,152 @@ function Welcome() {
   const setOnboardingDone = useCampusStore((s) => s.setOnboardingDone);
   const setInterests = useCampusStore((s) => s.setInterests);
   const setAcademicInterests = useCampusStore((s) => s.setAcademicInterests);
-  const setLifeStage = useCampusStore((s) => s.setLifeStage);
-  const onboardingDone = useCampusStore((s) => s.onboardingDone);
-  const [step, setStep] = useState(0);
-  const [who, setWho] = useState<LifeStage>("student");
+  const setLegalName = useCampusStore((s) => s.setLegalName);
+  const [step, setStep] = useState<0 | 1>(0);
+  const [displayName, setDisplayName] = useState("");
+  const [handle, setHandle] = useState("");
   const [social, setSocial] = useState<string[]>([]);
   const [academic, setAcademic] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [checkingProfile, setCheckingProfile] = useState(true);
 
   useEffect(() => {
-    if (user && onboardingDone) void nav({ to: "/" });
-  }, [user, onboardingDone, nav]);
+    let active = true;
+    if (!user) {
+      setCheckingProfile(false);
+      return;
+    }
+    void getMyProfile()
+      .then((profile) => {
+        if (!active) return;
+        if (profile?.onboardingDone) void nav({ to: "/" });
+        setCheckingProfile(false);
+      })
+      .catch(() => {
+        if (active) setCheckingProfile(false);
+      });
+    return () => { active = false; };
+  }, [user, nav]);
 
-  function finish() {
-    setInterests(social);
-    setAcademicInterests(academic);
-    setLifeStage(who);
-    setOnboardingDone(true);
-    if (user) void upsertMyProfile({ data: { onboardingDone: true } });
-    void nav({ to: "/" });
+  function continueToInterests() {
+    setError(null);
+    const cleanName = displayName.trim().replace(/\s+/g, " ");
+    const cleanHandle = handle.trim().replace(/^@/, "").toLowerCase();
+    if (cleanName.length < 2) {
+      setError("Add your name so people know what to call you.");
+      return;
+    }
+    if (!/^[a-z0-9_]{3,20}$/.test(cleanHandle)) {
+      setError("Choose a username with 3–20 letters, numbers or underscores.");
+      return;
+    }
+    setDisplayName(cleanName);
+    setHandle(cleanHandle);
+    setStep(1);
+  }
+
+  async function finish() {
+    setError(null);
+    setSaving(true);
+    try {
+      setInterests(social);
+      setAcademicInterests(academic);
+      setLegalName(displayName.trim());
+      if (user) {
+        await upsertMyProfile({
+          data: {
+            displayName: displayName.trim(),
+            handle: handle.trim().replace(/^@/, "").toLowerCase(),
+            onboardingDone: true,
+          },
+        });
+        setOnboardingDone(true);
+        await nav({ to: "/" });
+      } else {
+        await nav({ to: "/riff" });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save your profile. Try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const hints = social.flatMap((id) => ROOM_HINTS[id] ?? []);
 
-  if (isPending) {
-    return <div className="m-6 h-64 animate-pulse rounded-3xl bg-secondary" />;
+  if (isPending || checkingProfile) {
+    return <div className="mx-auto mt-8 h-48 max-w-md animate-pulse rounded-3xl bg-secondary" />;
   }
 
   if (!user) {
     return (
       <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6">
-        <Wordmark size="sm" className="mb-10 max-w-[9rem]" />
-        <p className="kicker">Welcome</p>
-        <h1 className="mt-3 font-display text-4xl font-medium">The UNIBUD world.</h1>
+        <Wordmark size="sm" className="mb-8 max-w-[9rem]" />
+        <h1 className="font-display text-3xl font-medium">Make it yours, when you’re ready.</h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          People, ideas, culture, and learning. Sign in to keep your wallet, chats, and semester with you.
+          No long form. You can explore Riff anonymously, or create an account to keep your profile.
         </p>
-        <div className="mt-8 space-y-3">
-          <Link to="/login" search={{ mode: "up" }}>
-            <Button className="w-full">Create account</Button>
-          </Link>
-          <Link to="/login">
-            <Button variant="outline" className="w-full">
-              Sign in
-            </Button>
-          </Link>
-        </div>
-        <button
-          type="button"
-          className="mt-6 text-sm text-muted-foreground"
-          onClick={() => {
-            try {
-              sessionStorage.setItem("unibud-guest-browse", "1");
-            } catch {
-              /* ignore */
-            }
-            void nav({ to: "/" });
-          }}
-        >
-          Look around first
-        </button>
+        <Button asChild className="mt-7 w-full">
+          <Link to="/login" search={{ mode: "up" }}>Create account</Link>
+        </Button>
+        <Button asChild variant="outline" className="mt-3 w-full">
+          <Link to="/riff">Explore Riff</Link>
+        </Button>
+        <Button asChild variant="ghost" className="mt-2 w-full">
+          <Link to="/bud">Try Bud as a guest</Link>
+        </Button>
       </main>
     );
   }
 
   return (
-    <main className="safe-bottom px-5 pt-10">
-      <p className="kicker">Welcome</p>
-      <h1 className="mt-2 font-display text-4xl">A few things, so the mix is yours.</h1>
+    <main className="safe-bottom mx-auto max-w-xl px-5 pb-10 pt-8">
+      <Wordmark size="sm" className="mb-8 max-w-[9rem]" />
+      <p className="kicker">Welcome to UNIBUD</p>
+      <h1 className="mt-2 font-display text-4xl tracking-tight">
+        {step === 0 ? "What should we call you?" : "Tune your corner."}
+      </h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Short questions. Skip anything. Nothing here grants extra permissions.
+        {step === 0
+          ? "Just your name and username. The rest can wait."
+          : "Pick what you’re into, or skip it. You can change these any time."}
       </p>
 
       {step === 0 ? (
-        <section className="mt-8">
-          <p className="text-sm font-medium">You’re here as…</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {(
-              [
-                ["student", "Student"],
-                ["tutor", "Tutor"],
-                ["both", "Both"],
-                ["pre", "Pre-university"],
-              ] as const
-            ).map(([id, label]) => (
-              <Chip key={id} on={who === id} onClick={() => setWho(id)}>
-                {label}
-              </Chip>
-            ))}
+        <section className="mt-8 space-y-5">
+          <div className="space-y-1.5">
+            <Label htmlFor="display-name">Full name</Label>
+            <Input
+              id="display-name"
+              autoComplete="name"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Your name"
+              maxLength={80}
+              required
+            />
           </div>
-          {who === "tutor" || who === "both" ? (
-            <p className="mt-4 text-xs text-muted-foreground">
-              Bud will remember you teach. Tutor Mode still needs lecturer verification — this does not grant it.
+          <div className="space-y-1.5">
+            <Label htmlFor="username">Username</Label>
+            <Input
+              id="username"
+              autoComplete="username"
+              value={handle}
+              onChange={(e) => setHandle(e.target.value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20))}
+              placeholder="yourname"
+              maxLength={20}
+              required
+              aria-describedby="username-help"
+            />
+            <p id="username-help" className="text-xs text-muted-foreground">
+              Use 3–20 letters, numbers or underscores. This is how people can mention you.
             </p>
-          ) : null}
-          <Button className="mt-8 w-full" onClick={() => setStep(1)}>
-            Continue
-          </Button>
+          </div>
+          {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+          <Button className="w-full" onClick={continueToInterests}>Continue</Button>
         </section>
-      ) : null}
-
-      {step === 1 ? (
+      ) : (
         <section className="mt-8">
           <p className="text-sm font-medium">What do you actually want to see?</p>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -131,36 +179,28 @@ function Welcome() {
               <Chip
                 key={id}
                 on={social.includes(id)}
-                onClick={() =>
-                  setSocial((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
-                }
+                onClick={() => setSocial((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))}
               >
                 {id}
               </Chip>
             ))}
           </div>
-          {who === "tutor" || who === "both" || who === "student" ? (
-            <>
-              <p className="mt-6 text-sm font-medium">Learning, if you want it.</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {ACADEMIC.map((id) => (
-                  <Chip
-                    key={id}
-                    on={academic.includes(id)}
-                    onClick={() =>
-                      setAcademic((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))
-                    }
-                  >
-                    {id}
-                  </Chip>
-                ))}
-              </div>
-            </>
-          ) : null}
+          <p className="mt-6 text-sm font-medium">Learning, if you want it.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {ACADEMIC.map((id) => (
+              <Chip
+                key={id}
+                on={academic.includes(id)}
+                onClick={() => setAcademic((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))}
+              >
+                {id}
+              </Chip>
+            ))}
+          </div>
           {hints.length ? (
             <div className="mt-6">
-              <p className="text-xs text-muted-foreground">Rooms that match, if you want them later.</p>
-              <ul className="mt-2 space-y-1">
+              <p className="text-xs text-muted-foreground">Communities that match your interests</p>
+              <ul className="mt-2 space-y-2">
                 {hints.map((h) => (
                   <li key={h.id}>
                     <Link to="/communities/$id" params={{ id: h.id }} className="text-sm font-medium text-bud">
@@ -171,15 +211,18 @@ function Welcome() {
               </ul>
             </div>
           ) : null}
-          <Button className="mt-8 w-full" onClick={finish}>
-            Take me to Square
+          {error ? <p role="alert" className="mt-4 text-sm text-destructive">{error}</p> : null}
+          <Button className="mt-8 w-full" onClick={() => void finish()} disabled={saving}>
+            {saving ? "Saving…" : "Take me to UNIBUD"}
           </Button>
+          <button type="button" className="mt-4 w-full text-sm text-muted-foreground" onClick={() => void finish()} disabled={saving}>
+            Skip interests for now
+          </button>
+          <button type="button" className="mt-3 w-full text-sm text-muted-foreground" onClick={() => { setError(null); setStep(0); }}>
+            Back to name
+          </button>
         </section>
-      ) : null}
-
-      <button type="button" className="mt-4 w-full text-sm text-muted-foreground" onClick={finish}>
-        Skip for now
-      </button>
+      )}
     </main>
   );
 }
@@ -189,6 +232,7 @@ function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; chi
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={on}
       className={cn(
         "h-9 rounded-full px-4 text-sm capitalize",
         on ? "bg-ink text-paper" : "bg-card ring-1 ring-border",
