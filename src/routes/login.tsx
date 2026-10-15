@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Wordmark } from "@/components/brand/logo";
-import { useCampusStore } from "@/lib/unibud/campus-store";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (s: Record<string, unknown>): { mode?: "in" | "up" } => ({
