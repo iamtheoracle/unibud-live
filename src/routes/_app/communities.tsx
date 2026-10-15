@@ -28,6 +28,7 @@ function Communities() {
   const [tab, setTab] = useState<"discover" | "mine">("discover");
   const [kind, setKind] = useState<"all" | "Class" | "Study" | "University" | "Faculty" | "Interest">("all");
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState<"popular" | "az">("popular");
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [createKind, setCreateKind] = useState<"Study" | "Interest" | "Class">("Study");
@@ -42,9 +43,9 @@ function Communities() {
       c.name.toLowerCase().includes(q.toLowerCase()) ||
       c.description.toLowerCase().includes(q.toLowerCase()),
   );
-  const shown = (tab === "mine" ? communities.filter((c) => mine.data?.includes(c.id)) : communities).filter(
-    (c) => kind === "all" || c.kind === kind || (kind === "Interest" && ["Interest", "Music", "Sports", "Career"].includes(c.kind)),
-  );
+  const shown = (tab === "mine" ? communities.filter((c) => mine.data?.includes(c.id)) : communities)
+    .filter((c) => kind === "all" || c.kind === kind || (kind === "Interest" && ["Interest", "Music", "Sports", "Career"].includes(c.kind)))
+    .sort((a, b) => sort === "az" ? a.name.localeCompare(b.name) : b.members - a.members || a.name.localeCompare(b.name));
 
   return (
     <main className="safe-bottom px-5 pt-6">
@@ -127,6 +128,15 @@ function Communities() {
             className={cn("h-9 shrink-0 rounded-full px-3 text-xs", kind === id ? "bg-ink text-paper" : "bg-secondary")}
           >
             {id === "all" ? "All" : communityKindLabel(id)}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-4 flex justify-end gap-2">
+        {([{ id: "popular", label: "Popular" }, { id: "az", label: "A–Z" }] as const).map((option) => (
+          <button key={option.id} type="button" onClick={() => setSort(option.id)} aria-pressed={sort === option.id}
+            className={cn("rounded-full px-3 py-1.5 text-xs", sort === option.id ? "bg-ink text-paper" : "bg-secondary")}>
+            {option.label}
           </button>
         ))}
       </div>
