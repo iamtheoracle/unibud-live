@@ -35,8 +35,10 @@ export const WEST_AFRICA_COUNTRY_SCOPE: readonly WestAfricaCountryScope[] = [
   {
     countryCode: "BF",
     countryName: "Burkina Faso",
-    sourceDiscoveryStatus: "discovery_required",
-    sourceNotes: "Locate and review the current official ministry/regulator institution, accreditation, programme, and curriculum directories.",
+    sourceDiscoveryStatus: "source_identified",
+    officialSourceUrl: "https://www.mesrsi.gov.bf/fileadmin/user_upload/storage/images/ANNUAIRE_STATISTIQUE_DE_L_ENSEIGNEMENT_SUPERIEUR_2023_2024.pdf",
+    sourcePublisher: "Ministère de l'Enseignement Supérieur, de la Recherche et de l'Innovation",
+    sourceNotes: "Official 2023–2024 statistical yearbook lists higher-education and research institutions. A separate official 2024–2025 private institution list exists; verify current editions and terms before import.",
     importedRecords: 0,
   },
   {
@@ -78,8 +80,10 @@ export const WEST_AFRICA_COUNTRY_SCOPE: readonly WestAfricaCountryScope[] = [
   {
     countryCode: "GN",
     countryName: "Guinea",
-    sourceDiscoveryStatus: "discovery_required",
-    sourceNotes: "Locate and review current official ministry/regulator directories; do not substitute third-party directories for official recognition evidence.",
+    sourceDiscoveryStatus: "source_identified",
+    officialSourceUrl: "https://mesrs.gov.gn/les-organismes-publics-autonomes/",
+    sourcePublisher: "Ministère de l'Enseignement Supérieur et de la Recherche Scientifique",
+    sourceNotes: "Official ministry page identifies universities, institutes and schools, research centres, and the national quality-assurance authority. Review the linked institution directories and programme/accreditation sources.",
     importedRecords: 0,
   },
   {
@@ -101,8 +105,10 @@ export const WEST_AFRICA_COUNTRY_SCOPE: readonly WestAfricaCountryScope[] = [
   {
     countryCode: "ML",
     countryName: "Mali",
-    sourceDiscoveryStatus: "discovery_required",
-    sourceNotes: "Locate and review current official ministry/regulator directories, including institution types, accreditation, programmes, and curriculum sources.",
+    sourceDiscoveryStatus: "source_identified",
+    officialSourceUrl: "https://dg-enseignementsup.ml/rubrique/universites/universites-publiques/",
+    sourcePublisher: "Direction Générale de l'Enseignement Supérieur et de la Recherche Scientifique",
+    sourceNotes: "Official directory of public universities. Additional official pages list public grandes écoles/institutes and private institutions; verify each source and academic session before import.",
     importedRecords: 0,
   },
   {
