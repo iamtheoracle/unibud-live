@@ -8,21 +8,17 @@ import { useCampusStore } from "@/lib/unibud/campus-store";
 import { getMyProfile, upsertMyProfile } from "@/lib/unibud/server";
 import { useAuthReady } from "@/components/unibud/sign-in-gate";
 import { cn } from "@/lib/utils";
+import { useCatalog } from "@/lib/unibud/queries";
 
 export const Route = createFileRoute("/_app/welcome")({ component: Welcome });
 
 const SOCIAL = ["music", "football", "campus gist", "fashion", "tech", "faith", "hustle", "nightlife"];
 const ACADEMIC = ["notes", "exams", "projects", "internships", "research"];
 
-const ROOM_HINTS: Record<string, { to: string; id: string; label: string }[]> = {
-  music: [{ to: "/communities/$id", id: "afrobeats", label: "Afrobeats & Campus DJ" }],
-  football: [{ to: "/communities/$id", id: "five-aside", label: "Five-a-side" }],
-  "campus gist": [{ to: "/communities/$id", id: "the-gist", label: "The Gist" }],
-};
-
 function Welcome() {
   const nav = useNavigate();
   const { user, isPending } = useAuthReady();
+  const { data: catalog } = useCatalog();
   const setOnboardingDone = useCampusStore((s) => s.setOnboardingDone);
   const setInterests = useCampusStore((s) => s.setInterests);
   const setAcademicInterests = useCampusStore((s) => s.setAcademicInterests);
@@ -98,7 +94,31 @@ function Welcome() {
     }
   }
 
-  const hints = social.flatMap((id) => ROOM_HINTS[id] ?? []);
+  const keywordMap: Record<string, string[]> = {
+    "campus gist": ["gist", "campus", "culture", "social"],
+    football: ["football", "sports", "pitch"],
+    music: ["music", "sound", "afrobeats"],
+    fashion: ["fashion", "style"],
+    tech: ["tech", "coding", "build", "career"],
+    faith: ["faith", "religion"],
+    hustle: ["career", "business", "build"],
+    nightlife: ["event", "nightlife", "social"],
+    notes: ["study", "class", "academic"],
+    exams: ["study", "class", "exam"],
+    projects: ["project", "research", "build"],
+    internships: ["career", "internship"],
+    research: ["research", "academic", "study"],
+  };
+  const selected = [...social, ...academic];
+  const hints = (catalog?.communities ?? [])
+    .filter((community) => {
+      const text = [community.name, community.description, community.kind].join(" ").toLowerCase();
+      return selected.some((interest) =>
+        (keywordMap[interest] ?? [interest]).some((keyword) => text.includes(keyword)),
+      );
+    })
+    .sort((a, b) => b.members - a.members || a.name.localeCompare(b.name))
+    .slice(0, 3);
 
   if (isPending || checkingProfile) {
     return <div className="mx-auto mt-8 h-48 max-w-md animate-pulse rounded-3xl bg-secondary" />;
@@ -201,10 +221,14 @@ function Welcome() {
             <div className="mt-6">
               <p className="text-xs text-muted-foreground">Communities that match your interests</p>
               <ul className="mt-2 space-y-2">
-                {hints.map((h) => (
-                  <li key={h.id}>
-                    <Link to="/communities/$id" params={{ id: h.id }} className="text-sm font-medium text-bud">
-                      {h.label}
+                {hints.map((community) => (
+                  <li key={community.id}>
+                    <Link to="/communities/$id" params={{ id: community.id }} className="flex items-center justify-between gap-3 rounded-xl bg-card px-3 py-3 ring-1 ring-border">
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium">{community.name}</span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">{community.members.toLocaleString()} members</span>
+                      </span>
+                      <span className="text-xs font-medium text-bud">View</span>
                     </Link>
                   </li>
                 ))}
