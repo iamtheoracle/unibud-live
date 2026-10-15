@@ -56,11 +56,7 @@ function parseSearchInput(input: AcademicInstitutionSearchInput) {
   };
 }
 
-/**
- * Public read-only search across the reviewed shared catalogue.
- * Unverified/pending records are never silently presented as authoritative.
- * All filter values are bound parameters, never interpolated into SQL.
- */
+/** Public read-only search of verified catalogue records. Values are bound parameters. */
 export const searchAcademicInstitutions = createServerFn({ method: "GET" })
   .validator((input: AcademicInstitutionSearchInput) => parseSearchInput(input))
   .handler(async ({ data }): Promise<AcademicInstitutionSearchResult[]> => {
@@ -71,37 +67,40 @@ export const searchAcademicInstitutions = createServerFn({ method: "GET" })
       "i.operational_status <> 'closed'",
     ];
     const params: unknown[] = [data.countryCode];
-    const add = (clause: string, value: unknown) => {
+
+    const addFilter = (sqlClause: string, value: unknown) => {
       params.push(value);
-      clauses.push(clause.replace("?", "$" + params.length));
+      clauses.push(sqlClause.replace("?", "$" + params.length));
     };
 
     if (data.query) {
-      add(
-        "(i.name ilike ? or coalesce(i.legal_name, '') ilike ? or exists (select 1 from academic_institution_aliases ia where ia.institution_id = i.id and ia.alias ilike ?))",
-        "%" + data.query + "%",
+      const pattern = "%" + data.query + "%";
+      params.push(pattern, pattern, pattern);
+      const nameParam = params.length - 2;
+      const legalNameParam = params.length - 1;
+      const aliasParam = params.length;
+      clauses.push(
+        "(i.name ilike $" + nameParam +
+        " or coalesce(i.legal_name, '') ilike $" + legalNameParam +
+        " or exists (select 1 from academic_institution_aliases ia where ia.institution_id = i.id and ia.alias ilike $" + aliasParam + "))",
       );
-      // The query clause has three placeholders; add the additional bound values.
-      params.push("%" + data.query + "%", "%" + data.query + "%");
-      clauses[clauses.length - 1] = clauses[clauses.length - 1]
-        .replace("ilike $"+(params.length - 2), "ilike $"+(params.length - 2));
     }
-    if (data.institutionTypeId) add("i.institution_type_id = ?", data.institutionTypeId);
-    if (data.ownershipType) add("i.ownership_type = ?", data.ownershipType);
+    if (data.institutionTypeId) addFilter("i.institution_type_id = ?", data.institutionTypeId);
+    if (data.ownershipType) addFilter("i.ownership_type = ?", data.ownershipType);
     if (data.administrativeRegion) {
-      add(
+      addFilter(
         "exists (select 1 from academic_campuses c where c.institution_id = i.id and c.administrative_region ilike ?)",
         "%" + data.administrativeRegion + "%",
       );
     }
     if (data.programmeLevelId) {
-      add(
+      addFilter(
         "exists (select 1 from academic_programmes p where p.institution_id = i.id and p.verification_status = 'verified' and p.qualification_level_id = ?)",
         data.programmeLevelId,
       );
     }
     if (data.subjectAreaCode) {
-      add(
+      addFilter(
         "exists (select 1 from academic_programmes p where p.institution_id = i.id and p.verification_status = 'verified' and p.subject_area_code = ?)",
         data.subjectAreaCode,
       );
@@ -110,7 +109,7 @@ export const searchAcademicInstitutions = createServerFn({ method: "GET" })
     params.push(data.limit, data.offset);
     const limitParam = params.length - 1;
     const offsetParam = params.length;
-    const rows = await sql.query<AcademicInstitutionSearchResult>(
+    return sql.query<AcademicInstitutionSearchResult>(
       `select
         i.id,
         i.country_code as "countryCode",
@@ -133,7 +132,6 @@ export const searchAcademicInstitutions = createServerFn({ method: "GET" })
       limit $${limitParam} offset $${offsetParam}`,
       params,
     );
-    return rows;
   });
 
 export interface AcademicInstitutionDetails {
@@ -142,9 +140,12 @@ export interface AcademicInstitutionDetails {
   campuses: Record<string, unknown>[];
   accreditations: Record<string, unknown>[];
   programmes: Record<string, unknown>[];
+  courses: Record<string, unknown>[];
+  syllabusTopics: Record<string, unknown>[];
+  standards: Record<string, unknown>[];
 }
 
-/** Public detail view only returns verified programmes and dated/source-backed accreditation records. */
+/** Public details expose verified catalogue data and reviewed standards only. */
 export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
   .validator((input: { institutionId: string }) => {
     const institutionId = input.institutionId.trim();
@@ -169,9 +170,9 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
     const institution = institutionRows[0];
     if (!institution) return null;
 
-    const [aliases, campuses, accreditations, programmes] = await Promise.all([
+    const [aliases, campuses, accreditations, programmes, courses, syllabusTopics, standards] = await Promise.all([
       sql.query<Record<string, unknown>>(
-        "select alias, alias_type as \"aliasType\" from academic_institution_aliases where institution_id = $1 order by alias",
+        'select alias, alias_type as "aliasType" from academic_institution_aliases where institution_id = $1 order by alias',
         [data.institutionId],
       ),
       sql.query<Record<string, unknown>>(
@@ -212,7 +213,47 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
          order by p.name`,
         [data.institutionId],
       ),
+      sql.query<Record<string, unknown>>(
+        `select c.id, c.programme_id as "programmeId", c.curriculum_version_id as "curriculumVersionId",
+          c.code, c.title, c.description, c.stage_label as "stageLabel", c.year_or_level as "yearOrLevel",
+          c.term_label as "termLabel", c.credit_value as "creditValue", c.contact_hours as "contactHours",
+          c.prerequisites, c.learning_outcomes as "learningOutcomes", c.official_source_url as "officialSourceUrl",
+          cv.version_label as "curriculumVersion", cv.academic_session as "academicSession"
+         from academic_courses c
+         left join academic_curriculum_versions cv on cv.id = c.curriculum_version_id
+         where c.institution_id = $1 and c.verification_status = 'verified'
+         order by c.programme_id, c.year_or_level nulls last, c.term_label, c.code, c.title`,
+        [data.institutionId],
+      ),
+      sql.query<Record<string, unknown>>(
+        `select st.id, st.course_id as "courseId", st.parent_topic_id as "parentTopicId",
+          st.sequence_number as "sequenceNumber", st.title, st.description,
+          st.expected_hours as "expectedHours", st.learning_outcomes as "learningOutcomes",
+          st.assessment_methods as "assessmentMethods", st.source_url as "sourceUrl"
+         from academic_syllabus_topics st
+         join academic_courses c on c.id = st.course_id
+         where c.institution_id = $1 and c.verification_status = 'verified'
+         order by st.course_id, st.sequence_number nulls last, st.title`,
+        [data.institutionId],
+      ),
+      sql.query<Record<string, unknown>>(
+        `select s.id, s.code, s.title, s.standard_type as "standardType", s.version_label as "versionLabel",
+          m.entity_type as "entityType", m.entity_id as "entityId", m.compliance_status as "complianceStatus",
+          m.evidence_note as "evidenceNote", s.official_source_url as "officialSourceUrl"
+         from academic_standard_mappings m
+         join academic_standards s on s.id = m.standard_id
+         where m.review_status = 'accepted' and s.verification_status = 'verified'
+           and (
+             (m.entity_type = 'institution' and m.entity_id = $1)
+             or (m.entity_type = 'programme' and m.entity_id in
+               (select id from academic_programmes where institution_id = $1 and verification_status = 'verified'))
+             or (m.entity_type = 'course' and m.entity_id in
+               (select id from academic_courses where institution_id = $1 and verification_status = 'verified'))
+           )
+         order by s.title`,
+        [data.institutionId],
+      ),
     ]);
 
-    return { institution, aliases, campuses, accreditations, programmes };
+    return { institution, aliases, campuses, accreditations, programmes, courses, syllabusTopics, standards };
   });
