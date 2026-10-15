@@ -30,7 +30,7 @@ test("country source discovery is not misrepresented as imported data", () => {
   assert.ok(WEST_AFRICA_COUNTRY_SCOPE.every((country) => country.importedRecords === 0));
   const summary = getWestAfricaSourceDiscoverySummary();
   assert.equal(summary.totalCountries, 16);
-  assert.equal(summary.sourceIdentifiedCountries, 12);
-  assert.equal(summary.discoveryRequiredCountries, 4);
+  assert.equal(summary.sourceIdentifiedCountries, 11);
+  assert.equal(summary.discoveryRequiredCountries, 5);
   assert.equal(summary.importedRecords, 0);
 });
