@@ -250,6 +250,20 @@ export interface AcademicSourceAssertion {
   reviewerId?: string | null;
 }
 
+export interface AcademicSourceCoverage {
+  id: string;
+  countryCode: string;
+  sourceId?: string | null;
+  coverageDomain: "institutions" | "campuses" | "accreditation" | "qualification_frameworks" | "programmes" | "courses" | "syllabi" | "standards";
+  status: "discovered" | "configured" | "importing" | "partial" | "verified" | "stale" | "unavailable";
+  lastCheckedAt?: string | null;
+  lastSuccessAt?: string | null;
+  expectedRefreshDays?: number | null;
+  recordsExpected?: number | null;
+  recordsVerified: number;
+  coverageNotes?: string | null;
+}
+
 export interface AcademicImportRun {
   id: string;
   countryCode?: string | null;
