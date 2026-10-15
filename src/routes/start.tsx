@@ -1,4 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { OrbitMark } from "@/components/brand/identity-marks";
 import { Wordmark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 
@@ -7,32 +9,30 @@ export const Route = createFileRoute("/start")({
 });
 
 function Welcome() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void navigate({ to: "/login" });
+    }, 1350);
+    return () => window.clearTimeout(timer);
+  }, [navigate]);
+
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-background px-6 py-12">
       <div className="flex w-full max-w-sm flex-col items-center text-center">
         <Wordmark size="hero" className="mb-8" />
-        <p className="kicker">UNIBUD</p>
-        <h1 className="mt-3 font-display text-3xl font-medium tracking-tight">
-          Where people, ideas and discovery meet.
-        </h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          A quiet assistant named Bud. Sign in to keep your place, or continue as a guest.
+        <p className="font-display text-2xl font-medium tracking-tight">Welcome to UNIBUD</p>
+        <p className="mt-2 max-w-xs text-sm text-muted-foreground">
+          Your people. Your ideas. Your next chapter.
         </p>
-
-        <div className="mt-10 flex w-full flex-col gap-3">
-          <Button asChild className="w-full" size="lg">
-            <Link to="/login">Sign In / Register</Link>
-          </Button>
-          <Button asChild variant="outline" className="w-full" size="lg">
-            <Link to="/bud">
-              Continue as Guest
-            </Link>
-          </Button>
+        <div className="mt-8" aria-label="Loading UNIBUD">
+          <OrbitMark size={44} spinning />
         </div>
-
-        <p className="mt-6 text-[11px] text-muted-foreground">
-          Guest chats are not saved. Sign in anytime to keep your conversations.
-        </p>
+        <p className="sr-only" role="status" aria-live="polite">Getting UNIBUD ready</p>
+        <Button asChild variant="ghost" className="mt-6">
+          <Link to="/login">Continue now</Link>
+        </Button>
       </div>
     </main>
   );
