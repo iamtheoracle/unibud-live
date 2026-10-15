@@ -42,6 +42,8 @@ These are proposed starting guardrails, not claims about current production perf
 
 Targets must be segmented by journey and device class. External-provider latency must be measured separately rather than hidden inside an application metric. Any budget change should include the baseline, rationale, and regression impact.
 
+For the user-facing web experience, also track the established Core Web Vitals at the 75th percentile, separately for mobile and desktop: **Largest Contentful Paint (LCP) ≤ 2.5 s, Interaction to Next Paint (INP) ≤ 200 ms, and Cumulative Layout Shift (CLS) ≤ 0.1**. These are field-performance targets, not substitutes for application API budgets. Source: [web.dev, Web Vitals](https://web.dev/articles/vitals).
+
 ## Target architecture
 
 Build a **modular, PostgreSQL-first platform** before considering distributed services. Modules have explicit contracts and ownership, but remain in the existing deployable application until operational evidence justifies separation.
