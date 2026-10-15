@@ -190,6 +190,82 @@ export interface AcademicRegistryFilters {
   subjectAreaCode?: string;
 }
 
+export interface AcademicInstitutionAlias {
+  id: string;
+  institutionId: string;
+  alias: string;
+  aliasType: "former_name" | "abbreviation" | "local_name" | "alternate_spelling" | "other";
+  sourceId?: string | null;
+}
+
+export interface AcademicAccreditation {
+  id: string;
+  institutionId: string;
+  authorityId?: string | null;
+  programmeId?: string | null;
+  accreditationType: string;
+  status: "accredited" | "provisional" | "suspended" | "withdrawn" | "expired" | "not_accredited" | "unknown";
+  referenceNumber?: string | null;
+  validFrom?: string | null;
+  validUntil?: string | null;
+  officialSourceUrl?: string | null;
+  verifiedAt?: string | null;
+}
+
+export interface AcademicStandard {
+  id: string;
+  countryCode?: string | null;
+  authorityId?: string | null;
+  code?: string | null;
+  title: string;
+  standardType: string;
+  versionLabel?: string | null;
+  effectiveFrom?: string | null;
+  effectiveUntil?: string | null;
+  officialSourceUrl?: string | null;
+  verificationStatus: "unverified" | "pending_review" | "verified" | "stale";
+}
+
+export interface AcademicStandardMapping {
+  id: string;
+  standardId: string;
+  entityType: "institution" | "campus" | "accreditation" | "framework" | "level" | "programme" | "curriculum" | "course" | "syllabus_topic";
+  entityId: string;
+  complianceStatus: "meets" | "partially_meets" | "does_not_meet" | "not_assessed" | "unknown";
+  sourceId?: string | null;
+  evidenceNote?: string | null;
+  assessedAt?: string | null;
+  reviewStatus: "pending_review" | "accepted" | "rejected" | "superseded";
+}
+
+export interface AcademicSourceAssertion {
+  id: string;
+  sourceId: string;
+  entityType: "country" | "authority" | "institution" | "campus" | "accreditation" | "framework" | "level" | "programme" | "curriculum" | "course" | "syllabus_topic";
+  entityId: string;
+  fieldName: string;
+  assertedValue: unknown;
+  reviewStatus: "pending_review" | "accepted" | "rejected" | "superseded";
+  reviewedAt?: string | null;
+  reviewerId?: string | null;
+}
+
+export interface AcademicImportRun {
+  id: string;
+  countryCode?: string | null;
+  sourceId?: string | null;
+  importerName: string;
+  sourceVersion?: string | null;
+  startedAt: string;
+  finishedAt?: string | null;
+  status: "queued" | "running" | "succeeded" | "partial" | "failed" | "cancelled";
+  recordsSeen: number;
+  recordsCreated: number;
+  recordsUpdated: number;
+  recordsRejected: number;
+  errorSummary?: string | null;
+}
+
 /** Normalize ISO country codes without silently guessing a country. */
 export function normalizeCountryCode(value: string): string {
   const normalized = value.trim().toUpperCase();
