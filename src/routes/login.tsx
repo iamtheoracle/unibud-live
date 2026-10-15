@@ -4,7 +4,7 @@ import { authClient, authEnabled } from "@/lib/auth/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Wordmark } from "@/components/brand/logo";
+import { OracleBrand } from "@/components/brand/oracle-brand";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (s: Record<string, unknown>): { mode?: "in" | "up" } => ({
@@ -58,16 +58,15 @@ function Login() {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-background px-5 py-8">
       <section className="w-full max-w-sm">
-        <Link to="/start" className="inline-flex" aria-label="UNIBUD welcome">
-          <Wordmark size="md" className="max-w-[9rem]" />
+        <Link to="/start" className="flex justify-center" aria-label="Oracle welcome">
+          <OracleBrand className="py-1" />
         </Link>
 
         <div className="mt-10">
-          <p className="kicker">Your space, your pace</p>
-          <h1 className="mt-2 font-display text-4xl font-medium tracking-tight">
+          <h1 className="font-display text-3xl font-medium tracking-tight">
             Come in as you are.
           </h1>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
             You don’t need an account to roast, rizz, gossip or gist. Start with Riff, or try Bud.
           </p>
         </div>
@@ -131,11 +130,7 @@ function Login() {
           ) : null}
         </form>
 
-        <div className="my-7 flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="h-px flex-1 bg-border" />
-          Or explore without an account
-          <span className="h-px flex-1 bg-border" />
-        </div>
+        <p className="my-6 text-center text-sm text-muted-foreground">Or continue without an account</p>
 
         <div className="space-y-3">
           <Button asChild variant="outline" className="w-full">
