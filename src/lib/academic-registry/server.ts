@@ -134,15 +134,25 @@ export const searchAcademicInstitutions = createServerFn({ method: "GET" })
     );
   });
 
+export type SerializableAcademicValue =
+  | string
+  | number
+  | boolean
+  | null
+  | SerializableAcademicValue[]
+  | { [key: string]: SerializableAcademicValue };
+
+type SerializableAcademicRecord = Record<string, SerializableAcademicValue>;
+
 export interface AcademicInstitutionDetails {
-  institution: Record<string, unknown>;
-  aliases: Record<string, unknown>[];
-  campuses: Record<string, unknown>[];
-  accreditations: Record<string, unknown>[];
-  programmes: Record<string, unknown>[];
-  courses: Record<string, unknown>[];
-  syllabusTopics: Record<string, unknown>[];
-  standards: Record<string, unknown>[];
+  institution: SerializableAcademicRecord;
+  aliases: SerializableAcademicRecord[];
+  campuses: SerializableAcademicRecord[];
+  accreditations: SerializableAcademicRecord[];
+  programmes: SerializableAcademicRecord[];
+  courses: SerializableAcademicRecord[];
+  syllabusTopics: SerializableAcademicRecord[];
+  standards: SerializableAcademicRecord[];
 }
 
 /** Public details expose verified catalogue data and reviewed standards only. */
@@ -156,7 +166,7 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
   })
   .handler(async ({ data }): Promise<AcademicInstitutionDetails | null> => {
     const sql = await getSql();
-    const institutionRows = await sql.query<Record<string, unknown>>(
+    const institutionRows = await sql.query<SerializableAcademicRecord>(
       `select i.id, i.country_code as "countryCode", i.name, i.legal_name as "legalName",
         i.slug, i.ownership_type as "ownershipType", i.funding_or_governance_label as "fundingOrGovernanceLabel",
         i.official_website as "officialWebsite", i.established_year as "establishedYear",
@@ -171,17 +181,17 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
     if (!institution) return null;
 
     const [aliases, campuses, accreditations, programmes, courses, syllabusTopics, standards] = await Promise.all([
-      sql.query<Record<string, unknown>>(
+      sql.query<SerializableAcademicRecord>(
         'select alias, alias_type as "aliasType" from academic_institution_aliases where institution_id = $1 order by alias',
         [data.institutionId],
       ),
-      sql.query<Record<string, unknown>>(
+      sql.query<SerializableAcademicRecord>(
         `select id, name, campus_type as "campusType", address, locality,
           administrative_region as "administrativeRegion", official_website as "officialWebsite"
          from academic_campuses where institution_id = $1 and operational_status <> 'closed' order by name`,
         [data.institutionId],
       ),
-      sql.query<Record<string, unknown>>(
+      sql.query<SerializableAcademicRecord>(
         `select id, accreditation_type as "accreditationType", status, reference_number as "referenceNumber",
           valid_from as "validFrom", valid_until as "validUntil", official_source_url as "officialSourceUrl",
           verified_at as "verifiedAt"
@@ -189,7 +199,7 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
          order by valid_until desc nulls last`,
         [data.institutionId],
       ),
-      sql.query<Record<string, unknown>>(
+      sql.query<SerializableAcademicRecord>(
         `select p.id, p.code, p.name, p.award_title as "awardTitle", p.subject_area_code as "subjectAreaCode",
           p.study_mode as "studyMode", p.attendance_mode as "attendanceMode",
           p.duration_value as "durationValue", p.duration_unit as "durationUnit",
@@ -213,7 +223,7 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
          order by p.name`,
         [data.institutionId],
       ),
-      sql.query<Record<string, unknown>>(
+      sql.query<SerializableAcademicRecord>(
         `select c.id, c.programme_id as "programmeId", c.curriculum_version_id as "curriculumVersionId",
           c.code, c.title, c.description, c.stage_label as "stageLabel", c.year_or_level as "yearOrLevel",
           c.term_label as "termLabel", c.credit_value as "creditValue", c.contact_hours as "contactHours",
@@ -225,7 +235,7 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
          order by c.programme_id, c.year_or_level nulls last, c.term_label, c.code, c.title`,
         [data.institutionId],
       ),
-      sql.query<Record<string, unknown>>(
+      sql.query<SerializableAcademicRecord>(
         `select st.id, st.course_id as "courseId", st.parent_topic_id as "parentTopicId",
           st.sequence_number as "sequenceNumber", st.title, st.description,
           st.expected_hours as "expectedHours", st.learning_outcomes as "learningOutcomes",
@@ -236,7 +246,7 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
          order by st.course_id, st.sequence_number nulls last, st.title`,
         [data.institutionId],
       ),
-      sql.query<Record<string, unknown>>(
+      sql.query<SerializableAcademicRecord>(
         `select s.id, s.code, s.title, s.standard_type as "standardType", s.version_label as "versionLabel",
           m.entity_type as "entityType", m.entity_id as "entityId", m.compliance_status as "complianceStatus",
           m.evidence_note as "evidenceNote", s.official_source_url as "officialSourceUrl"
