@@ -46,7 +46,7 @@ export interface AcademicAuthority {
   authorityType: string;
   jurisdiction?: string | null;
   officialWebsite?: string | null;
-  sourceStatus: VerificationStatus | "partially_verified";
+  sourceStatus: "unverified" | "partially_verified" | "verified";
 }
 
 export interface AcademicInstitutionType {
