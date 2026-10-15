@@ -1,0 +1,49 @@
+name: Repair lockfile
+on:
+  workflow_dispatch:
+  push:
+    branches: ["fix/guest-access-enforcement-2026-10-13"]
+    paths:
+      - "package.json"
+      - ".github/workflows/repair-lockfile.yml"
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/guest-access-enforcement-2026-10-13
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+      - name: Align package.json and regenerate lockfile
+        run: |
+          set -e
+          node -v
+          npm -v
+          python3 <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("package.json")
+          pkg = json.loads(p.read_text())
+          pkg["packageManager"] = "npm@10.9.2"
+          pkg.pop("overrides", None)
+          p.write_text(json.dumps(pkg, indent=2) + "\n")
+          print("package.json ready")
+          PY
+          rm -f package-lock.json
+          npm install --legacy-peer-deps
+          npm install --legacy-peer-deps
+          rm -rf node_modules
+          npm ci --legacy-peer-deps
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          if git diff --cached --quiet; then echo No changes; exit 0; fi
+          git commit -m "fix: regenerate lockfile for Netlify npm 10.9 / Node 22 (drop overrides)"
+          git push origin HEAD:fix/guest-access-enforcement-2026-10-13

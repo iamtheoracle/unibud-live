@@ -214,30 +214,4 @@ async function runAsk(
   return { ok: true, text: reply, conversationId };
 }
 
-/** Guest path: no auth, no persistence. Conversations are not saved. */
-export const askBudGuest = createServerFn({ method: "POST" })
-  .validator((input: { prompt: string }) => input)
-  .handler(async ({ data }) => {
-    const prompt = (data.prompt || "").trim();
-    if (!prompt) return { ok: false as const, error: "Say something first." };
-    if (prompt.length > 2000) return { ok: false as const, error: "Keep it shorter for guest mode." };
-
-    const provider = getAIProvider();
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 20_000);
-    try {
-      const result = await provider.complete(
-        [
-          { role: "system", content: SYSTEM },
-          { role: "user", content: prompt },
-        ],
-        { maxTokens: 400, signal: controller.signal },
-      );
-      clearTimeout(timer);
-      if (!result.ok) return { ok: false as const, error: result.error };
-      return { ok: true as const, text: result.text };
-    } catch {
-      clearTimeout(timer);
-      return { ok: false as const, error: "Bud is unavailable right now. Try again in a moment." };
-    }
-  });
+export { askBudGuest } from "./guest-ask";

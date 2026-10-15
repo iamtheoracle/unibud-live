@@ -11,7 +11,8 @@ export type AgentId =
   | "library_service" | "marketplace_service" | "housing_service" | "transport_service"
   | "events_service" | "moderation_service" | "security_service" | "analytics_service"
   | "integration_service" | "notification_service" | "outreach_service" | "payment_service"
-  | "communication_service";
+  | "communication_service"
+  | "browser";
 
 export type AgentActivityState = "idle" | "queued" | "working" | "waiting" | "completed" | "failed";
 

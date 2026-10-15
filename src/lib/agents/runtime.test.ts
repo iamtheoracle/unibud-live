@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { executeAgent, toBudMessage, buildAgentWorkPlan } from './runtime.ts';
 import { ORGANIZATION_AGENTS } from './organization.ts';
+import { listAgentDefinitions } from './registry.ts';
 
 const request = (target: any, input: unknown = 'Help with this', extra: any = {}) => ({ id: 'r1', source: 'spark', target, intent: 'support', input, traceId: 't1', ...extra });
 
@@ -12,12 +13,30 @@ test('Oracle is a registered operational intelligence role', () => {
   assert.ok(result.requiredAgents.includes('spark'));
 });
 
-test('all 51 registered agents have an executable behavior path', () => {
+test('all registered agents have a structured runtime behavior path', () => {
   for (const agent of ORGANIZATION_AGENTS) {
     const result = executeAgent({ request: request(agent.id), authorizedContext: {}, availableCapabilities: agent.capabilities });
     assert.notEqual(result.outcome, 'failed', agent.id);
     assert.equal(result.response.agent, agent.id);
   }
+});
+
+test('every registry entry has an attached executable handler', () => {
+  const definitions = listAgentDefinitions();
+  assert.ok(definitions.length >= ORGANIZATION_AGENTS.length);
+  const missing = definitions.filter((definition) => typeof definition.handler !== 'function').map((definition) => definition.id);
+  assert.deepEqual(missing, [], 'agents must not be registered as names only');
+});
+
+test('external research agents do not claim to search without a connected tool', async () => {
+  const definition = listAgentDefinitions().find((agent) => agent.id === 'orbit');
+  assert.equal(typeof definition?.handler, 'function');
+  const result = await definition!.handler!({ requestId: 'r-search', userId: 'test-user', prompt: 'Find current news' }, {
+    requestId: 'r-search', now: new Date(0).toISOString(), userId: 'test-user', prompt: 'Find current news', context: {},
+  });
+  assert.equal(result.ok, false);
+  assert.match(result.error ?? '', /connected search\/data tool/i);
+  assert.match(result.error ?? '', /No source lookup was performed/i);
 });
 
 test('fluctuating connectivity is reported as a timeout, not ignorance', () => {
@@ -42,6 +61,7 @@ test('Bud remains the only user-facing presentation boundary', () => {
   const nonBud = ORGANIZATION_AGENTS.filter((agent) => agent.id !== 'bud');
   assert.ok(nonBud.every((agent) => agent.userFacing === false));
 });
+
 test('every registered role produces a concrete work plan from its mission and duties', () => {
   for (const agent of ORGANIZATION_AGENTS) {
     const plan = buildAgentWorkPlan(agent.id, 'support the student request', agent.capabilities);

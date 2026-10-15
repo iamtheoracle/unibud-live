@@ -56,17 +56,14 @@ function Riff() {
             key={id}
             type="button"
             onClick={() => setTopic(id)}
-            className={cn(
-              "h-9 shrink-0 rounded-full px-4 text-sm capitalize",
-              topic === id ? "bg-ink text-paper" : "bg-card ring-1 ring-border",
-            )}
+            className={`h-9 shrink-0 rounded-full px-3 text-sm ${topic === id ? "bg-ink text-paper" : "bg-secondary"}`}
           >
             {id}
           </button>
         ))}
       </div>
 
-      <div className="mt-4 flex gap-2 overflow-x-auto px-5 pb-2">
+      <div className="mt-4 flex gap-2 overflow-x-auto px-5">
         {CHALLENGES.map((c) => (
           <button
             key={c.id}
@@ -80,40 +77,58 @@ function Riff() {
         ))}
       </div>
 
-      {user ? (
-        <form
-          className="mt-2 border-y border-border px-5 py-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!draft.trim()) return;
-            addSpill(draft.trim(), "you", quoting ? { quoteId: quoting } : undefined);
-            setDraft("");
-            setQuoting(null);
-          }}
-        >
-          {quoting ? (
-            <p className="mb-2 text-xs text-muted-foreground">
-              Quoting a Riff ·{" "}
-              <button type="button" className="underline" onClick={() => setQuoting(null)}>
-                cancel
-              </button>
-            </p>
-          ) : null}
-          <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Start a Riff."
-            className="min-h-20 w-full resize-none bg-transparent text-sm outline-none"
-          />
-          <div className="mt-2 flex justify-end">
-            <Button type="submit" size="sm" disabled={!draft.trim()}>
-              Drop
-            </Button>
-          </div>
-        </form>
-      ) : (
-        <p className="mt-4 px-5 text-sm text-muted-foreground">Sign in to drop a Riff. You can still read.</p>
-      )}
+      <form
+        className="mt-2 border-y border-border px-5 py-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!draft.trim()) return;
+          addSpill(draft.trim(), user ? "you" : "guest", quoting ? { quoteId: quoting } : undefined);
+          setDraft("");
+          setQuoting(null);
+        }}
+      >
+        {!user ? (
+          <p className="mb-2 text-[11px] text-muted-foreground">
+            Guest Riff — on this device only. Sign in to keep it.
+          </p>
+        ) : null}
+        {quoting ? (
+          <p className="mb-2 text-xs text-muted-foreground">
+            Quoting a Riff ·{" "}
+            <button type="button" className="underline" onClick={() => setQuoting(null)}>
+              cancel
+            </button>
+          </p>
+        ) : null}
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="Roast, rizz, gossip, or gist…"
+          className="min-h-20 w-full resize-none bg-transparent text-sm outline-none"
+        />
+        <div className="mt-2 flex items-center justify-between">
+          <button
+            type="button"
+            className="text-xs text-muted-foreground underline"
+            onClick={() => {
+              const key = "unibud-guest-bud-invites";
+              const n = Number(sessionStorage.getItem(key) || "0");
+              if (!user && n >= 3) {
+                toast.error("Guest Bud limit reached. Sign in for more.");
+                return;
+              }
+              if (!user) sessionStorage.setItem(key, String(n + 1));
+              setBudDraft(draft.trim() || "Invite Bud into this Riff.");
+              window.location.href = "/bud";
+            }}
+          >
+            Invite Bud
+          </button>
+          <Button type="submit" size="sm" disabled={!draft.trim()}>
+            Drop
+          </Button>
+        </div>
+      </form>
 
       {followed.length ? (
         <p className="px-5 pt-4 text-xs text-muted-foreground">
@@ -140,36 +155,23 @@ function RiffCard({ spill, onQuote }: { spill: SpillPost; onQuote: () => void })
   const flagSpill = useCampusStore((s) => s.flagSpill);
   const followRiff = useCampusStore((s) => s.followRiff);
   const followed = useCampusStore((s) => (s.followedRiffs ?? []).includes(spill.id));
-  const quote = spill.quoteId
-    ? useCampusStore.getState().spills.find((x) => x.id === spill.quoteId)
-    : undefined;
 
   return (
     <article className="border-b border-border px-5 py-4">
-      <div className="flex gap-3">
-        <Avatar name={name} />
+      <div className="flex items-start gap-3">
+        <Avatar handle={spill.authorHandle} name={name} />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">
-            <Link to="/u/$handle" params={{ handle: spill.authorHandle }} className="hover:underline">
-              {name}
-            </Link>
-            <span className="ml-1 font-normal text-muted-foreground">@{spill.authorHandle}</span>
-            <span className="ml-1 font-normal text-muted-foreground">· {relativeTime(spill.createdAt)}</span>
-          </p>
+          <div className="flex items-baseline gap-2">
+            <p className="truncate text-sm font-medium">{name}</p>
+            <p className="text-xs text-muted-foreground">@{spill.authorHandle}</p>
+            <p className="ml-auto text-xs text-muted-foreground">{relativeTime(spill.createdAt)}</p>
+          </div>
           {community ? (
-            <Link
-              to="/communities/$id"
-              params={{ id: community.id }}
-              className="text-[11px] font-medium text-bud"
-            >
-              from {community.name}
-            </Link>
+            <p className="text-xs text-muted-foreground">{community.name}</p>
           ) : null}
-          <p className="mt-2 text-sm leading-relaxed">{spill.body}</p>
-          {quote ? (
-            <div className="mt-2 rounded-xl bg-secondary px-3 py-2 text-xs text-muted-foreground">
-              @{quote.authorHandle}: {quote.body}
-            </div>
+          <p className="mt-1 text-sm leading-relaxed">{spill.body}</p>
+          {spill.image ? (
+            <img src={spill.image} alt="" className="mt-3 h-40 w-full rounded-2xl object-cover" />
           ) : spill.quotedFrom ? (
             <div className="mt-2 rounded-xl bg-secondary px-3 py-2 text-xs text-muted-foreground">
               From Square · @{spill.quotedFrom.handle}: {spill.quotedFrom.body}
