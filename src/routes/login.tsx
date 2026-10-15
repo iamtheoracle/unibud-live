@@ -139,7 +139,7 @@ function Login() {
 
         <div className="space-y-3">
           <Button asChild variant="outline" className="w-full">
-            <Link to="/riff">Join the Riff</Link>
+            <Link to="/riff">Explore Riff</Link>
           </Button>
           <Button asChild className="w-full">
             <Link to="/bud">Try Bud as a guest</Link>
