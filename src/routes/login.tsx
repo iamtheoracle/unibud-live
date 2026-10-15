@@ -104,8 +104,7 @@ function Login() {
         </Link>
         <h2 className="font-display text-3xl font-medium">Sign in</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Create an account or sign in to use Square, Connect, Quad, and Chat. Guests can still use Bud and public
-          Riff.
+          Email and password. That’s it. You can still try Bud or Riff as a guest.
         </p>
 
         {authEnabled ? (
