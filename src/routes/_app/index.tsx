@@ -51,7 +51,7 @@ function Square() {
   const connections = useCampusStore((s) => s.connections);
   const interests = useCampusStore((s) => s.interests);
   const likeCounts = useCampusStore((s) => s.likeCounts);
-  const searches = useCampusStore((s) => s.searches);
+  const searches = useCampusStore((s) => s.recentSearches);
   const setComposeOpen = useCampusStore((s) => s.setComposeOpen);
   const setDropOpen = useCampusStore((s) => s.setDropOpen);
   const setSquareView = useCampusStore((s) => s.setSquareView);
@@ -64,7 +64,7 @@ function Square() {
   }, [catalog.posts, localPosts]);
 
   const lanePosts = useMemo(
-    () => postsForLane(merged, lane, { following, connections, interests, likeCounts, searches }),
+    () => postsForLane(merged, lane, { following, connections, interests, likeCounts, searches }, connections),
     [merged, lane, following, connections, interests, likeCounts, searches],
   );
 
@@ -388,7 +388,7 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
                   e.preventDefault();
                   if (!reply.trim()) return;
                   const body = reply.trim();
-                  addPostReply(key, body, "you");
+                  addPostReply(key, { id: `local-${Date.now()}`, authorHandle: user ? "you" : "guest", body, createdAt: new Date().toISOString() });
                   if (user) void addSquareReply({ data: { postId: key, body } }).catch(() => {});
                   setReply("");
                 }}
