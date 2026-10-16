@@ -15,6 +15,7 @@ import { isVideoPost, likeKey, loopStream, postsForLane, SQUARE_LANES, type Squa
 import { addSquareReply, toggleCommentLike as toggleDbCommentLike, togglePostLike, toggleSave } from "@/lib/unibud/server";
 import { toast } from "sonner";
 import type { DiscoveryItem, FeedPost } from "@/lib/unibud/types";
+import type { mapPostReply } from "@/lib/unibud/map";
 import { isSquareInteractiveTarget } from "@/lib/unibud/square-board";
 
 const EMPTY_REPLIES: import("@/lib/unibud/spill-data").SpillReply[] = [];
@@ -279,13 +280,14 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
   const liked = useCampusStore((s) => s.liked[key]);
   const count = useCampusStore((s) => s.likeCounts[key] ?? 0);
   const toggleLike = useCampusStore((s) => s.toggleLike);
-  const localReplies = useCampusStore((s) => s.postReplies[key] ?? EMPTY_REPLIES);
+  const localReplies: import("@/lib/unibud/spill-data").SpillReply[] = useCampusStore((s) => s.postReplies[key] ?? EMPTY_REPLIES);
   const addPostReply = useCampusStore((s) => s.addPostReply);
   const hidePost = useCampusStore((s) => s.hidePost);
   const saved = useCampusStore((s) => (s.savedPosts ?? []).includes(key));
   const toggleSavePost = useCampusStore((s) => s.toggleSavePost);
   const { user } = useCurrentUserState();
-  const catalog = useLoaderData({ from: "/_app" });
+  type CatalogReply = ReturnType<typeof mapPostReply>;
+  const catalog = useLoaderData({ from: "/_app" }) as { replies?: CatalogReply[] };
   const dbReplies = (catalog.replies ?? [])
     .filter((r) => r.postId === key)
     .map((r) => ({
