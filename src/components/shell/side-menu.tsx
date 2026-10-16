@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 const items = [
   { to: "/profile", label: "Profile", icon: CircleUser },
   { to: "/bud", label: "Bud", icon: Sparkles },
-  { to: "/riff", label: "Riff · public discovery", icon: Megaphone },
+  { to: "/riff", label: "Riff", icon: Megaphone },
   { to: "/guild", label: "Guild", icon: Landmark },
   { to: "/soulync", label: "SouLync", icon: Heart },
   { to: "/wayward", label: "Wayward", icon: Flame },
