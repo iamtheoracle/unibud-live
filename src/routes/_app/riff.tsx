@@ -24,8 +24,10 @@ function Riff() {
   const localSpills = useCampusStore((s) => s.spills);
   const spills = visibleDeviceLocalRiffs(localSpills, access);
   const addSpill = useCampusStore((s) => s.addSpill);
-  const flagged = useCampusStore((s) => s.flaggedSpills);
-  const followed = useCampusStore((s) => s.followedRiffs ?? []);
+  const localFlagged = useCampusStore((s) => s.flaggedSpills);
+  const localFollowed = useCampusStore((s) => s.followedRiffs ?? []);
+  const flagged = access.canReadDeviceLocalState ? localFlagged : [];
+  const followed = access.canReadDeviceLocalState ? localFollowed : [];
   const [draft, setDraft] = useState("");
   const [quoting, setQuoting] = useState<string | null>(null);
   const [topic, setTopic] = useState<(typeof TOPICS)[number]>("all");
