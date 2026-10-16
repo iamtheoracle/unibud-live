@@ -17,7 +17,8 @@ function makeSql(
     for (let i = 0; i < values.length; i += 1) text += `$${i + 1}${strings[i + 1]}`;
     return query(text, values);
   }) as unknown as Sql;
-  sql.query = async (text: string, params: unknown[] = []) => query(text, params);
+  sql.query = async <T = Record<string, unknown>>(text: string, params: unknown[] = []): Promise<T[]> =>
+    await query(text, params) as T[];
   if (transaction) sql.transaction = transaction;
   return sql;
 }
