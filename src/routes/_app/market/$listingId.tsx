@@ -12,6 +12,7 @@ import { ListingCard } from "@/components/listing-card";
 import { PersonMark } from "@/components/person-mark";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import type { DirectoryPerson, Listing } from "@/lib/unibud/types";
 
 export const Route = createFileRoute("/_app/market/$listingId")({
   loader: ({ params }) => getListing({ data: params.listingId }),
@@ -19,7 +20,7 @@ export const Route = createFileRoute("/_app/market/$listingId")({
 });
 
 function ListingPage() {
-  const data = Route.useLoaderData();
+  const data = Route.useLoaderData() as { listing: Listing; seller: DirectoryPerson | null; related: Listing[] } | null;
   const router = useRouter();
   const qc = useQueryClient();
   const { user, isPending } = useCurrentUserState();
