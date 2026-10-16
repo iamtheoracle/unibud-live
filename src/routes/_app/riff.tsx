@@ -10,8 +10,8 @@ import { useCampusStore } from "@/lib/unibud/campus-store";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { cn } from "@/lib/utils";
 import type { SpillPost } from "@/lib/unibud/spill-data";
-import { CHALLENGES } from "@/lib/unibud/discover-data";
 import { setBudDraft } from "@/lib/bud/draft";
+import { resolveRiffAccess, visibleDeviceLocalRiffs } from "@/lib/unibud/riff-access";
 import { RiffMark } from "@/components/brand/identity-marks";
 
 export const Route = createFileRoute("/_app/riff")({ component: Riff });
@@ -20,10 +20,14 @@ const TOPICS = ["all", "music", "tech", "games", "culture", "learning", "space"]
 
 function Riff() {
   const { user } = useCurrentUserState();
-  const spills = useCampusStore((s) => s.spills);
+  const access = resolveRiffAccess(Boolean(user));
+  const localSpills = useCampusStore((s) => s.spills);
+  const spills = visibleDeviceLocalRiffs(localSpills, access);
   const addSpill = useCampusStore((s) => s.addSpill);
-  const flagged = useCampusStore((s) => s.flaggedSpills);
-  const followed = useCampusStore((s) => s.followedRiffs ?? []);
+  const localFlagged = useCampusStore((s) => s.flaggedSpills);
+  const localFollowed = useCampusStore((s) => s.followedRiffs ?? []);
+  const flagged = access.canReadDeviceLocalState ? localFlagged : [];
+  const followed = access.canReadDeviceLocalState ? localFollowed : [];
   const [draft, setDraft] = useState("");
   const [quoting, setQuoting] = useState<string | null>(null);
   const [topic, setTopic] = useState<(typeof TOPICS)[number]>("all");
@@ -63,35 +67,21 @@ function Riff() {
         ))}
       </div>
 
-      <div className="mt-4 flex gap-2 overflow-x-auto px-5">
-        {CHALLENGES.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            className="w-44 shrink-0 rounded-2xl bg-secondary p-3 text-left"
-            onClick={() => setDraft((d) => d || `${c.title}: ${c.body}`)}
-          >
-            <p className="text-[11px] font-medium text-bud">{c.joins.toLocaleString()} in</p>
-            <p className="mt-1 text-sm font-medium">{c.title}</p>
-          </button>
-        ))}
-      </div>
 
+      {access.canMutateDeviceLocalState ? (
       <form
         className="mt-2 border-y border-border px-5 py-4"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!draft.trim()) return;
+          if (!access.canMutateDeviceLocalState || !draft.trim()) return;
           addSpill(draft.trim(), user ? "you" : "guest", quoting ? { quoteId: quoting } : undefined);
           setDraft("");
           setQuoting(null);
         }}
       >
-        {!user ? (
-          <p className="mb-2 text-[11px] text-muted-foreground">
-            Guest Riff — on this device only. Sign in to keep it.
-          </p>
-        ) : null}
+        <p className="mb-2 text-[11px] text-muted-foreground">
+          This Riff preview is stored on this device only. Posts and interactions are not shared with other users yet.
+        </p>
         {quoting ? (
           <p className="mb-2 text-xs text-muted-foreground">
             Quoting a Riff ·{" "}
@@ -111,13 +101,6 @@ function Riff() {
             type="button"
             className="text-xs text-muted-foreground underline"
             onClick={() => {
-              const key = "unibud-guest-bud-invites";
-              const n = Number(sessionStorage.getItem(key) || "0");
-              if (!user && n >= 3) {
-                toast.error("Guest Bud limit reached. Sign in for more.");
-                return;
-              }
-              if (!user) sessionStorage.setItem(key, String(n + 1));
               setBudDraft(draft.trim() || "Invite Bud into this Riff.");
               window.location.href = "/bud";
             }}
@@ -129,6 +112,14 @@ function Riff() {
           </Button>
         </div>
       </form>
+      ) : (
+        <section className="mx-5 mt-4 rounded-2xl border border-dashed border-border p-5" aria-live="polite">
+          <p className="text-sm font-medium">Guest access is read-only.</p>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
+            The shared Riff feed is not connected in this build, so there are no public posts to display yet. Device-local content is hidden from guests.
+          </p>
+        </section>
+      )}
 
       {followed.length ? (
         <p className="px-5 pt-4 text-xs text-muted-foreground">
@@ -136,11 +127,15 @@ function Riff() {
         </p>
       ) : null}
 
-      <div>
-        {list.map((s) => (
-          <RiffCard key={s.id} spill={s} onQuote={() => setQuoting(s.id)} />
-        ))}
-      </div>
+      {list.length > 0 ? (
+        <div>
+          {list.map((s) => (
+            <RiffCard key={s.id} spill={s} onQuote={() => setQuoting(s.id)} />
+          ))}
+        </div>
+      ) : access.canReadDeviceLocalState ? (
+        <p className="px-5 py-8 text-sm text-muted-foreground">No Riffs have been created on this device yet.</p>
+      ) : null}
     </main>
   );
 }
@@ -221,9 +216,10 @@ function RiffCard({ spill, onQuote }: { spill: SpillPost; onQuote: () => void })
               className="inline-flex h-9 items-center gap-1.5 text-sm"
               onClick={() => {
                 flagSpill(spill.id);
-                toast.success("Report noted. This is not The Fixer.");
+                toast.success("Hidden on this device only.");
               }}
-              aria-label="Report"
+              aria-label="Hide this Riff on this device"
+              title="Hide on this device"
             >
               <Flag className="size-4" />
             </button>

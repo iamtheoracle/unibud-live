@@ -1,5 +1,7 @@
 # UNIBUD Implementation Handoff
 
+> **Historical checkpoint — superseded on 16 October 2026.** The source-of-truth and navigation statements below refer to an older repository generation. The current application repository is `iamtheoracle/unibud-live`; preserve the approved primary tabs **Square → Connect → Quad → Chat**. Use `docs/UNIBUD_IMPLEMENTATION_LOG.md` for current verified progress. Treat conflicting instructions in this historical checkpoint as stale until reconciled with the current source and approved product specification.
+
 ## Purpose
 
 This file is the continuation checkpoint for UNIBUD implementation work. Any future implementation agent must read this file before changing architecture or UI.
