@@ -18,7 +18,6 @@ const TOPICS = ["all", "music", "tech", "games", "culture", "learning", "space"]
 type Topic = (typeof TOPICS)[number];
 type RiffPost = {
   id: string;
-  authorUserId: string;
   authorHandle: string;
   body: string;
   communityId: string | null;
