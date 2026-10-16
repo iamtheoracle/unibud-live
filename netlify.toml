@@ -17,6 +17,9 @@
   NPM_CONFIG_LEGACY_PEER_DEPS = "true"
   NODE_OPTIONS = "--max-old-space-size=4096"
   NETLIFY_COREPACK_ENABLED = "false"
+  COREPACK_ENABLE_DOWNLOAD_PROMPT = "0"
+  NPM_CONFIG_FUND = "false"
+  NPM_CONFIG_AUDIT = "false"
   # Client auth flag: must be true for public sign-in UI. Secrets still required server-side.
   VITE_AUTH_ENABLED = "true"
 
