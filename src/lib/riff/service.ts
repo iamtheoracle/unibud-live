@@ -193,7 +193,9 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
       const replyId = input.replyId ? idValue(input.replyId, "reply ID") : null;
       if (Boolean(postId) === Boolean(replyId)) throw new Error("Report exactly one Riff post or reply.");
       if (!reasons.has(input.reason)) throw new Error("Invalid report reason.");
-      const details = (input.details ?? "").trim();
+      const rawDetails = input.details ?? "";
+      if (typeof rawDetails !== "string") throw new Error("Report details must be text.");
+      const details = rawDetails.trim();
       if (details.length > 1000) throw new Error("Report details must be at most 1,000 characters.");
       const operation = async (tx: Sql) => {
         // Serialize a reporter's own submissions while applying the rate limit.
