@@ -44,7 +44,7 @@ jobs:
           }
           excluded_names = {
               ".env", ".env.local", ".env.production", ".env.development.local",
-              ".npmrc", ".pypirc", "id_rsa", "id_ed25519", "credentials.json",
+              ".pypirc", "id_rsa", "id_ed25519", "credentials.json",
               "service-account.json"
           }
           excluded_suffixes = {".pem", ".p12", ".pfx", ".key", ".jks", ".keystore"}
