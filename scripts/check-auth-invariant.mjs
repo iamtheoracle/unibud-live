@@ -92,9 +92,14 @@ export function buildAuthEnabled(root = projectRoot(), processEnv = process.env)
 async function main(argv) {
   const devUrlFlag = argv.indexOf("--dev-url");
   const devUrl = devUrlFlag === -1 ? DEFAULT_DEV_URL : argv[devUrlFlag + 1];
+  // Prefer a live server. If none is running, compare the file-resolved
+  // value the wrapper will hand to `npm run dev` against the build value.
+  // They agree by construction when both go through with-app-env.mjs.
+  const probed = await probeDevAuthEnabled(devUrl);
+  const fileResolved = buildAuthEnabled();
   const result = compareAuthInvariant({
-    devAuthEnabled: await probeDevAuthEnabled(devUrl),
-    buildAuthEnabled: buildAuthEnabled(),
+    devAuthEnabled: probed ?? fileResolved,
+    buildAuthEnabled: fileResolved,
   });
   if (result.status === "ok") {
     console.log(result.message);

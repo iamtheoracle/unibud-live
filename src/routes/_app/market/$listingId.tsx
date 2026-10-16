@@ -12,6 +12,7 @@ import { ListingCard } from "@/components/listing-card";
 import { PersonMark } from "@/components/person-mark";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import type { Listing } from "@/lib/unibud/types";
 
 export const Route = createFileRoute("/_app/market/$listingId")({
   loader: ({ params }) => getListing({ data: params.listingId }),
@@ -96,7 +97,7 @@ function ListingPage() {
           ) : null}
         </div>
         <div className="mt-6 flex flex-wrap gap-2">
-          {listing.tags.map((t) => (
+          {listing.tags.map((t: string) => (
             <Badge key={t}>{t}</Badge>
           ))}
         </div>
@@ -167,7 +168,7 @@ function ListingPage() {
         <div className="lg:col-span-12">
           <h2 className="mb-4 font-display text-2xl">Nearby in this lane</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {related.map((l) => (
+            {related.map((l: Listing) => (
               <ListingCard key={l.id} listing={l} />
             ))}
           </div>

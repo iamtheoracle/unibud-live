@@ -15,6 +15,7 @@ import { isVideoPost, likeKey, loopStream, postsForLane, SQUARE_LANES, type Squa
 import { addSquareReply, toggleCommentLike as toggleDbCommentLike, togglePostLike, toggleSave } from "@/lib/unibud/server";
 import { toast } from "sonner";
 import type { DiscoveryItem, FeedPost } from "@/lib/unibud/types";
+import type { mapPostReply } from "@/lib/unibud/map";
 import { isSquareInteractiveTarget } from "@/lib/unibud/square-board";
 
 const EMPTY_REPLIES: import("@/lib/unibud/spill-data").SpillReply[] = [];
@@ -287,8 +288,8 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
   const { user } = useCurrentUserState();
   const catalog = useLoaderData({ from: "/_app" });
   const dbReplies = (catalog.replies ?? [])
-    .filter((r) => r.postId === key)
-    .map((r) => ({
+    .filter((r: { postId: string }) => r.postId === key)
+    .map((r: { id: string; authorHandle: string; body: string; parentId?: string; createdAt: string }) => ({
       id: r.id,
       authorHandle: r.authorHandle,
       body: r.body,
@@ -296,7 +297,7 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
       createdAt: r.createdAt,
     }));
   const localIds = new Set(localReplies.map((r) => r.id));
-  const replies = [...dbReplies.filter((r) => !localIds.has(r.id)), ...localReplies];
+  const replies = [...dbReplies.filter((r: { id: string }) => !localIds.has(r.id)), ...localReplies];
   const following = useCampusStore((s) => s.following);
   const follow = useCampusStore((s) => s.follow);
   const unfollow = useCampusStore((s) => s.unfollow);

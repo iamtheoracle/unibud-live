@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useLoaderData } from "@tanstack/react-router";
 import { CATEGORIES } from "@/lib/unibud/catalog";
-import type { ListingCategory } from "@/lib/unibud/types";
+import type { Listing, ListingCategory } from "@/lib/unibud/types";
 import { ListingCard } from "@/components/listing-card";
 import { VaultGate } from "@/components/unibud/vault-gate";
 import { cn } from "@/lib/utils";
@@ -18,7 +18,7 @@ function Market() {
   const catalog = useLoaderData({ from: "/_app" });
   const { cat = "all" } = Route.useSearch();
   const listings =
-    cat === "all" ? catalog.listings : catalog.listings.filter((l) => l.category === cat);
+    cat === "all" ? catalog.listings : catalog.listings.filter((l: Listing) => l.category === cat);
 
   return (
     <VaultGate title="Marketplace">
@@ -51,7 +51,7 @@ function Market() {
         <p className="text-sm text-muted-foreground">Nothing in this lane yet.</p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {listings.map((l) => (
+          {listings.map((l: Listing) => (
             <ListingCard key={l.id} listing={l} />
           ))}
         </div>
