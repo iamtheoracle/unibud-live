@@ -73,7 +73,7 @@ export function CampusMoments({
   const [mineOpen, setMineOpen] = useState(false);
   const [seg, setSeg] = useState(0);
 
-  const active = CLUSTERS.filter((c) => !seen.includes(c.id));
+  const active: Cluster[] = []; // DEMO_ONLY clusters are not shown. Real stories come from the signed-in user only.
   const current = CLUSTERS.find((c) => c.id === open) ?? null;
 
   function closeCluster(id: string) {

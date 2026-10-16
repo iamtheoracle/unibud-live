@@ -31,7 +31,7 @@ function StartScreen() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-background px-6 py-12">
+    <main className="flex min-h-dvh flex-col items-center justify-between bg-background px-6 py-8">
       <div className="flex w-full max-w-sm flex-col items-center text-center">
         <Wordmark size="hero" className="mb-6 max-w-xs" />
         <p className="kicker">UNIBUD · University Buddy</p>
@@ -42,7 +42,7 @@ function StartScreen() {
           You don’t need an account to drop a Riff or talk with Bud. Sign in when you want Square, Connect, Quad, and Chat.
         </p>
 
-        <div className="mt-10 flex w-full flex-col gap-3">
+        <div className="mt-8 flex w-full flex-col gap-2.5">
           <Button
             type="button"
             className="w-full"
@@ -79,7 +79,7 @@ function StartScreen() {
         <p className="mt-6 text-[11px] text-muted-foreground">
           Guest Riffs and Bud chats stay on this device. Create an account to keep them.
         </p>
-        <ArcAttribution variant="compact" className="mt-10" />
+        <ArcAttribution variant="compact" className="mt-6" />
       </div>
     </main>
   );

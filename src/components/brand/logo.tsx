@@ -73,13 +73,13 @@ export function ArcAttribution({
   const src = variant === "full" ? ARC_FULL : ARC_DARK;
   return (
     <figure className={cn("flex flex-col items-center gap-2", className)}>
-      <div className="overflow-hidden rounded-xl bg-black px-3 py-2">
+      <div className="rounded-xl bg-black px-4 py-3">
         <img
           src={src}
           alt="ARC · Oracle Intelligence & Systems"
           className={cn(
-            "object-contain",
-            variant === "full" ? "h-10 w-auto max-w-[220px]" : "h-7 w-auto max-w-[160px]",
+            "object-contain object-center",
+            variant === "full" ? "h-14 w-auto max-w-[280px]" : "h-10 w-auto max-w-[200px]",
           )}
         />
       </div>

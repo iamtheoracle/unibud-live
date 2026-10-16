@@ -46,6 +46,7 @@ function Login() {
   const [mode, setMode] = useState<"in" | "up">(search.mode ?? "in");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const brokerReady = Boolean(import.meta.env.VITE_GROK_AUTH_CLIENT_ID);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +108,7 @@ function Login() {
           Email and password. That’s it. You can still try Bud or Riff as a guest.
         </p>
 
-        {authEnabled ? (
+        {authEnabled && brokerReady ? (
           <div className="mt-8 space-y-3">
             {GROK_PROVIDERS.map((p) => (
               <Button

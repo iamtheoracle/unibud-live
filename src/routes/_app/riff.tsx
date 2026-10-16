@@ -71,7 +71,7 @@ function Riff() {
             className="w-44 shrink-0 rounded-2xl bg-secondary p-3 text-left"
             onClick={() => setDraft((d) => d || `${c.title}: ${c.body}`)}
           >
-            <p className="text-[11px] font-medium text-bud">{c.joins.toLocaleString()} in</p>
+            <p className="text-[11px] font-medium text-muted-foreground">Open challenge</p>
             <p className="mt-1 text-sm font-medium">{c.title}</p>
           </button>
         ))}
