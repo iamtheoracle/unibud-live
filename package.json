@@ -23,7 +23,8 @@
     "test:auth-policy": "node --experimental-strip-types --test src/lib/auth/auth-policy.test.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test:riff": "node --experimental-strip-types --test src/lib/riff/service.test.ts"
+    "test:riff": "node --experimental-strip-types --test src/lib/riff/service.test.ts",
+    "test:riff:postgres": "node --experimental-strip-types --test src/lib/riff/service.postgres.test.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
