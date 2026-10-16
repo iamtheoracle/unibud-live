@@ -8,6 +8,15 @@ const validId = (value: unknown, label: string) => {
   return value.trim();
 };
 
+/** Anonymous reads are limited by the service to global and public-community posts. */
+export const listPublicRiffs = createServerFn({ method: "GET" })
+  .validator((input: { cursorCreatedAt?: string; cursorId?: string; limit?: number } = {}) => input)
+  .handler(async ({ data }) => createRiffService(await getSql(), null).listRiffs(data));
+
+export const getPublicRiff = createServerFn({ method: "GET" })
+  .validator((input: { postId: string }) => ({ postId: validId(input?.postId, "post ID") }))
+  .handler(async ({ data }) => createRiffService(await getSql(), null).getRiff(data.postId));
+
 export const listRiffs = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .validator((input: { cursorCreatedAt?: string; cursorId?: string; limit?: number } = {}) => input)

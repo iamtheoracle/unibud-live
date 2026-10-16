@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Avatar } from "@/components/unibud/person";
 import { Button } from "@/components/ui/button";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
-import { getRiff, replyToRiff, toggleRiffFollow } from "@/lib/riff/server";
+import { getPublicRiff, getRiff, replyToRiff, toggleRiffFollow } from "@/lib/riff/server";
 import { relativeTime } from "@/lib/unibud/format";
 
 export const Route = createFileRoute("/_app/riff/$id")({ component: RiffThread });
@@ -27,6 +27,7 @@ type RiffThreadData = {
   followCount: number;
   liked: boolean;
   following: boolean;
+  canInteract: boolean;
   replies: RiffReply[];
 };
 
@@ -46,12 +47,11 @@ function RiffThread() {
     let active = true;
     setThread(null);
     setLoadError("");
-    if (!userId) {
-      setLoading(false);
-      return () => { active = false; };
-    }
     setLoading(true);
-    getRiff({ data: { postId: id } })
+    const request = userId
+      ? getRiff({ data: { postId: id } })
+      : getPublicRiff({ data: { postId: id } });
+    request
       .then((result) => { if (active) setThread(result as RiffThreadData); })
       .catch(() => { if (active) setLoadError("This Riff could not be found or loaded."); })
       .finally(() => { if (active) setLoading(false); });
@@ -60,7 +60,7 @@ function RiffThread() {
 
   async function send(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!draft.trim() || sending || !thread) return;
+    if (!userId || !thread?.canInteract || !draft.trim() || sending) return;
     setSending(true);
     try {
       const reply = await replyToRiff({ data: { postId: id, body: draft.trim(), parentReplyId: parent } });
@@ -76,7 +76,7 @@ function RiffThread() {
   }
 
   async function toggleFollow() {
-    if (!thread || followingBusy) return;
+    if (!userId || !thread?.canInteract || followingBusy) return;
     setFollowingBusy(true);
     try {
       const result = await toggleRiffFollow({ data: { postId: id } });
@@ -86,15 +86,6 @@ function RiffThread() {
     } finally {
       setFollowingBusy(false);
     }
-  }
-
-  if (!user) {
-    return (
-      <main className="px-5 py-10">
-        <p className="text-sm text-muted-foreground">Sign in to read and join shared Riff conversations.</p>
-        <Link to="/riff" className="mt-3 inline-block text-sm font-medium">Back to Riff</Link>
-      </main>
-    );
   }
 
   if (loading) {
@@ -130,9 +121,15 @@ function RiffThread() {
           <span>{thread.replyCount} replies</span>
           <span>{thread.followCount} following</span>
         </div>
-        <Button className="mt-4" size="sm" variant={thread.following ? "outline" : "primary"} disabled={followingBusy} onClick={() => void toggleFollow()}>
-          {thread.following ? "Following this conversation" : "Follow conversation"}
-        </Button>
+        {user && thread.canInteract ? (
+          <Button className="mt-4" size="sm" variant={thread.following ? "outline" : "primary"} disabled={followingBusy} onClick={() => void toggleFollow()}>
+            {thread.following ? "Following this conversation" : "Follow conversation"}
+          </Button>
+        ) : (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {user ? "Join this community to follow or reply." : "Guest access is read-only. Sign in to follow or reply."}
+          </p>
+        )}
       </article>
 
       <h2 className="mt-6 text-sm font-medium">Conversation · newest replies first</h2>
@@ -147,16 +144,16 @@ function RiffThread() {
                 <p className="text-xs text-muted-foreground">{name} · {relativeTime(reply.createdAt)}</p>
                 {parentBody ? <p className="mt-1 text-[11px] text-muted-foreground">Replying: {parentBody}</p> : null}
                 <p className="mt-1 whitespace-pre-wrap break-words text-sm">{reply.body}</p>
-                <button type="button" className="mt-2 text-xs font-medium" onClick={() => setParent(reply.id)}>Reply</button>
+                {user && thread.canInteract ? <button type="button" className="mt-2 text-xs font-medium" onClick={() => setParent(reply.id)}>Reply</button> : null}
               </li>
             );
           })}
         </ul>
       ) : (
-        <p className="mt-3 text-sm text-muted-foreground">No replies yet. Start the conversation.</p>
+        <p className="mt-3 text-sm text-muted-foreground">{user && thread.canInteract ? "No replies yet. Start the conversation." : "No replies yet."}</p>
       )}
 
-      <form className="mt-6" onSubmit={send}>
+      {user && thread.canInteract ? <form className="mt-6" onSubmit={send}>
         {parent ? (
           <p className="mb-1 text-xs text-muted-foreground">
             Replying to a reply ·{" "}
@@ -174,7 +171,7 @@ function RiffThread() {
           <span className="text-xs text-muted-foreground">{draft.length}/10,000</span>
           <Button size="sm" type="submit" disabled={!draft.trim() || sending}>{sending ? "Replying…" : "Reply"}</Button>
         </div>
-      </form>
+      </form> : user ? <p className="mt-4 text-sm text-muted-foreground">Join this community to reply.</p> : null}
     </main>
   );
 }

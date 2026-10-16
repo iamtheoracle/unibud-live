@@ -84,3 +84,11 @@ This ledger is intentionally conservative. Reclassify status only when evidence 
 - **Verification evidence:** GitHub Actions PR verification run 38933976796 passed on commit c99ad7aa34dd9cbb54517c474d09cafed08abe4b. The run passed TypeScript, Netlify production build, authentication policy tests, Riff persistence/ownership tests, Bud/agent tests, media tests, and academic session policy tests. This is automated CI evidence only; it does not prove live deployment behavior or a real two-account staging journey.
 - **Change scope and safety:** changes are on feat/riff-server-backend-2026-10-12 for review in PR #12. No schema migration, production database mutation, merge, or deployment was performed.
 - **Next actions:** inspect moderation/report review workflows; add a deliberate concurrent membership-revocation stress test; run two-account authorization tests in an isolated staging environment; then reconcile the existing branch stack before any merge decision. Production remains frozen.
+
+## Riff public-read / member-write boundary — 2026-10-16
+
+- Decision: guests may read only global Riff posts and posts in explicitly public communities. Private community content is never returned to anonymous callers. All create, reply, reaction, follow, report, and delete operations require a verified member identity.
+- The Riff service accepts a null actor only for read methods; every mutation fails closed with `Authentication required.`. Existing authenticated endpoints continue to use `authMiddleware`.
+- Feed and thread routes use the anonymous read endpoints for guests, and hide mutation controls while preserving public post/thread navigation. Guest access does not read the device-local Zustand store.
+- Regression coverage is added for public/global visibility, private-community denial, anonymous mutation denial, interaction capability flags, and absence of internal user IDs in returned DTOs.
+- This is source/CI verification only. Public-feed availability in a deployed environment still depends on the deployed database having the Riff migration; no staging/production migration is authorized by this change.

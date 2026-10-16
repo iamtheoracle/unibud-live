@@ -15,6 +15,7 @@ async function fixture() {
       status text not null default 'uploading', visibility text not null default 'private',
       created_at timestamptz not null default now(), updated_at timestamptz not null default now()
     );
+    create table communities (id text primary key, privacy text not null default 'public');
     create table community_members (community_id text not null, user_id text not null, primary key (community_id, user_id));
     create table student_profiles (user_id text primary key, handle text not null);
     insert into "user" (id, name, email) values ('user-a', 'A', 'a@example.test'), ('user-b', 'B', 'b@example.test');
@@ -36,7 +37,12 @@ async function fixture() {
     const txSql = makeSql(async (text, params) => (await tx.query(text, params)).rows);
     return work(txSql);
   });
-  return { pg, a: createRiffService(sql, "user-a"), b: createRiffService(sql, "user-b") };
+  return {
+    pg,
+    a: createRiffService(sql, "user-a"),
+    b: createRiffService(sql, "user-b"),
+    guest: createRiffService(sql, null),
+  };
 }
 
 test("two accounts share persisted posts and replies, newest first", async () => {
@@ -82,6 +88,46 @@ test("community Riffs are visible and interactive only for current members", asy
     assert.equal((await a.listRiffs()).some((item) => item.id === post.id), false);
     await assert.rejects(() => a.getRiff(post.id), /Riff not found/);
     await assert.rejects(() => a.createRiff({ body: "Quote after leaving", quotePostId: post.id }), /Riff not found/);
+  } finally { await pg.close(); }
+});
+
+
+test("guests can read global and public-community Riffs but not private content or mutations", async () => {
+  const { pg, a, guest } = await fixture();
+  try {
+    await pg.query("insert into communities (id, privacy) values ($1, $2), ($3, $4)", [
+      "public-community", "public", "private-community", "private",
+    ]);
+    await pg.query("insert into community_members (community_id, user_id) values ($1, $2), ($3, $2)", [
+      "public-community", "user-a", "private-community",
+    ]);
+
+    const globalPost = await a.createRiff({ body: "Public global post" });
+    const publicPost = await a.createRiff({ body: "Public community post", communityId: "public-community" });
+    const privatePost = await a.createRiff({ body: "Private community post", communityId: "private-community" });
+    await a.replyToRiff({ postId: publicPost.id, body: "Public reply" });
+    await a.replyToRiff({ postId: privatePost.id, body: "Private reply" });
+
+    const feed = await guest.listRiffs({ limit: 50 });
+    const visibleIds = new Set(feed.map((post) => post.id));
+    assert.equal(visibleIds.has(globalPost.id), true);
+    assert.equal(visibleIds.has(publicPost.id), true);
+    assert.equal(visibleIds.has(privatePost.id), false);
+    assert.equal(feed.find((post) => post.id === globalPost.id)?.canInteract, true);
+    assert.equal(feed.find((post) => post.id === publicPost.id)?.canInteract, false);
+    assert.equal("authorUserId" in feed[0], false);
+    assert.equal("author_user_id" in feed[0], false);
+
+    const publicThread = await guest.getRiff(publicPost.id);
+    assert.equal(publicThread.replies.some((reply) => reply.body === "Public reply"), true);
+    await assert.rejects(() => guest.getRiff(privatePost.id), /Riff not found/);
+
+    await assert.rejects(() => guest.createRiff({ body: "Guest write" }), /Authentication required/);
+    await assert.rejects(() => guest.replyToRiff({ postId: globalPost.id, body: "Guest reply" }), /Authentication required/);
+    await assert.rejects(() => guest.toggleRiffLike(globalPost.id), /Authentication required/);
+    await assert.rejects(() => guest.toggleRiffFollow(globalPost.id), /Authentication required/);
+    await assert.rejects(() => guest.reportRiff({ postId: globalPost.id, reason: "spam" }), /Authentication required/);
+    await assert.rejects(() => guest.softDeleteRiffPost(globalPost.id), /Authentication required/);
   } finally { await pg.close(); }
 });
 

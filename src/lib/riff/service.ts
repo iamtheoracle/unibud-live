@@ -14,7 +14,7 @@ const idValue = (value: unknown, label = "ID") => {
 };
 const postDto = (r: Record<string, unknown>) => ({
   id: String(r.id), authorHandle: String(r.author_handle ?? "member"), body: String(r.body),
-  liked: Boolean(r.liked), following: Boolean(r.following),
+  liked: Boolean(r.liked), following: Boolean(r.following), canInteract: Boolean(r.can_interact ?? true),
   communityId: r.community_id == null ? null : String(r.community_id),
   quotePostId: r.quote_post_id == null ? null : String(r.quote_post_id),
   mediaId: r.media_id == null ? null : String(r.media_id),
@@ -26,15 +26,19 @@ const replyDto = (r: Record<string, unknown>) => ({
   authorHandle: String(r.author_handle ?? "member"), body: String(r.body), createdAt: String(r.created_at),
 });
 
-export function createRiffService(sql: Sql, sessionUserId: string) {
-  if (!sessionUserId?.trim()) throw new Error("Authentication required.");
-  const actor = sessionUserId.trim();
+export function createRiffService(sql: Sql, sessionUserId: string | null) {
+  const actor = typeof sessionUserId === "string" && sessionUserId.trim() ? sessionUserId.trim() : null;
+  const requireActor = () => {
+    if (!actor) throw new Error("Authentication required.");
+    return actor;
+  };
 
   async function assertCommunityMembership(tx: Sql, communityId: unknown) {
+    const actorId = requireActor();
     if (communityId == null) return;
     const membership = await tx.query(
       "select user_id from community_members where community_id = $1 and user_id = $2 for key share",
-      [String(communityId), actor],
+      [String(communityId), actorId],
     );
     if (!membership[0]) throw new Error("Riff not found.");
   }
@@ -57,6 +61,7 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
   async function postById(postId: string) {
     const rows = await sql.query(`select p.id, p.body, p.community_id, p.quote_post_id, p.media_id,
       p.created_at, p.updated_at, coalesce(sp.handle, 'member') as author_handle,
+      (p.community_id is null or exists (select 1 from community_members own_member where own_member.community_id = p.community_id and own_member.user_id = $2)) as can_interact,
       exists(select 1 from riff_reactions own_like where own_like.post_id = p.id and own_like.user_id = $2) as liked,
       exists(select 1 from riff_follows own_follow where own_follow.post_id = p.id and own_follow.user_id = $2) as following,
       (select count(*)::int from riff_replies r where r.post_id = p.id and r.deleted_at is null) as reply_count,
@@ -64,9 +69,13 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
       (select count(*)::int from riff_follows f where f.post_id = p.id) as follow_count
       from riff_posts p left join student_profiles sp on sp.user_id = p.author_user_id
       where p.id = $1 and p.deleted_at is null
-      and (p.community_id is null or exists (
-        select 1 from community_members cm where cm.community_id = p.community_id and cm.user_id = $2
-      )) limit 1`, [postId, actor]);
+      and (
+        p.community_id is null
+        or exists (select 1 from communities c where c.id = p.community_id and c.privacy = 'public')
+        or ($2::text is not null and exists (
+          select 1 from community_members cm where cm.community_id = p.community_id and cm.user_id = $2
+        ))
+      ) limit 1`, [postId, actor]);
     if (!rows[0]) throw new Error("Riff not found.");
     return postDto(rows[0] as Record<string, unknown>);
   }
@@ -80,6 +89,7 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
       if (at && Number.isNaN(Date.parse(at))) throw new Error("Invalid feed cursor.");
       const rows = await sql.query(`select p.id, p.body, p.community_id, p.quote_post_id, p.media_id,
         p.created_at, p.updated_at, coalesce(sp.handle, 'member') as author_handle,
+        (p.community_id is null or exists (select 1 from community_members own_member where own_member.community_id = p.community_id and own_member.user_id = $4)) as can_interact,
         exists(select 1 from riff_reactions own_like where own_like.post_id = p.id and own_like.user_id = $4) as liked,
         exists(select 1 from riff_follows own_follow where own_follow.post_id = p.id and own_follow.user_id = $4) as following,
         (select count(*)::int from riff_replies r where r.post_id = p.id and r.deleted_at is null) as reply_count,
@@ -87,9 +97,13 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
         (select count(*)::int from riff_follows f where f.post_id = p.id) as follow_count
         from riff_posts p left join student_profiles sp on sp.user_id = p.author_user_id
         where p.deleted_at is null
-        and (p.community_id is null or exists (
-          select 1 from community_members cm where cm.community_id = p.community_id and cm.user_id = $4
-        ))
+        and (
+          p.community_id is null
+          or exists (select 1 from communities c where c.id = p.community_id and c.privacy = 'public')
+          or ($4::text is not null and exists (
+            select 1 from community_members cm where cm.community_id = p.community_id and cm.user_id = $4
+          ))
+        )
         and ($1::timestamptz is null or (p.created_at, p.id) < ($1::timestamptz, $2::text))
         order by p.created_at desc, p.id desc limit $3`, [at, id, limit, actor]);
       return rows.map((r) => postDto(r as Record<string, unknown>));
@@ -103,9 +117,13 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
         from riff_replies r join riff_posts p on p.id = r.post_id
         left join student_profiles sp on sp.user_id = r.author_user_id
         where r.post_id = $1 and r.deleted_at is null and p.deleted_at is null
-        and (p.community_id is null or exists (
-          select 1 from community_members cm where cm.community_id = p.community_id and cm.user_id = $2
-        ))
+        and (
+          p.community_id is null
+          or exists (select 1 from communities c where c.id = p.community_id and c.privacy = 'public')
+          or ($2::text is not null and exists (
+            select 1 from community_members cm where cm.community_id = p.community_id and cm.user_id = $2
+          ))
+        )
         order by r.created_at desc, r.id desc limit 500`, [postId, actor]);
       const own = await sql.query(`select exists(select 1 from riff_reactions where post_id = $1 and user_id = $2) as liked,
         exists(select 1 from riff_follows where post_id = $1 and user_id = $2) as following`, [postId, actor]);
@@ -113,6 +131,7 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
     },
 
     async createRiff(input: { body: string; communityId?: string; quotePostId?: string; mediaId?: string }) {
+      requireActor();
       const body = textValue(input?.body, "Riff");
       const communityId = input.communityId ? idValue(input.communityId, "community ID") : null;
       const quotePostId = input.quotePostId ? idValue(input.quotePostId, "quoted post ID") : null;
@@ -143,6 +162,7 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
     },
 
     async replyToRiff(input: { postId: string; body: string; parentReplyId?: string }) {
+      requireActor();
       const postId = idValue(input?.postId, "post ID");
       const body = textValue(input?.body, "Reply");
       const parentId = input.parentReplyId ? idValue(input.parentReplyId, "parent reply ID") : null;
@@ -166,6 +186,7 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
     },
 
     async toggleRiffLike(postIdValue: string) {
+      requireActor();
       const postId = idValue(postIdValue, "post ID");
       const operation = async (tx: Sql) => {
         await lockVisiblePost(tx, postId);
@@ -183,6 +204,7 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
     },
 
     async toggleRiffFollow(postIdValue: string) {
+      requireActor();
       const postId = idValue(postIdValue, "post ID");
       const operation = async (tx: Sql) => {
         await lockVisiblePost(tx, postId);
@@ -200,6 +222,7 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
     },
 
     async reportRiff(input: { postId?: string; replyId?: string; reason: RiffReportReason; details?: string }) {
+      requireActor();
       const postId = input.postId ? idValue(input.postId, "post ID") : null;
       const replyId = input.replyId ? idValue(input.replyId, "reply ID") : null;
       if (Boolean(postId) === Boolean(replyId)) throw new Error("Report exactly one Riff post or reply.");
@@ -232,6 +255,7 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
     },
 
     async softDeleteRiffPost(postIdValue: string) {
+      requireActor();
       const postId = idValue(postIdValue, "post ID");
       const rows = await sql.query("update riff_posts set deleted_at = now(), updated_at = now() where id = $1 and author_user_id = $2 and deleted_at is null returning id", [postId, actor]);
       if (!rows[0]) throw new Error("Riff not found or you cannot delete this post.");
@@ -239,6 +263,7 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
     },
 
     async softDeleteRiffReply(replyIdValue: string) {
+      requireActor();
       const replyId = idValue(replyIdValue, "reply ID");
       const rows = await sql.query(`update riff_replies r set deleted_at = now(), updated_at = now()
         where r.id = $1 and r.author_user_id = $2 and r.deleted_at is null

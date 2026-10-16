@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { setBudDraft } from "@/lib/bud/draft";
 import { RiffMark } from "@/components/brand/identity-marks";
-import { createRiff, listRiffs, reportRiff, toggleRiffFollow, toggleRiffLike } from "@/lib/riff/server";
+import { createRiff, listPublicRiffs, listRiffs, reportRiff, toggleRiffFollow, toggleRiffLike } from "@/lib/riff/server";
 import { relativeTime } from "@/lib/unibud/format";
 import { cn } from "@/lib/utils";
 import { CHALLENGES } from "@/lib/unibud/discover-data";
@@ -29,6 +29,7 @@ type RiffPost = {
   likeCount: number;
   followCount: number;
   liked: boolean;
+  canInteract: boolean;
   following: boolean;
 };
 
@@ -45,15 +46,13 @@ function Riff() {
 
   useEffect(() => {
     let active = true;
-    if (!userId) {
-      setPosts([]);
-      setLoadError("");
-      setLoading(false);
-      return () => { active = false; };
-    }
+    setPosts([]);
     setLoading(true);
     setLoadError("");
-    listRiffs({ data: { limit: 30 } })
+    const request = userId
+      ? listRiffs({ data: { limit: 30 } })
+      : listPublicRiffs({ data: { limit: 30 } });
+    request
       .then((rows) => { if (active) setPosts(rows as RiffPost[]); })
       .catch(() => { if (active) setLoadError("Riff could not load. Please try again."); })
       .finally(() => { if (active) setLoading(false); });
@@ -146,6 +145,7 @@ function Riff() {
             key={challenge.id}
             type="button"
             className="w-44 shrink-0 rounded-2xl bg-secondary p-3 text-left"
+            disabled={!user}
             onClick={() => setDraft((current) => current || `${challenge.title}: ${challenge.body}`)}
           >
             <p className="text-[11px] font-medium text-bud">Writing prompt</p>
@@ -177,7 +177,7 @@ function Riff() {
           </div>
         </form>
       ) : (
-        <p className="mt-4 px-5 text-sm text-muted-foreground">Sign in to read and join shared Riff conversations.</p>
+        <p className="mt-4 px-5 text-sm text-muted-foreground">Guest access is read-only. You can browse public Riffs; sign in to like, follow, quote, report, or reply.</p>
       )}
 
       <div aria-live="polite">
@@ -188,15 +188,18 @@ function Riff() {
             <Button className="mt-3" variant="outline" size="sm" onClick={() => window.location.reload()}>Try again</Button>
           </div>
         ) : null}
-        {!loading && !loadError && user && visiblePosts.length === 0 ? (
+        {!loading && !loadError && visiblePosts.length === 0 ? (
           <p className="px-5 py-8 text-sm text-muted-foreground">
-            {posts.length === 0 ? "No Riffs yet. Start the first conversation." : "No Riffs match this topic."}
+            {user
+              ? posts.length === 0 ? "No Riffs yet. Start the first conversation." : "No Riffs match this topic."
+              : posts.length === 0 ? "No public Riffs yet." : "No public Riffs match this topic."}
           </p>
         ) : null}
         {visiblePosts.map((post) => (
           <RiffCard
             key={post.id}
             post={post}
+            readOnly={!user || !post.canInteract}
             onQuote={() => setQuoting(post.id)}
             onLike={() => void likePost(post.id)}
             onFollow={() => void followPost(post.id)}
@@ -208,8 +211,9 @@ function Riff() {
   );
 }
 
-function RiffCard({ post, onQuote, onLike, onFollow, onReport }: {
+function RiffCard({ post, readOnly, onQuote, onLike, onFollow, onReport }: {
   post: RiffPost;
+  readOnly: boolean;
   onQuote: () => void;
   onLike: () => void;
   onFollow: () => void;
@@ -233,24 +237,36 @@ function RiffCard({ post, onQuote, onLike, onFollow, onReport }: {
             <p className="mt-2 rounded-xl bg-secondary px-3 py-2 text-xs text-muted-foreground">Includes a quoted Riff.</p>
           ) : null}
           <div className="mt-3 flex flex-wrap items-center gap-3 text-muted-foreground">
-            <button type="button" onClick={onLike} className={cn("inline-flex h-9 items-center gap-1.5 text-sm", post.liked && "text-bud")} aria-label={post.liked ? "Unlike Riff" : "Like Riff"}>
-              <Heart className={cn("size-4", post.liked && "fill-bud")} />{post.likeCount || ""}
-            </button>
+            {!readOnly ? (
+              <button type="button" onClick={onLike} className={cn("inline-flex h-9 items-center gap-1.5 text-sm", post.liked && "text-bud")} aria-label={post.liked ? "Unlike Riff" : "Like Riff"}>
+                <Heart className={cn("size-4", post.liked && "fill-bud")} />{post.likeCount || ""}
+              </button>
+            ) : (
+              <span className="inline-flex h-9 items-center gap-1.5 text-sm" aria-label={`${post.likeCount} likes`}>
+                <Heart className="size-4" />{post.likeCount || ""}
+              </span>
+            )}
             <Link to="/riff/$id" params={{ id: post.id }} className="inline-flex h-9 items-center gap-1.5 text-sm">
               <MessageCircle className="size-4" />{post.replyCount || ""}
             </Link>
-            <button type="button" onClick={onQuote} className="inline-flex h-9 items-center gap-1.5 text-sm" aria-label="Quote Riff">
-              <Repeat2 className="size-4" />
-            </button>
-            <button type="button" onClick={onFollow} className={cn("inline-flex h-9 items-center gap-1.5 text-sm", post.following && "text-ink")} aria-label={post.following ? "Unfollow conversation" : "Follow conversation"}>
-              <Bookmark className={cn("size-4", post.following && "fill-ink")} />
-            </button>
+            {!readOnly ? (
+              <>
+                <button type="button" onClick={onQuote} className="inline-flex h-9 items-center gap-1.5 text-sm" aria-label="Quote Riff">
+                  <Repeat2 className="size-4" />
+                </button>
+                <button type="button" onClick={onFollow} className={cn("inline-flex h-9 items-center gap-1.5 text-sm", post.following && "text-ink")} aria-label={post.following ? "Unfollow conversation" : "Follow conversation"}>
+                  <Bookmark className={cn("size-4", post.following && "fill-ink")} />
+                </button>
+              </>
+            ) : null}
             <Link to="/bud" className="inline-flex h-9 items-center gap-1.5 text-sm" aria-label="Ask Bud" onClick={() => setBudDraft(`A Riff by @${author}: “${post.body}”\nHelp me think about this. Stay as Bud.`)}>
               <Sparkles className="size-4" />
             </Link>
-            <button type="button" className="inline-flex h-9 items-center gap-1.5 text-sm" onClick={onReport} aria-label="Report Riff">
-              <Flag className="size-4" />
-            </button>
+            {!readOnly ? (
+              <button type="button" className="inline-flex h-9 items-center gap-1.5 text-sm" onClick={onReport} aria-label="Report Riff">
+                <Flag className="size-4" />
+              </button>
+            ) : null}
           </div>
         </div>
       </div>
