@@ -15,6 +15,7 @@ import { isVideoPost, likeKey, loopStream, postsForLane, SQUARE_LANES, type Squa
 import { addSquareReply, toggleCommentLike as toggleDbCommentLike, togglePostLike, toggleSave } from "@/lib/unibud/server";
 import { toast } from "sonner";
 import type { DiscoveryItem, FeedPost } from "@/lib/unibud/types";
+import type { mapPostReply } from "@/lib/unibud/map";
 import { isSquareInteractiveTarget } from "@/lib/unibud/square-board";
 
 const EMPTY_REPLIES: import("@/lib/unibud/spill-data").SpillReply[] = [];
@@ -38,10 +39,6 @@ function Square() {
     }
     if (user && !onboardingDone) void nav({ to: "/welcome" });
   }, [user, isPending, onboardingDone, nav]);
-
-  if (isPending || (user && !onboardingDone)) {
-    return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
-  }
 
   const [lane, setLane] = useState<SquareLane>("on-stream");
   const [peekStart, setPeekStart] = useState<string | undefined>();
@@ -93,6 +90,10 @@ function Square() {
     setSquareView(v === "peek" ? "peek" : "feed");
     if (v !== "peek") setPeekStart(undefined);
     setShown(10);
+  }
+
+  if (isPending || (user && !onboardingDone)) {
+    return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
   }
 
   return (
@@ -279,13 +280,14 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
   const liked = useCampusStore((s) => s.liked[key]);
   const count = useCampusStore((s) => s.likeCounts[key] ?? 0);
   const toggleLike = useCampusStore((s) => s.toggleLike);
-  const localReplies = useCampusStore((s) => s.postReplies[key] ?? EMPTY_REPLIES);
+  const localReplies: import("@/lib/unibud/spill-data").SpillReply[] = useCampusStore((s) => s.postReplies[key] ?? EMPTY_REPLIES);
   const addPostReply = useCampusStore((s) => s.addPostReply);
   const hidePost = useCampusStore((s) => s.hidePost);
   const saved = useCampusStore((s) => (s.savedPosts ?? []).includes(key));
   const toggleSavePost = useCampusStore((s) => s.toggleSavePost);
   const { user } = useCurrentUserState();
-  const catalog = useLoaderData({ from: "/_app" });
+  type CatalogReply = ReturnType<typeof mapPostReply>;
+  const catalog = useLoaderData({ from: "/_app" }) as { replies?: CatalogReply[] };
   const dbReplies = (catalog.replies ?? [])
     .filter((r) => r.postId === key)
     .map((r) => ({
@@ -336,7 +338,7 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
           </div>
           {menu ? (
             <div className="mt-2 flex flex-wrap gap-2 text-xs">
-              <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { following.includes(post.authorHandle) ? unfollow(post.authorHandle) : follow(post.authorHandle); setMenu(false); }}>
+              <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { if (following.includes(post.authorHandle)) { unfollow(post.authorHandle); } else { follow(post.authorHandle); } setMenu(false); }}>
                 {following.includes(post.authorHandle) ? "Unfollow" : "Follow"}
               </button>
               <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { hidePost(key); setMenu(false); }}>

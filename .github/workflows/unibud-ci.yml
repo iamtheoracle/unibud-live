@@ -1,23 +1,29 @@
 name: UNIBUD Pre-UI Verification Gate
-# Full application verification gate
+# Run reproducible source checks before a change can be considered ready.
 
 on:
   push:
-    branches: [main]
+    branches: [main, rebuild/unibud-mini-apps-2026-10-16, architecture/unibud-next-era-foundation]
   pull_request:
-    branches: [main]
+    branches: [main, rebuild/unibud-mini-apps-2026-10-16]
 
 permissions:
   contents: read
 
+concurrency:
+  group: unibud-verify-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -35,11 +41,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Database policy tests
+        run: npm run test:db-policy
+
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Lint agent and integration layer (pre-UI gate)
-        run: npx eslint src/lib/agents src/lib/spark src/lib/bud/server.ts src/lib/bud/guest-ask.ts src/lib/bud/spark.ts
+      - name: Lint changed source files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          git diff --name-only "$BASE_SHA" HEAD -- '*.ts' '*.tsx' '*.js' '*.jsx' > /tmp/unibud-lint-files.txt
+          if [ -s /tmp/unibud-lint-files.txt ]; then
+            xargs -r npx eslint < /tmp/unibud-lint-files.txt
+          else
+            echo "No changed JavaScript/TypeScript files to lint."
+          fi
+
+      - name: Full-repository lint debt audit
+        run: npm run lint
+        continue-on-error: true
 
       - name: Agent and Spark tests (pre-UI gate)
         run: npm run test:agents
+
+      - name: Netlify-compatible production build
+        run: npm run build:netlify

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useLoaderData } from "@tanstack/react-router";
 import { CATEGORIES } from "@/lib/unibud/catalog";
-import type { ListingCategory } from "@/lib/unibud/types";
+import type { Listing, ListingCategory } from "@/lib/unibud/types";
 import { ListingCard } from "@/components/listing-card";
 import { VaultGate } from "@/components/unibud/vault-gate";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_app/market/")({
 });
 
 function Market() {
-  const catalog = useLoaderData({ from: "/_app" });
+  const catalog = useLoaderData({ from: "/_app" }) as { listings: Listing[] };
   const { cat = "all" } = Route.useSearch();
   const listings =
     cat === "all" ? catalog.listings : catalog.listings.filter((l) => l.category === cat);

@@ -39,4 +39,30 @@ export function isServerlessRuntime(): boolean {
   );
 }
 
+/** Explicit production detection, independent of hosting provider. */
+export function isProductionRuntime(): boolean {
+  return typeof process !== "undefined" && process.env.NODE_ENV === "production";
+}
+
+export interface EmbeddedDatabasePolicy {
+  databaseUrl?: string;
+  serverless: boolean;
+  production: boolean;
+  enabled: boolean;
+}
+
+/**
+ * Embedded storage is a local-development convenience only. A configured
+ * PostgreSQL URL always takes precedence; PGlite is never a production
+ * fallback, including on non-serverless Node hosts.
+ */
+export function isPgliteAllowed(policy: EmbeddedDatabasePolicy): boolean {
+  return (
+    !policy.databaseUrl?.trim() &&
+    !policy.serverless &&
+    !policy.production &&
+    policy.enabled
+  );
+}
+
 export const DATABASE_URL_VARS = CANDIDATES.join(" or ");

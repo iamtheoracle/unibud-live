@@ -1,17 +1,31 @@
 import { pendingMigrations } from "../../scripts/migration-plan.mjs";
-import { DATABASE_URL_VARS, isServerlessRuntime, resolveDatabaseUrl } from "./database-url";
+import {
+  DATABASE_URL_VARS,
+  isPgliteAllowed,
+  isProductionRuntime,
+  isServerlessRuntime,
+  resolveDatabaseUrl,
+} from "./database-url";
 
 export type DbSource = "postgres" | "pglite" | "unconfigured";
 
 const databaseUrl = resolveDatabaseUrl();
 const serverless = isServerlessRuntime();
+const production = isProductionRuntime();
 const usePglite = typeof process !== "undefined" && process.env.USE_PGLITE === "true";
+const pgliteAllowed = isPgliteAllowed({
+  databaseUrl,
+  serverless,
+  production,
+  enabled: usePglite,
+});
 
 /**
- * Postgres when a connection string is set (Netlify/production).
- * Embedded PGlite only for local/preview — never on a serverless filesystem.
+ * PostgreSQL is mandatory in production. Embedded PGlite is available only
+ * when explicitly enabled in local development and never as a production
+ * or serverless fallback.
  */
-export const dbSource: DbSource = databaseUrl ? "postgres" : usePglite && !serverless ? "pglite" : "unconfigured";
+export const dbSource: DbSource = databaseUrl ? "postgres" : pgliteAllowed ? "pglite" : "unconfigured";
 
 export interface Sql {
   <T = any>(
@@ -69,13 +83,14 @@ function createPostgresSql(): Promise<Sql> {
 }
 
 async function createPgliteSql(): Promise<Sql> {
-  if (serverless) {
-    throw new Error(
-      `PGlite cannot run on Netlify/Lambda. Set ${DATABASE_URL_VARS} for PostgreSQL.`,
-    );
-  }
-  if (!usePglite) {
-    throw new Error("PGlite is disabled by default. Set USE_PGLITE=true for local development.");
+  if (!pgliteAllowed) {
+    if (production) {
+      throw new Error(`PGlite is forbidden in production. Configure PostgreSQL with ${DATABASE_URL_VARS}.`);
+    }
+    if (serverless) {
+      throw new Error(`PGlite cannot run on Netlify/Lambda. Set ${DATABASE_URL_VARS} for PostgreSQL.`);
+    }
+    throw new Error("PGlite is disabled by default. Set USE_PGLITE=true for local development only.");
   }
   globalRef.__pgliteInstance__ ??= (async () => {
     const { PGlite } = await import("@electric-sql/pglite");
@@ -132,12 +147,15 @@ async function createSql(): Promise<Sql> {
     throw new Error("@/lib/db is server-only.");
   }
   if (databaseUrl) return createPostgresSql();
+  if (production) {
+    throw new Error(`Production requires PostgreSQL. Configure ${DATABASE_URL_VARS}; embedded storage is forbidden.`);
+  }
   if (serverless) {
     throw new Error(
       `PGlite cannot run on Netlify/Lambda. Set ${DATABASE_URL_VARS} for PostgreSQL.`,
     );
   }
-  if (usePglite) return createPgliteSql();
+  if (pgliteAllowed) return createPgliteSql();
   throw new Error(
     `Database is not configured. Set ${DATABASE_URL_VARS} for PostgreSQL or USE_PGLITE=true for local development.`,
   );
@@ -152,8 +170,8 @@ export function getSql(): Promise<Sql> {
 }
 
 export async function getPglite(): Promise<import("@electric-sql/pglite").PGlite> {
-  if (databaseUrl || serverless || !usePglite) {
-    throw new Error("PGlite is only for local preview. Production uses PostgreSQL.");
+  if (!pgliteAllowed) {
+    throw new Error("PGlite is only for explicitly enabled local development. Production uses PostgreSQL.");
   }
   await getSql();
   const pg = await globalRef.__pgliteInstance__;
@@ -163,13 +181,18 @@ export async function getPglite(): Promise<import("@electric-sql/pglite").PGlite
 
 export function ensureDbReady(): Promise<void> {
   if (databaseUrl) return Promise.resolve();
+  if (production) {
+    return Promise.reject(
+      new Error(`Production requires PostgreSQL. Configure ${DATABASE_URL_VARS}; embedded storage is forbidden.`),
+    );
+  }
   if (serverless) return Promise.resolve();
-  if (!usePglite) return Promise.resolve();
+  if (!pgliteAllowed) return Promise.resolve();
   return getSql().then(() => undefined);
 }
 
 const globalBoot = globalThis as typeof globalThis & { __pgBootstrapPromise__?: Promise<void> };
-if (typeof window === "undefined" && !databaseUrl && !serverless && usePglite) {
+if (typeof window === "undefined" && pgliteAllowed) {
   globalBoot.__pgBootstrapPromise__ ??= ensureDbReady().catch((err) => {
     globalBoot.__pgBootstrapPromise__ = undefined;
     console.error("[db] PGLite bootstrap failed:", err);
