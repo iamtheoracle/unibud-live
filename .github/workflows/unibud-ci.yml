@@ -3,7 +3,10 @@ name: UNIBUD Pre-UI Verification Gate
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - "rebuild/unibud-mini-apps-*"
+      - "fix/riff-guest-readonly-*"
   pull_request:
     branches: [main]
 
@@ -38,8 +41,14 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Production bundle build
+        run: npm run build:netlify
+
       - name: Lint agent and integration layer (pre-UI gate)
         run: npx eslint src/lib/agents src/lib/spark src/lib/bud/server.ts src/lib/bud/guest-ask.ts src/lib/bud/spark.ts
 
       - name: Agent and Spark tests (pre-UI gate)
         run: npm run test:agents
+
+      - name: Riff guest access policy tests
+        run: npm run test:riff-access
