@@ -44,7 +44,7 @@ test("two accounts share persisted posts and replies, newest first", async () =>
   try {
     const post = await a.createRiff({ body: "Persistent post from A" });
     assert.equal((await b.listRiffs()).length, 1);
-    assert.equal((await b.listRiffs())[0].authorUserId, "user-a");
+    assert.equal((await b.listRiffs())[0].authorHandle, "alice");
     await b.replyToRiff({ postId: post.id, body: "First reply" });
     await b.replyToRiff({ postId: post.id, body: "Second reply" });
     const thread = await a.getRiff(post.id);
@@ -57,8 +57,10 @@ test("ownership is derived from the server service identity", async () => {
   const { pg, a, b } = await fixture();
   try {
     const post = await a.createRiff({ body: "Identity stays server-side" });
-    assert.equal(post.authorUserId, "user-a");
-    assert.equal((await b.getRiff(post.id)).authorUserId, "user-a");
+    assert.equal(post.authorHandle, "you");
+    const rows = await pg.query<{ author_user_id: string }>("select author_user_id from riff_posts where id = $1", [post.id]);
+    assert.equal(rows.rows[0].author_user_id, "user-a");
+    assert.equal((await b.getRiff(post.id)).authorHandle, "alice");
   } finally { await pg.close(); }
 });
 
