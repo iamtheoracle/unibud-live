@@ -77,58 +77,58 @@ function Riff() {
         ))}
       </div>
 
-      <form
-        className="mt-2 border-y border-border px-5 py-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!draft.trim()) return;
-          addSpill(draft.trim(), user ? "you" : "guest", quoting ? { quoteId: quoting } : undefined);
-          setDraft("");
-          setQuoting(null);
-        }}
-      >
-        {!user ? (
-          <p className="mb-2 text-[11px] text-muted-foreground">
-            Guest Riff — on this device only. Sign in to keep it.
-          </p>
-        ) : null}
-        {quoting ? (
-          <p className="mb-2 text-xs text-muted-foreground">
-            Quoting a Riff ·{" "}
-            <button type="button" className="underline" onClick={() => setQuoting(null)}>
-              cancel
+      {user ? (
+        <form
+          className="mt-2 border-y border-border px-5 py-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!draft.trim()) return;
+            addSpill(draft.trim(), "you", quoting ? { quoteId: quoting } : undefined);
+            setDraft("");
+            setQuoting(null);
+          }}
+        >
+          {quoting ? (
+            <p className="mb-2 text-xs text-muted-foreground">
+              Quoting a Riff ·{" "}
+              <button type="button" className="underline" onClick={() => setQuoting(null)}>
+                cancel
+              </button>
+            </p>
+          ) : null}
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Roast, rizz, gossip, or gist…"
+            className="min-h-20 w-full resize-none bg-transparent text-sm outline-none"
+          />
+          <div className="mt-2 flex items-center justify-between">
+            <button
+              type="button"
+              className="text-xs text-muted-foreground underline"
+              onClick={() => {
+                setBudDraft(draft.trim() || "Invite Bud into this Riff.");
+                window.location.href = "/bud";
+              }}
+            >
+              Invite Bud
             </button>
+            <Button type="submit" size="sm" disabled={!draft.trim()}>
+              Drop
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <section className="mt-2 border-y border-border px-5 py-4" aria-label="Guest access">
+          <p className="text-sm font-medium">Explore Riff as a guest</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Guest access is read-only. Sign in to post, reply, react, follow, or report content.
           </p>
-        ) : null}
-        <textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Roast, rizz, gossip, or gist…"
-          className="min-h-20 w-full resize-none bg-transparent text-sm outline-none"
-        />
-        <div className="mt-2 flex items-center justify-between">
-          <button
-            type="button"
-            className="text-xs text-muted-foreground underline"
-            onClick={() => {
-              const key = "unibud-guest-bud-invites";
-              const n = Number(sessionStorage.getItem(key) || "0");
-              if (!user && n >= 3) {
-                toast.error("Guest Bud limit reached. Sign in for more.");
-                return;
-              }
-              if (!user) sessionStorage.setItem(key, String(n + 1));
-              setBudDraft(draft.trim() || "Invite Bud into this Riff.");
-              window.location.href = "/bud";
-            }}
-          >
-            Invite Bud
-          </button>
-          <Button type="submit" size="sm" disabled={!draft.trim()}>
-            Drop
-          </Button>
-        </div>
-      </form>
+          <Link to="/login" className="mt-3 inline-flex text-sm font-semibold underline">
+            Sign in to join the conversation
+          </Link>
+        </section>
+      )}
 
       {followed.length ? (
         <p className="px-5 pt-4 text-xs text-muted-foreground">
@@ -146,6 +146,7 @@ function Riff() {
 }
 
 function RiffCard({ spill, onQuote }: { spill: SpillPost; onQuote: () => void }) {
+  const { user } = useCurrentUserState();
   const person = personByHandle(spill.authorHandle);
   const name = person?.name ?? (spill.authorHandle === "you" ? "You" : spill.authorHandle);
   const community = spill.communityId ? communityById(spill.communityId) : undefined;
@@ -179,33 +180,49 @@ function RiffCard({ spill, onQuote }: { spill: SpillPost; onQuote: () => void })
             <img src={spill.video} alt="" className="mt-3 h-40 w-full rounded-2xl object-cover" />
           ) : null}
           <div className="mt-3 flex flex-wrap items-center gap-3 text-muted-foreground">
-            <button
-              type="button"
-              onClick={() => toggleLike(spill.id)}
-              className={cn("inline-flex h-9 items-center gap-1.5 text-sm", liked && "text-bud")}
-            >
-              <Heart className={cn("size-4", liked && "fill-bud")} />
-              {count || ""}
-            </button>
+            {user ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => toggleLike(spill.id)}
+                  className={cn("inline-flex h-9 items-center gap-1.5 text-sm", liked && "text-bud")}
+                >
+                  <Heart className={cn("size-4", liked && "fill-bud")} />
+                  {count || ""}
+                </button>
+                <button type="button" onClick={onQuote} className="inline-flex h-9 items-center gap-1.5 text-sm" aria-label="Quote">
+                  <Repeat2 className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  className={cn("inline-flex h-9 items-center gap-1.5 text-sm", followed && "text-ink")}
+                  onClick={() => followRiff(spill.id)}
+                  aria-label="Follow conversation"
+                >
+                  <Bookmark className={cn("size-4", followed && "fill-ink")} />
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex h-9 items-center gap-1.5 text-sm"
+                  onClick={() => {
+                    flagSpill(spill.id);
+                    toast.success("Report noted. This is not The Fixer.");
+                  }}
+                  aria-label="Report"
+                >
+                  <Flag className="size-4" />
+                </button>
+              </>
+            ) : null}
             <Link
               to="/riff/$id"
               params={{ id: spill.id }}
               className="inline-flex h-9 items-center gap-1.5 text-sm"
+              aria-label="Read conversation"
             >
               <MessageCircle className="size-4" />
               {spill.replies.length || ""}
             </Link>
-            <button type="button" onClick={onQuote} className="inline-flex h-9 items-center gap-1.5 text-sm" aria-label="Quote">
-              <Repeat2 className="size-4" />
-            </button>
-            <button
-              type="button"
-              className={cn("inline-flex h-9 items-center gap-1.5 text-sm", followed && "text-ink")}
-              onClick={() => followRiff(spill.id)}
-              aria-label="Follow conversation"
-            >
-              <Bookmark className={cn("size-4", followed && "fill-ink")} />
-            </button>
             <Link
               to="/bud"
               className="inline-flex h-9 items-center gap-1.5 text-sm"
@@ -216,17 +233,6 @@ function RiffCard({ spill, onQuote }: { spill: SpillPost; onQuote: () => void })
             >
               <Sparkles className="size-4" />
             </Link>
-            <button
-              type="button"
-              className="inline-flex h-9 items-center gap-1.5 text-sm"
-              onClick={() => {
-                flagSpill(spill.id);
-                toast.success("Report noted. This is not The Fixer.");
-              }}
-              aria-label="Report"
-            >
-              <Flag className="size-4" />
-            </button>
           </div>
         </div>
       </div>
