@@ -150,7 +150,16 @@ function Login() {
               </p>
             </form>
           </>
-        ) : null}
+        ) : (
+          <div className="mt-6 space-y-4">
+            <p role="status" className="text-sm text-muted-foreground">
+              Account sign-in is unavailable here right now. You can still continue as a guest.
+            </p>
+            <Button asChild className="w-full">
+              <Link to="/start">Continue as guest</Link>
+            </Button>
+          </div>
+        )}
         <ArcAttribution variant="compact" className="mt-10" />
       </section>
     </main>
