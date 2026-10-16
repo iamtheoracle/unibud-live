@@ -74,3 +74,10 @@ This ledger is the implementation and acceptance gate for issue #3. A screen, ro
 - The production Netlify site, repository, deployed branch and commit are not yet proven to match each other.
 
 This ledger is intentionally conservative. Reclassify status only when evidence and tests justify it.
+
+
+## Active implementation work log (2026-10-16)
+
+- **Riff community visibility hardening — implemented, verification pending.** Review of the Riff server branch found that community membership was checked when creating community-associated posts but was not consistently enforced when listing or reading them, or when replying, reacting, following, or reporting. The server service now filters community-associated posts against the current actor's membership at those boundaries. A PGlite regression test covers a member's visibility and verifies that a non-member cannot list, read, reply to, like, follow, or report a community-only Riff.
+- **Evidence boundary:** changes were committed to the existing Riff implementation branch feat/riff-server-backend-2026-10-12 for review in PR #12. The test has been added but has not been executed in this session; CI must pass before this item can be considered verified. No production database, migration, deployment, or live environment was changed.
+- **Next actions:** inspect the PR's CI results on the new head; fix any failures; review Riff moderation/report handling and membership-revocation behavior; then complete isolated staging tests for two-account visibility and authorization. Production remains frozen until the established release gates are met.
