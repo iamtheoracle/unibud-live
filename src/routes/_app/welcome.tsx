@@ -1,6 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Wordmark } from "@/components/brand/logo";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { upsertMyProfile } from "@/lib/unibud/server";
@@ -19,9 +21,20 @@ function Welcome() {
     if (user && onboardingDone) void nav({ to: "/" });
   }, [user, onboardingDone, nav]);
 
+  const [username, setUsername] = useState("");
+  const [fullName, setFullName] = useState("");
+
   function finish() {
     setOnboardingDone(true);
-    if (user) void upsertMyProfile({ data: { onboardingDone: true } });
+    if (user) {
+      void upsertMyProfile({
+        data: {
+          onboardingDone: true,
+          displayName: fullName.trim() || undefined,
+          handle: username.trim().toLowerCase() || undefined,
+        },
+      });
+    }
     void nav({ to: "/" });
   }
 
