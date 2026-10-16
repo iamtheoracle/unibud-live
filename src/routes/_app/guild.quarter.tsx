@@ -7,7 +7,6 @@ import {
   Banknote,
   BedDouble,
   Building2,
-  CheckCircle2,
   ChevronRight,
   CircleHelp,
   CreditCard,
@@ -249,7 +248,7 @@ function Quarter() {
               <h3 className="mt-4 font-semibold text-slate-950">{module.title}</h3>
               <p className="mt-1 flex-1 text-sm leading-5 text-muted-foreground">{module.description}</p>
               <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                <CheckCircle2 className="size-3.5" />
+                <CircleHelp className="size-3.5" />
                 {module.label}
               </p>
             </a>
