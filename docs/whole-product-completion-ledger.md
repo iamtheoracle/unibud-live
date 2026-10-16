@@ -84,3 +84,24 @@ This ledger is intentionally conservative. Reclassify status only when evidence 
 - **Verification evidence:** GitHub Actions PR verification run 38933976796 passed on commit c99ad7aa34dd9cbb54517c474d09cafed08abe4b. The run passed TypeScript, Netlify production build, authentication policy tests, Riff persistence/ownership tests, Bud/agent tests, media tests, and academic session policy tests. This is automated CI evidence only; it does not prove live deployment behavior or a real two-account staging journey.
 - **Change scope and safety:** changes are on feat/riff-server-backend-2026-10-12 for review in PR #12. No schema migration, production database mutation, merge, or deployment was performed.
 - **Next actions:** inspect moderation/report review workflows; add a deliberate concurrent membership-revocation stress test; run two-account authorization tests in an isolated staging environment; then reconcile the existing branch stack before any merge decision. Production remains frozen.
+
+## Riff public-read / member-write boundary — 2026-10-16
+
+- Decision: guests may read only global Riff posts and posts in explicitly public communities. Private community content is never returned to anonymous callers. All create, reply, reaction, follow, report, and delete operations require a verified member identity.
+- The Riff service accepts a null actor only for read methods; every mutation fails closed with `Authentication required.`. Existing authenticated endpoints continue to use `authMiddleware`.
+- Feed and thread routes use the anonymous read endpoints for guests, and hide mutation controls while preserving public post/thread navigation. Guest access does not read the device-local Zustand store.
+- Regression coverage is added for public/global visibility, private-community denial, anonymous mutation denial, interaction capability flags, and absence of internal user IDs in returned DTOs.
+- This is source/CI verification only. Public-feed availability in a deployed environment still depends on the deployed database having the Riff migration; no staging/production migration is authorized by this change.
+
+## Riff public-read follow-up — validation and membership locking
+
+- Added runtime validation for anonymous/authenticated feed inputs, including non-object payloads, incomplete/invalid cursors, and malformed page limits.
+- Added a PGlite regression that pauses a reply after acquiring the community membership lock, attempts concurrent membership revocation, and asserts the revocation cannot commit until the in-flight action completes.
+- The new test is intended to verify the serialization guarantee documented by the Riff service. CI must pass before treating that guarantee as verified.
+
+## PostgreSQL Riff concurrency verification — 2026-10-16
+
+- Added `src/lib/riff/service.postgres.test.ts`, which creates an isolated PostgreSQL schema, applies migration 0027, pauses a Riff reply after acquiring the community-membership row lock, and verifies a concurrent membership-revocation DELETE waits on a PostgreSQL lock before the action commits.
+- Added the `test:riff:postgres` package script and an ephemeral PostgreSQL 17 service to `.github/workflows/pr-verification.yml`. The test does not connect to staging or production.
+- [CI run 38936567563](https://github.com/iamtheoracle/unibud-live/actions/runs/38936567563) passed on `b33659705639227199788dc8dad527a8b1f08dee`: TypeScript, production build, authentication policy tests, PGlite Riff persistence/ownership tests, the real PostgreSQL membership-revocation concurrency test, Bud/agent tests, media tests, and academic policy tests all passed.
+- This ledger update is documentation-only; the updated branch head must pass its own CI run before it is considered verified.
