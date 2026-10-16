@@ -155,7 +155,6 @@ test("membership revocation waits for an in-flight Riff mutation holding the mem
   let revocation: Promise<void> | undefined;
   let action: Promise<unknown> | undefined;
   try {
-    await pg.query("create table communities (id text primary key, privacy text not null default 'public')");
     await pg.query("insert into communities (id, privacy) values ('private-room', 'private')");
     await pg.query("insert into community_members (community_id, user_id) values ('private-room', 'user-a')");
     const post = await a.createRiff({ body: "Lock ordering target", communityId: "private-room" });
