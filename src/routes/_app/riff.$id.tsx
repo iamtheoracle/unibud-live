@@ -63,9 +63,13 @@ function RiffThread() {
         </div>
       </div>
       <p className="mt-4 text-base leading-relaxed">{spill.body}</p>
-      <Button className="mt-4" size="sm" variant={followed ? "outline" : "primary"} onClick={() => followRiff(id)}>
-        {followed ? "Following this conversation" : "Follow conversation"}
-      </Button>
+      {user ? (
+        <Button className="mt-4" size="sm" variant={followed ? "outline" : "primary"} onClick={() => followRiff(id)}>
+          {followed ? "Following this conversation" : "Follow conversation"}
+        </Button>
+      ) : (
+        <p className="mt-3 text-xs text-muted-foreground">Guest access is read-only.</p>
+      )}
 
       <h2 className="mt-8 text-sm font-medium">Conversation</h2>
       <ul className="mt-3 space-y-3">
@@ -81,9 +85,11 @@ function RiffThread() {
                 <p className="mt-1 text-[11px] text-muted-foreground">Replying: {parentBody}</p>
               ) : null}
               <p className="mt-1 text-sm">{r.body}</p>
-              <button type="button" className="mt-2 text-xs font-medium" onClick={() => setParent(r.id)}>
-                Reply
-              </button>
+              {user ? (
+                <button type="button" className="mt-2 text-xs font-medium" onClick={() => setParent(r.id)}>
+                  Reply
+                </button>
+              ) : null}
             </li>
           );
         })}
