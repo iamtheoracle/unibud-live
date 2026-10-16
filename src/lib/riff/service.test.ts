@@ -116,6 +116,17 @@ test("reports persist without exposing reporter identity in feed results", async
   } finally { await pg.close(); }
 });
 
+test("report details reject non-text payloads", async () => {
+  const { pg, a, b } = await fixture();
+  try {
+    const post = await a.createRiff({ body: "Report validation target" });
+    await assert.rejects(
+      () => b.reportRiff({ postId: post.id, reason: "spam", details: 123 as unknown as string }),
+      /Report details must be text/,
+    );
+  } finally { await pg.close(); }
+});
+
 test("report submissions are rate-limited per account", async () => {
   const { pg, a, b } = await fixture();
   try {
