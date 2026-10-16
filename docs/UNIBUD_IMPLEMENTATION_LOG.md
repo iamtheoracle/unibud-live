@@ -30,6 +30,12 @@
 - The tests exercise the access policy helper. They do not prove server authorization.
 - No database migration, production configuration change, merge, or deployment was performed.
 
+
+### Verification result — first full gate
+- GitHub Actions run [38935022677](https://github.com/iamtheoracle/unibud-live/actions/runs/38935022677) completed with **success** on commit `76b2d03092f4d713adf9c4676ffc74cd6beca179`.
+- Confirmed successful steps: `npm ci`, `npm run typecheck`, `npm run build:netlify`, targeted ESLint for the agent/integration layer, `npm run test:agents`, and `npm run test:riff-access`.
+- This validates the source snapshot at that commit. The subsequent log update is a documentation-only commit and must receive its own CI run before the current branch head is considered verified.
+
 ### Known risks and blockers
 1. **Shared Riff remains unimplemented in this branch.** There is no server-backed public feed, durable post/reply/reaction/follow storage, or moderation-report endpoint. The guest page therefore shows an honest empty state rather than pretending that device-local records are public.
 2. **Client-side policy is not security enforcement.** Before introducing shared Riff mutation endpoints, require verified identity via `authMiddleware`, enforce permissions server-side, validate payloads and ownership, and test guest denial plus account A/B isolation. Public reads must return only explicitly public content.
