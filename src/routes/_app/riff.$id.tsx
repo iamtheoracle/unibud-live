@@ -13,14 +13,12 @@ type RiffReply = {
   id: string;
   postId: string;
   parentReplyId: string | null;
-  authorUserId: string;
   authorHandle: string;
   body: string;
   createdAt: string;
 };
 type RiffThreadData = {
   id: string;
-  authorUserId: string;
   authorHandle: string;
   body: string;
   createdAt: string;
