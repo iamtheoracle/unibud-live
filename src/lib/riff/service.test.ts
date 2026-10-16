@@ -62,6 +62,22 @@ test("ownership is derived from the server service identity", async () => {
   } finally { await pg.close(); }
 });
 
+test("community Riffs are visible and interactive only for current members", async () => {
+  const { pg, a, b } = await fixture();
+  try {
+    await pg.query("insert into community_members (community_id, user_id) values ($1, $2)", ["community-a", "user-a"]);
+    const post = await a.createRiff({ body: "Community-only conversation", communityId: "community-a" });
+
+    assert.equal((await a.listRiffs()).some((item) => item.id === post.id), true);
+    assert.equal((await b.listRiffs()).some((item) => item.id === post.id), false);
+    await assert.rejects(() => b.getRiff(post.id), /Riff not found/);
+    await assert.rejects(() => b.replyToRiff({ postId: post.id, body: "Unauthorized reply" }), /Riff not found/);
+    await assert.rejects(() => b.toggleRiffLike(post.id), /Riff not found/);
+    await assert.rejects(() => b.toggleRiffFollow(post.id), /Riff not found/);
+    await assert.rejects(() => b.reportRiff({ postId: post.id, reason: "spam" }), /Riff not found/);
+  } finally { await pg.close(); }
+});
+
 test("users cannot delete another user's post or reply", async () => {
   const { pg, a, b } = await fixture();
   try {
