@@ -74,3 +74,13 @@ This ledger is the implementation and acceptance gate for issue #3. A screen, ro
 - The production Netlify site, repository, deployed branch and commit are not yet proven to match each other.
 
 This ledger is intentionally conservative. Reclassify status only when evidence and tests justify it.
+
+
+## Active implementation work log (2026-10-16)
+
+- **Riff community visibility and write-authorization hardening — CI verified.** Community-associated Riffs are now filtered by current membership on feed reads and post/thread reads. Replies, reactions, follows, reports, and quotes use transactional post/membership locking so a membership revocation cannot race the write authorization check. Community-only posts are inaccessible to non-members and former members.
+- **DTO and input hardening — CI verified.** Internal account IDs were removed from public Riff post/reply DTOs and unused client types. Ownership tests assert the persisted author at the database boundary. Report details reject non-text runtime payloads with a controlled validation error.
+- **Regression coverage:** PGlite tests cover public cross-account persistence, community member/non-member visibility, unauthorized reads/replies/reactions/follows/reports/quotes, membership revocation, ownership checks, malformed report details, report rate limiting, and fail-closed media sharing.
+- **Verification evidence:** GitHub Actions PR verification run 38933976796 passed on commit c99ad7aa34dd9cbb54517c474d09cafed08abe4b. The run passed TypeScript, Netlify production build, authentication policy tests, Riff persistence/ownership tests, Bud/agent tests, media tests, and academic session policy tests. This is automated CI evidence only; it does not prove live deployment behavior or a real two-account staging journey.
+- **Change scope and safety:** changes are on feat/riff-server-backend-2026-10-12 for review in PR #12. No schema migration, production database mutation, merge, or deployment was performed.
+- **Next actions:** inspect moderation/report review workflows; add a deliberate concurrent membership-revocation stress test; run two-account authorization tests in an isolated staging environment; then reconcile the existing branch stack before any merge decision. Production remains frozen.
