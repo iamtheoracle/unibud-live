@@ -37,6 +37,30 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
       )) limit 1`, [postId, actor]);
     if (!rows[0]) throw new Error("Riff not found.");
   }
+  async function assertCommunityMembership(tx: Sql, communityId: unknown) {
+    if (communityId == null) return;
+    const membership = await tx.query(
+      "select user_id from community_members where community_id = $1 and user_id = $2 for key share",
+      [String(communityId), actor],
+    );
+    if (!membership[0]) throw new Error("Riff not found.");
+  }
+
+  async function lockVisiblePost(tx: Sql, postId: string) {
+    const rows = await tx.query(
+      "select id, community_id from riff_posts where id = $1 and deleted_at is null for update",
+      [postId],
+    );
+    if (!rows[0]) throw new Error("Riff not found.");
+    await assertCommunityMembership(tx, rows[0].community_id);
+    return rows[0] as Record<string, unknown>;
+  }
+
+  async function inTransaction<T>(operation: (tx: Sql) => Promise<T>): Promise<T> {
+    if (!sql.transaction) throw new Error("Riff requires database transaction support for this action.");
+    return sql.transaction(operation);
+  }
+
   async function postById(postId: string) {
     const rows = await sql.query(`select p.id, p.body, p.community_id, p.quote_post_id, p.media_id,
       p.created_at, p.updated_at, coalesce(sp.handle, 'member') as author_handle,
@@ -133,27 +157,30 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
     async replyToRiff(input: { postId: string; body: string; parentReplyId?: string }) {
       const postId = idValue(input?.postId, "post ID");
       const body = textValue(input?.body, "Reply");
-      await assertPost(postId);
       const parentId = input.parentReplyId ? idValue(input.parentReplyId, "parent reply ID") : null;
-      if (parentId) {
-        const parent = await sql.query("select id from riff_replies where id = $1 and post_id = $2 and deleted_at is null limit 1", [parentId, postId]);
-        if (!parent[0]) throw new Error("Parent reply not found in this Riff.");
-      }
-      const id = `riff_reply_${crypto.randomUUID()}`;
-      const rows = await sql.query(`insert into riff_replies (id, post_id, parent_reply_id, author_user_id, body)
-        values ($1, $2, $3, $4, $5) returning id, post_id, parent_reply_id, body, created_at`,
-      [id, postId, parentId, actor, body]);
-      return replyDto({ ...rows[0], author_handle: "you" } as Record<string, unknown>);
+      const id = "riff_reply_" + crypto.randomUUID();
+      const row = await inTransaction(async (tx) => {
+        await lockVisiblePost(tx, postId);
+        if (parentId) {
+          const parent = await tx.query(
+            "select id from riff_replies where id = $1 and post_id = $2 and deleted_at is null limit 1",
+            [parentId, postId],
+          );
+          if (!parent[0]) throw new Error("Parent reply not found in this Riff.");
+        }
+        const rows = await tx.query(
+          "insert into riff_replies (id, post_id, parent_reply_id, author_user_id, body) values ($1, $2, $3, $4, $5) returning id, post_id, parent_reply_id, body, created_at",
+          [id, postId, parentId, actor, body],
+        );
+        return rows[0] as Record<string, unknown>;
+      });
+      return replyDto({ ...row, author_handle: "you" });
     },
 
     async toggleRiffLike(postIdValue: string) {
       const postId = idValue(postIdValue, "post ID");
       const operation = async (tx: Sql) => {
-        const locked = await tx.query(`select p.id from riff_posts p where p.id = $1 and p.deleted_at is null
-          and (p.community_id is null or exists (
-            select 1 from community_members cm where cm.community_id = p.community_id and cm.user_id = $2
-          )) for update`, [postId, actor]);
-        if (!locked[0]) throw new Error("Riff not found.");
+        await lockVisiblePost(tx, postId);
         const removed = await tx.query("delete from riff_reactions where post_id = $1 and user_id = $2 returning post_id", [postId, actor]);
         let liked = false;
         if (!removed[0]) {
@@ -164,17 +191,13 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
         const count = await tx.query("select count(*)::int as count from riff_reactions where post_id = $1", [postId]);
         return { liked, likeCount: Number(count[0]?.count ?? 0) };
       };
-      return sql.transaction ? sql.transaction(operation) : operation(sql);
+      return inTransaction(operation);
     },
 
     async toggleRiffFollow(postIdValue: string) {
       const postId = idValue(postIdValue, "post ID");
       const operation = async (tx: Sql) => {
-        const locked = await tx.query(`select p.id from riff_posts p where p.id = $1 and p.deleted_at is null
-          and (p.community_id is null or exists (
-            select 1 from community_members cm where cm.community_id = p.community_id and cm.user_id = $2
-          )) for update`, [postId, actor]);
-        if (!locked[0]) throw new Error("Riff not found.");
+        await lockVisiblePost(tx, postId);
         const removed = await tx.query("delete from riff_follows where post_id = $1 and user_id = $2 returning post_id", [postId, actor]);
         let following = false;
         if (!removed[0]) {
@@ -185,7 +208,7 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
         const count = await tx.query("select count(*)::int as count from riff_follows where post_id = $1", [postId]);
         return { following, followCount: Number(count[0]?.count ?? 0) };
       };
-      return sql.transaction ? sql.transaction(operation) : operation(sql);
+      return inTransaction(operation);
     },
 
     async reportRiff(input: { postId?: string; replyId?: string; reason: RiffReportReason; details?: string }) {
@@ -203,25 +226,21 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
         const recent = await tx.query("select count(*)::int as count from riff_reports where reporter_user_id = $1 and created_at > now() - interval '1 hour'", [actor]);
         if (Number(recent[0]?.count ?? 0) >= 10) throw new Error("Report limit reached. Try again later.");
         if (postId) {
-          const target = await tx.query(`select p.id from riff_posts p where p.id = $1 and p.deleted_at is null
-            and (p.community_id is null or exists (
-              select 1 from community_members cm where cm.community_id = p.community_id and cm.user_id = $2
-            )) limit 1`, [postId, actor]);
-          if (!target[0]) throw new Error("Riff not found.");
+          await lockVisiblePost(tx, postId);
         }
         if (replyId) {
-          const target = await tx.query(`select r.id from riff_replies r join riff_posts p on p.id = r.post_id
-            where r.id = $1 and r.deleted_at is null and p.deleted_at is null
-            and (p.community_id is null or exists (
-              select 1 from community_members cm where cm.community_id = p.community_id and cm.user_id = $2
-            )) limit 1`, [replyId, actor]);
+          const target = await tx.query(
+            "select r.id, p.community_id from riff_replies r join riff_posts p on p.id = r.post_id where r.id = $1 and r.deleted_at is null and p.deleted_at is null for update of r, p",
+            [replyId],
+          );
           if (!target[0]) throw new Error("Riff reply not found.");
+          await assertCommunityMembership(tx, target[0].community_id);
         }
         const id = `riff_report_${crypto.randomUUID()}`;
         await tx.query("insert into riff_reports (id, reporter_user_id, post_id, reply_id, reason, details) values ($1, $2, $3, $4, $5, $6)", [id, actor, postId, replyId, input.reason, details]);
         return { id, status: "open" as const };
       };
-      return sql.transaction ? sql.transaction(operation) : operation(sql);
+      return inTransaction(operation);
     },
 
     async softDeleteRiffPost(postIdValue: string) {
