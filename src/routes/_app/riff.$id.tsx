@@ -7,13 +7,16 @@ import { relativeTime } from "@/lib/unibud/format";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import type { SpillReply } from "@/lib/unibud/spill-data";
+import { resolveRiffAccess } from "@/lib/unibud/riff-access";
 
 export const Route = createFileRoute("/_app/riff/$id")({ component: RiffThread });
 
 function RiffThread() {
   const { id } = Route.useParams();
   const { user } = useCurrentUserState();
-  const spill = useCampusStore((s) => s.spills.find((x) => x.id === id));
+  const access = resolveRiffAccess(Boolean(user));
+  const localSpill = useCampusStore((s) => s.spills.find((x) => x.id === id));
+  const spill = access.canReadDeviceLocalState ? localSpill : undefined;
   const replySpill = useCampusStore((s) => s.replySpill);
   const followRiff = useCampusStore((s) => s.followRiff);
   const followed = useCampusStore((s) => (s.followedRiffs ?? []).includes(id));
@@ -23,7 +26,11 @@ function RiffThread() {
   if (!spill) {
     return (
       <main className="px-5 py-10">
-        <p className="text-sm text-muted-foreground">That Riff is gone.</p>
+        <p className="text-sm text-muted-foreground">
+          {access.canReadDeviceLocalState
+            ? "That Riff is not available on this device."
+            : "Guest Riff is read-only. This device-local thread is not part of a shared feed, which is not connected yet."}
+        </p>
         <Link to="/riff" className="mt-3 inline-block text-sm font-medium">
           Back to Riff
         </Link>
@@ -63,6 +70,9 @@ function RiffThread() {
         </div>
       </div>
       <p className="mt-4 text-base leading-relaxed">{spill.body}</p>
+      <p className="mt-2 text-xs leading-5 text-muted-foreground">
+        This thread and its interactions are stored only in this browser; they are not shared with other users yet.
+      </p>
       <Button className="mt-4" size="sm" variant={followed ? "outline" : "primary"} onClick={() => followRiff(id)}>
         {followed ? "Following this conversation" : "Follow conversation"}
       </Button>
