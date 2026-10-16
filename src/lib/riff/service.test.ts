@@ -75,6 +75,9 @@ test("community Riffs are visible and interactive only for current members", asy
     await assert.rejects(() => b.toggleRiffLike(post.id), /Riff not found/);
     await assert.rejects(() => b.toggleRiffFollow(post.id), /Riff not found/);
     await assert.rejects(() => b.reportRiff({ postId: post.id, reason: "spam" }), /Riff not found/);
+    await pg.query("delete from community_members where community_id = $1 and user_id = $2", ["community-a", "user-a"]);
+    assert.equal((await a.listRiffs()).some((item) => item.id === post.id), false);
+    await assert.rejects(() => a.getRiff(post.id), /Riff not found/);
   } finally { await pg.close(); }
 });
 
