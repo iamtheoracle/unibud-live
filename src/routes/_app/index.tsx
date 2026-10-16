@@ -338,7 +338,7 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
           </div>
           {menu ? (
             <div className="mt-2 flex flex-wrap gap-2 text-xs">
-              <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { following.includes(post.authorHandle) ? unfollow(post.authorHandle) : follow(post.authorHandle); setMenu(false); }}>
+              <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { if (following.includes(post.authorHandle)) { unfollow(post.authorHandle); } else { follow(post.authorHandle); } setMenu(false); }}>
                 {following.includes(post.authorHandle) ? "Unfollow" : "Follow"}
               </button>
               <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { hidePost(key); setMenu(false); }}>
