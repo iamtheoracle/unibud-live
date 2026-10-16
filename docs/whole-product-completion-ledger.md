@@ -98,3 +98,10 @@ This ledger is intentionally conservative. Reclassify status only when evidence 
 - Added runtime validation for anonymous/authenticated feed inputs, including non-object payloads, incomplete/invalid cursors, and malformed page limits.
 - Added a PGlite regression that pauses a reply after acquiring the community membership lock, attempts concurrent membership revocation, and asserts the revocation cannot commit until the in-flight action completes.
 - The new test is intended to verify the serialization guarantee documented by the Riff service. CI must pass before treating that guarantee as verified.
+
+## PostgreSQL Riff concurrency verification — 2026-10-16
+
+- Added `src/lib/riff/service.postgres.test.ts`, which creates an isolated PostgreSQL schema, applies migration 0027, pauses a Riff reply after acquiring the community-membership row lock, and verifies a concurrent membership-revocation DELETE waits on a PostgreSQL lock before the action commits.
+- Added the `test:riff:postgres` package script and an ephemeral PostgreSQL 17 service to `.github/workflows/pr-verification.yml`. The test does not connect to staging or production.
+- [CI run 38936567563](https://github.com/iamtheoracle/unibud-live/actions/runs/38936567563) passed on `b33659705639227199788dc8dad527a8b1f08dee`: TypeScript, production build, authentication policy tests, PGlite Riff persistence/ownership tests, the real PostgreSQL membership-revocation concurrency test, Bud/agent tests, media tests, and academic policy tests all passed.
+- This ledger update is documentation-only; the updated branch head must pass its own CI run before it is considered verified.
