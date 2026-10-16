@@ -13,12 +13,38 @@ import {
   mapProfile,
   mapUni,
 } from "./map";
-import type { ListingCategory, ListingKind, StudentProfile } from "./types";
+import type {
+  Community,
+  DirectoryPerson,
+  DiscoveryItem,
+  FeedPost,
+  Listing,
+  ListingCategory,
+  ListingKind,
+  StudentProfile,
+  University,
+} from "./types";
 import { canTeach, type CampusRole } from "./roles";
 import { COMMUNITIES, DISCOVERY, LISTINGS, PEOPLE, POSTS, UNIVERSITIES } from "./catalog";
 
+export type CampusCatalog = {
+  universities: University[];
+  people: DirectoryPerson[];
+  listings: Listing[];
+  communities: Community[];
+  posts: FeedPost[];
+  discovery: DiscoveryItem[];
+  replies: ReturnType<typeof mapPostReply>[];
+};
+
+export type ListingDetail = {
+  listing: Listing;
+  seller: DirectoryPerson | null;
+  related: Listing[];
+} | null;
+
 /** Production fallback when DB is unavailable — never surface fixture people/posts/communities. */
-function emptyCatalog() {
+function emptyCatalog(): CampusCatalog {
   return {
     universities: UNIVERSITIES,
     people: [] as typeof PEOPLE,
@@ -31,7 +57,7 @@ function emptyCatalog() {
 }
 
 export const getCampusCatalog = createServerFn({ method: "GET" }).handler(
-  async () => {
+  async (): Promise<CampusCatalog> => {
     try {
       await ensureCatalogSeed();
       const sql = await getSql();
@@ -65,7 +91,7 @@ export const getCampusCatalog = createServerFn({ method: "GET" }).handler(
 
 export const getListing = createServerFn({ method: "GET" })
   .validator((id: string) => id)
-  .handler(async ({ data: id }) => {
+  .handler(async ({ data: id }): Promise<ListingDetail> => {
     await ensureCatalogSeed();
     const sql = await getSql();
     const rows = await sql`select * from listings where id = ${id} limit 1`;
