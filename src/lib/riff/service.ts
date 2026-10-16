@@ -30,13 +30,6 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
   if (!sessionUserId?.trim()) throw new Error("Authentication required.");
   const actor = sessionUserId.trim();
 
-  async function assertPost(postId: string) {
-    const rows = await sql.query(`select p.id from riff_posts p where p.id = $1 and p.deleted_at is null
-      and (p.community_id is null or exists (
-        select 1 from community_members cm where cm.community_id = p.community_id and cm.user_id = $2
-      )) limit 1`, [postId, actor]);
-    if (!rows[0]) throw new Error("Riff not found.");
-  }
   async function assertCommunityMembership(tx: Sql, communityId: unknown) {
     if (communityId == null) return;
     const membership = await tx.query(
@@ -129,29 +122,24 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
         if (!media[0]) throw new Error("Media must be a ready private upload owned by you.");
         throw new Error("Riff media sharing is not enabled yet; create a text-only Riff for now.");
       }
-      if (quotePostId) await assertPost(quotePostId);
-      const id = `riff_${crypto.randomUUID()}`;
-      let rows: Record<string, unknown>[];
-      if (communityId) {
-        // Lock the membership row in the same statement as the insert so a
-        // concurrent leave/revocation cannot race the authorization check.
-        rows = await sql.query(`with authorized_member as (
-          select user_id from community_members
-          where community_id = $4 and user_id = $2
-          for key share
-        )
-        insert into riff_posts (id, author_user_id, body, community_id, quote_post_id)
-        select $1, authorized_member.user_id, $3, $4, $5 from authorized_member
-        returning id, body, community_id, quote_post_id, media_id, created_at, updated_at`,
-        [id, actor, body, communityId, quotePostId]);
-        if (!rows[0]) throw new Error("Join this community before posting to it.");
-      } else {
-        rows = await sql.query(`insert into riff_posts (id, author_user_id, body, community_id, quote_post_id)
-          values ($1, $2, $3, $4, $5)
-          returning id, body, community_id, quote_post_id, media_id, created_at, updated_at`,
-        [id, actor, body, communityId, quotePostId]);
-      }
-      return postDto({ ...rows[0], author_handle: "you", liked: false, following: false, reply_count: 0, like_count: 0, follow_count: 0 } as Record<string, unknown>);
+
+      const id = "riff_" + crypto.randomUUID();
+      const row = await inTransaction(async (tx) => {
+        if (quotePostId) await lockVisiblePost(tx, quotePostId);
+        if (communityId) {
+          const membership = await tx.query(
+            "select user_id from community_members where community_id = $1 and user_id = $2 for key share",
+            [communityId, actor],
+          );
+          if (!membership[0]) throw new Error("Join this community before posting to it.");
+        }
+        const rows = await tx.query(
+          "insert into riff_posts (id, author_user_id, body, community_id, quote_post_id) values ($1, $2, $3, $4, $5) returning id, body, community_id, quote_post_id, media_id, created_at, updated_at",
+          [id, actor, body, communityId, quotePostId],
+        );
+        return rows[0] as Record<string, unknown>;
+      });
+      return postDto({ ...row, author_handle: "you", liked: false, following: false, reply_count: 0, like_count: 0, follow_count: 0 });
     },
 
     async replyToRiff(input: { postId: string; body: string; parentReplyId?: string }) {
