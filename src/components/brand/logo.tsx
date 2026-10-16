@@ -60,7 +60,7 @@ const ARC_DARK = "/brand/arc-mark-dark.jpg";
 const ARC_FULL = "/brand/arc-mark-full.jpg";
 
 /**
- * Subtle ARC attribution. Uses the official treatments on a dark plate.
+ * Subtle THE ORACLE ARC attribution. Preserve the supplied logo artwork.
  * Do not place this in primary navigation or feeds.
  */
 export function ArcAttribution({
@@ -73,18 +73,18 @@ export function ArcAttribution({
   const src = variant === "full" ? ARC_FULL : ARC_DARK;
   return (
     <figure className={cn("flex flex-col items-center gap-2", className)}>
-      <div className="rounded-xl bg-black px-4 py-3">
+      <div className="px-0 py-0">
         <img
           src={src}
-          alt="ARC · Oracle Intelligence & Systems"
+          alt="THE ORACLE ARC · Intelligence & Systems"
           className={cn(
             "object-contain object-center",
-            variant === "full" ? "h-14 w-auto max-w-[280px]" : "h-10 w-auto max-w-[200px]",
+            variant === "full" ? "h-auto w-full max-w-[360px]" : "h-auto w-full max-w-[280px]",
           )}
         />
       </div>
-      <figcaption className="text-[10px] tracking-wide text-muted-foreground">
-        A product of ARC · Intelligence & Systems
+      <figcaption className="text-xs tracking-wide text-muted-foreground">
+        A product of THE ORACLE ARC · Intelligence & Systems
       </figcaption>
     </figure>
   );
