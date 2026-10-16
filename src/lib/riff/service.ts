@@ -31,7 +31,10 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
   const actor = sessionUserId.trim();
 
   async function assertPost(postId: string) {
-    const rows = await sql.query("select id from riff_posts where id = $1 and deleted_at is null limit 1", [postId]);
+    const rows = await sql.query(`select p.id from riff_posts p where p.id = $1 and p.deleted_at is null
+      and (p.community_id is null or exists (
+        select 1 from community_members cm where cm.community_id = p.community_id and cm.user_id = $2
+      )) limit 1`, [postId, actor]);
     if (!rows[0]) throw new Error("Riff not found.");
   }
   async function postById(postId: string) {
@@ -43,7 +46,10 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
       (select count(*)::int from riff_reactions x where x.post_id = p.id) as like_count,
       (select count(*)::int from riff_follows f where f.post_id = p.id) as follow_count
       from riff_posts p left join student_profiles sp on sp.user_id = p.author_user_id
-      where p.id = $1 and p.deleted_at is null limit 1`, [postId, actor]);
+      where p.id = $1 and p.deleted_at is null
+      and (p.community_id is null or exists (
+        select 1 from community_members cm where cm.community_id = p.community_id and cm.user_id = $2
+      )) limit 1`, [postId, actor]);
     if (!rows[0]) throw new Error("Riff not found.");
     return postDto(rows[0] as Record<string, unknown>);
   }
@@ -64,6 +70,9 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
         (select count(*)::int from riff_follows f where f.post_id = p.id) as follow_count
         from riff_posts p left join student_profiles sp on sp.user_id = p.author_user_id
         where p.deleted_at is null
+        and (p.community_id is null or exists (
+          select 1 from community_members cm where cm.community_id = p.community_id and cm.user_id = $4
+        ))
         and ($1::timestamptz is null or (p.created_at, p.id) < ($1::timestamptz, $2::text))
         order by p.created_at desc, p.id desc limit $3`, [at, id, limit, actor]);
       return rows.map((r) => postDto(r as Record<string, unknown>));
@@ -77,7 +86,10 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
         from riff_replies r join riff_posts p on p.id = r.post_id
         left join student_profiles sp on sp.user_id = r.author_user_id
         where r.post_id = $1 and r.deleted_at is null and p.deleted_at is null
-        order by r.created_at desc, r.id desc limit 500`, [postId]);
+        and (p.community_id is null or exists (
+          select 1 from community_members cm where cm.community_id = p.community_id and cm.user_id = $2
+        ))
+        order by r.created_at desc, r.id desc limit 500`, [postId, actor]);
       const own = await sql.query(`select exists(select 1 from riff_reactions where post_id = $1 and user_id = $2) as liked,
         exists(select 1 from riff_follows where post_id = $1 and user_id = $2) as following`, [postId, actor]);
       return { ...post, liked: Boolean(own[0]?.liked), following: Boolean(own[0]?.following), replies: rows.map((r) => replyDto(r as Record<string, unknown>)) };
@@ -137,7 +149,10 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
     async toggleRiffLike(postIdValue: string) {
       const postId = idValue(postIdValue, "post ID");
       const operation = async (tx: Sql) => {
-        const locked = await tx.query("select id from riff_posts where id = $1 and deleted_at is null for update", [postId]);
+        const locked = await tx.query(`select p.id from riff_posts p where p.id = $1 and p.deleted_at is null
+          and (p.community_id is null or exists (
+            select 1 from community_members cm where cm.community_id = p.community_id and cm.user_id = $2
+          )) for update`, [postId, actor]);
         if (!locked[0]) throw new Error("Riff not found.");
         const removed = await tx.query("delete from riff_reactions where post_id = $1 and user_id = $2 returning post_id", [postId, actor]);
         let liked = false;
@@ -155,7 +170,10 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
     async toggleRiffFollow(postIdValue: string) {
       const postId = idValue(postIdValue, "post ID");
       const operation = async (tx: Sql) => {
-        const locked = await tx.query("select id from riff_posts where id = $1 and deleted_at is null for update", [postId]);
+        const locked = await tx.query(`select p.id from riff_posts p where p.id = $1 and p.deleted_at is null
+          and (p.community_id is null or exists (
+            select 1 from community_members cm where cm.community_id = p.community_id and cm.user_id = $2
+          )) for update`, [postId, actor]);
         if (!locked[0]) throw new Error("Riff not found.");
         const removed = await tx.query("delete from riff_follows where post_id = $1 and user_id = $2 returning post_id", [postId, actor]);
         let following = false;
@@ -183,11 +201,18 @@ export function createRiffService(sql: Sql, sessionUserId: string) {
         const recent = await tx.query("select count(*)::int as count from riff_reports where reporter_user_id = $1 and created_at > now() - interval '1 hour'", [actor]);
         if (Number(recent[0]?.count ?? 0) >= 10) throw new Error("Report limit reached. Try again later.");
         if (postId) {
-          const target = await tx.query("select id from riff_posts where id = $1 and deleted_at is null limit 1", [postId]);
+          const target = await tx.query(`select p.id from riff_posts p where p.id = $1 and p.deleted_at is null
+            and (p.community_id is null or exists (
+              select 1 from community_members cm where cm.community_id = p.community_id and cm.user_id = $2
+            )) limit 1`, [postId, actor]);
           if (!target[0]) throw new Error("Riff not found.");
         }
         if (replyId) {
-          const target = await tx.query("select r.id from riff_replies r join riff_posts p on p.id = r.post_id where r.id = $1 and r.deleted_at is null and p.deleted_at is null limit 1", [replyId]);
+          const target = await tx.query(`select r.id from riff_replies r join riff_posts p on p.id = r.post_id
+            where r.id = $1 and r.deleted_at is null and p.deleted_at is null
+            and (p.community_id is null or exists (
+              select 1 from community_members cm where cm.community_id = p.community_id and cm.user_id = $2
+            )) limit 1`, [replyId, actor]);
           if (!target[0]) throw new Error("Riff reply not found.");
         }
         const id = `riff_report_${crypto.randomUUID()}`;
