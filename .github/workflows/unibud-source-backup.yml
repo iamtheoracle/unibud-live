@@ -1,0 +1,150 @@
+name: UNIBUD Source Backup (No Deployment)
+
+on:
+  push:
+    branches: [architecture/unibud-next-era-foundation]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unibud-source-backup-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact source revision
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build source archive and backup manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/unibud-backup
+          python3 <<'PY'
+          import hashlib, json, os, re, subprocess, zipfile
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          root = Path.cwd()
+          out = Path("/tmp/unibud-backup")
+          branch = subprocess.check_output(["git", "branch", "--show-current"], text=True).strip()
+          sha = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          files = subprocess.check_output(["git", "ls-files", "-z"]).decode().split("\0")
+          excluded_parts = {
+              ".git", "node_modules", "dist", "build", ".netlify", ".turbo",
+              ".next", "coverage", ".cache", "playwright-report", "test-results",
+              ".vercel", ".output", "vendor"
+          }
+          excluded_names = {
+              ".env", ".env.local", ".env.production", ".env.development.local",
+              ".npmrc", ".pypirc", "id_rsa", "id_ed25519", "credentials.json",
+              "service-account.json"
+          }
+          excluded_suffixes = {".pem", ".p12", ".pfx", ".key", ".jks", ".keystore"}
+          secret_patterns = [
+              re.compile(rb"-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----"),
+              re.compile(rb"\bAKIA[0-9A-Z]{16}\b"),
+              re.compile(rb"\bgh[pousr]_[A-Za-z0-9]{30,}\b"),
+              re.compile(rb"\bgithub_pat_[A-Za-z0-9_]{40,}\b"),
+          ]
+          archive = out / "UNIBUD-Complete-Source.zip"
+          included, excluded, suspicious = [], [], []
+          with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=8) as z:
+              for name in sorted(filter(None, files)):
+                  p = Path(name)
+                  parts = set(p.parts)
+                  if parts & excluded_parts or p.name in excluded_names or p.suffix.lower() in excluded_suffixes:
+                      excluded.append({"path": name, "reason": "secret/local/build/dependency exclusion"})
+                      continue
+                  if p.name.startswith(".env.") and p.name != ".env.example":
+                      excluded.append({"path": name, "reason": "environment-specific file"})
+                      continue
+                  if not p.is_file():
+                      continue
+                  data = p.read_bytes()
+                  if len(data) < 8_000_000:
+                      for pattern in secret_patterns:
+                          if pattern.search(data):
+                              suspicious.append(name)
+                              break
+                  z.writestr("unibud-live/" + name, data)
+                  included.append(name)
+          if suspicious:
+              archive.unlink(missing_ok=True)
+              raise SystemExit("Potential credential/private-key material detected; archive withheld: " + ", ".join(sorted(set(suspicious))))
+          prompt_path = root / "docs/backup/UNIBUD_MASTER_CONTINUITY_PROMPT.md"
+          if not prompt_path.exists():
+              raise SystemExit("Master continuity prompt missing from source revision")
+          prompt_copy = out / "UNIBUD-Master-Continuity-Prompt.md"
+          prompt_copy.write_bytes(prompt_path.read_bytes())
+          manifest = {
+              "project": "UNIBUD",
+              "repository": "iamtheoracle/unibud-live",
+              "branch": branch,
+              "commit": sha,
+              "created_at_utc": datetime.now(timezone.utc).isoformat(),
+              "archive": archive.name,
+              "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+              "included_file_count": len(included),
+              "excluded_file_count": len(excluded),
+              "included_paths": included,
+              "excluded_paths": excluded,
+              "secret_scan": "passed for configured high-confidence private-key/token patterns; not a substitute for a full security audit",
+              "build_verification": "See this workflow run and the separate UNIBUD verification workflow; do not infer build success from backup creation.",
+              "deployment_performed": False,
+              "merge_performed": False
+          }
+          (out / "UNIBUD-Backup-Manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+          (out / "UNIBUD-Backup-Manifest.txt").write_text(
+              f"UNIBUD source backup\nRepository: {manifest['repository']}\nBranch: {branch}\nCommit: {sha}\n"
+              f"Created (UTC): {manifest['created_at_utc']}\nFiles included: {len(included)}\n"
+              f"Files excluded: {len(excluded)}\nArchive SHA-256: {manifest['archive_sha256']}\n"
+              "Deployment: NO\nMerge: NO\n"
+              "Note: archive creation does not establish that the application builds or passes all tests.\n"
+          )
+          checksum = manifest["archive_sha256"] + "  " + archive.name + "\n"
+          (out / "SHA256SUMS.txt").write_text(checksum)
+          # Bundle the source archive, prompt, manifest and checksum together for one-click preservation.
+          with zipfile.ZipFile(out / "UNIBUD-Backup-Bundle.zip", "w", compression=zipfile.ZIP_DEFLATED, compresslevel=8) as z:
+              for file in sorted(out.iterdir()):
+                  if file.name != "UNIBUD-Backup-Bundle.zip" and file.is_file():
+                      z.write(file, file.name)
+          # Validate the two ZIP files and required source entries before upload.
+          for file in [archive, out / "UNIBUD-Backup-Bundle.zip"]:
+              with zipfile.ZipFile(file) as z:
+                  bad = z.testzip()
+                  if bad:
+                      raise SystemExit(f"ZIP integrity check failed: {file.name}: {bad}")
+          with zipfile.ZipFile(archive) as z:
+              names = set(z.namelist())
+              required = {
+                  "unibud-live/package.json",
+                  "unibud-live/package-lock.json",
+                  "unibud-live/docs/backup/UNIBUD_MASTER_CONTINUITY_PROMPT.md",
+              }
+              missing = sorted(required - names)
+              if missing:
+                  raise SystemExit("Required source files missing from archive: " + ", ".join(missing))
+          print(json.dumps({
+              "commit": sha,
+              "included": len(included),
+              "excluded": len(excluded),
+              "archive_sha256": manifest["archive_sha256"],
+              "bundle": str(out / "UNIBUD-Backup-Bundle.zip")
+          }, indent=2))
+          PY
+
+      - name: Upload downloadable backup files
+        uses: actions/upload-artifact@v4
+        with:
+          name: UNIBUD-Source-Backup-${{ github.sha }}
+          path: /tmp/unibud-backup/*
+          if-no-files-found: error
+          retention-days: 30
