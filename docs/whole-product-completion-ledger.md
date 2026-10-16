@@ -92,3 +92,9 @@ This ledger is intentionally conservative. Reclassify status only when evidence 
 - Feed and thread routes use the anonymous read endpoints for guests, and hide mutation controls while preserving public post/thread navigation. Guest access does not read the device-local Zustand store.
 - Regression coverage is added for public/global visibility, private-community denial, anonymous mutation denial, interaction capability flags, and absence of internal user IDs in returned DTOs.
 - This is source/CI verification only. Public-feed availability in a deployed environment still depends on the deployed database having the Riff migration; no staging/production migration is authorized by this change.
+
+## Riff public-read follow-up — validation and membership locking
+
+- Added runtime validation for anonymous/authenticated feed inputs, including non-object payloads, incomplete/invalid cursors, and malformed page limits.
+- Added a PGlite regression that pauses a reply after acquiring the community membership lock, attempts concurrent membership revocation, and asserts the revocation cannot commit until the in-flight action completes.
+- The new test is intended to verify the serialization guarantee documented by the Riff service. CI must pass before treating that guarantee as verified.

@@ -26,6 +26,40 @@ const replyDto = (r: Record<string, unknown>) => ({
   authorHandle: String(r.author_handle ?? "member"), body: String(r.body), createdAt: String(r.created_at),
 });
 
+type RiffListInput = { cursorCreatedAt?: string; cursorId?: string; limit?: number };
+
+function normalizeRiffListInput(input: unknown): RiffListInput {
+  if (input === undefined) return {};
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new Error("Invalid feed input.");
+  }
+  const value = input as Record<string, unknown>;
+  const cursorCreatedAt = value.cursorCreatedAt;
+  const cursorId = value.cursorId;
+  const limit = value.limit;
+
+  if (cursorCreatedAt !== undefined &&
+      (typeof cursorCreatedAt !== "string" || !cursorCreatedAt.trim() || Number.isNaN(Date.parse(cursorCreatedAt)))) {
+    throw new Error("Invalid feed cursor.");
+  }
+  if (cursorId !== undefined &&
+      (typeof cursorId !== "string" || !cursorId.trim() || cursorId.length > 200)) {
+    throw new Error("Invalid feed cursor.");
+  }
+  if ((cursorCreatedAt === undefined) !== (cursorId === undefined)) {
+    throw new Error("Both cursor fields are required.");
+  }
+  if (limit !== undefined && (typeof limit !== "number" || !Number.isInteger(limit) || limit < 1)) {
+    throw new Error("Invalid feed limit.");
+  }
+
+  return {
+    ...(cursorCreatedAt === undefined ? {} : { cursorCreatedAt }),
+    ...(cursorId === undefined ? {} : { cursorId }),
+    ...(limit === undefined ? {} : { limit }),
+  };
+}
+
 export function createRiffService(sql: Sql, sessionUserId: string | null) {
   const actor = typeof sessionUserId === "string" && sessionUserId.trim() ? sessionUserId.trim() : null;
   const requireActor = () => {
@@ -82,11 +116,10 @@ export function createRiffService(sql: Sql, sessionUserId: string | null) {
 
   return {
     async listRiffs(input: { cursorCreatedAt?: string; cursorId?: string; limit?: number } = {}) {
-      const limit = Math.max(1, Math.min(50, Math.floor(Number(input.limit ?? 20) || 20)));
-      const at = input.cursorCreatedAt ?? null;
-      const id = input.cursorId ?? null;
-      if (Boolean(at) !== Boolean(id)) throw new Error("Both cursor fields are required.");
-      if (at && Number.isNaN(Date.parse(at))) throw new Error("Invalid feed cursor.");
+      const normalized = normalizeRiffListInput(input);
+      const limit = Math.min(50, normalized.limit ?? 20);
+      const at = normalized.cursorCreatedAt ?? null;
+      const id = normalized.cursorId ?? null;
       const rows = await sql.query(`select p.id, p.body, p.community_id, p.quote_post_id, p.media_id,
         p.created_at, p.updated_at, coalesce(sp.handle, 'member') as author_handle,
         (p.community_id is null or exists (select 1 from community_members own_member where own_member.community_id = p.community_id and own_member.user_id = $4)) as can_interact,
