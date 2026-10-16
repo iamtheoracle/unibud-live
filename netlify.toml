@@ -13,7 +13,9 @@
 
 [build.environment]
   NODE_VERSION = "22"
-  NPM_FLAGS = "--legacy-peer-deps"
+  # Make Netlify's automatic npm install a no-op so the build command's npm ci handles installation.
+  # See: https://answers.netlify.com/t/how-can-i-use-npm-ci-instead-of-npm-install/12570/14
+  NPM_FLAGS = "--version"
   NPM_CONFIG_LEGACY_PEER_DEPS = "true"
   NODE_OPTIONS = "--max-old-space-size=4096"
   NETLIFY_COREPACK_ENABLED = "false"
