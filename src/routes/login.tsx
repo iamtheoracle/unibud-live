@@ -5,7 +5,7 @@ import { clearGuestMode } from "@/lib/auth/guest";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Wordmark } from "@/components/brand/logo";
+import { Wordmark, ArcAttribution } from "@/components/brand/logo";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 
 export const Route = createFileRoute("/login")({
@@ -213,6 +213,7 @@ function Login() {
             </form>
           </>
         ) : null}
+        <ArcAttribution variant="compact" className="mt-10" />
       </section>
     </main>
   );

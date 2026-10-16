@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArcAttribution } from "@/components/brand/logo";
 
 export const Route = createFileRoute("/_app/help")({ component: Help });
 
@@ -53,6 +54,14 @@ function Help() {
         </Link>
         .
       </p>
+      <section className="mt-10">
+        <p className="kicker">About</p>
+        <h2 className="mt-1 font-display text-2xl">UNIBUD</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          University Buddy is built by ARC · Oracle Intelligence & Systems.
+        </p>
+        <ArcAttribution variant="full" className="mt-4" />
+      </section>
     </main>
   );
 }

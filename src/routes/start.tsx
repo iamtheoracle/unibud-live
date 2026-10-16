@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { enterGuestMode } from "@/lib/auth/guest";
-import { Wordmark } from "@/components/brand/logo";
+import { Wordmark, ArcAttribution } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/start")({
@@ -79,6 +79,7 @@ function StartScreen() {
         <p className="mt-6 text-[11px] text-muted-foreground">
           Guest Riffs and Bud chats stay on this device. Create an account to keep them.
         </p>
+        <ArcAttribution variant="compact" className="mt-10" />
       </div>
     </main>
   );

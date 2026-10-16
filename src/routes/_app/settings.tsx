@@ -11,6 +11,7 @@ import { upsertMyProfile } from "@/lib/unibud/server";
 import { useAuthReady } from "@/components/unibud/sign-in-gate";
 import type { CampusRole } from "@/lib/unibud/roles";
 import { Button } from "@/components/ui/button";
+import { ArcAttribution } from "@/components/brand/logo";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
@@ -158,6 +159,9 @@ function Settings() {
         >
           Oracle portfolio
         </a>
+      </section>
+      <section className="mt-10">
+        <ArcAttribution variant="full" />
       </section>
     </main>
   );

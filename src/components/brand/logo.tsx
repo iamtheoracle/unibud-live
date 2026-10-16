@@ -55,3 +55,37 @@ export function LogoPlate({ className }: { className?: string }) {
     />
   );
 }
+
+const ARC_DARK = "/brand/arc-mark-dark.jpg";
+const ARC_FULL = "/brand/arc-mark-full.jpg";
+
+/**
+ * Subtle ARC attribution. Uses the official treatments on a dark plate.
+ * Do not place this in primary navigation or feeds.
+ */
+export function ArcAttribution({
+  variant = "compact",
+  className,
+}: {
+  variant?: "compact" | "full";
+  className?: string;
+}) {
+  const src = variant === "full" ? ARC_FULL : ARC_DARK;
+  return (
+    <figure className={cn("flex flex-col items-center gap-2", className)}>
+      <div className="overflow-hidden rounded-xl bg-black px-3 py-2">
+        <img
+          src={src}
+          alt="ARC · Oracle Intelligence & Systems"
+          className={cn(
+            "object-contain",
+            variant === "full" ? "h-10 w-auto max-w-[220px]" : "h-7 w-auto max-w-[160px]",
+          )}
+        />
+      </div>
+      <figcaption className="text-[10px] tracking-wide text-muted-foreground">
+        A product of ARC · Intelligence & Systems
+      </figcaption>
+    </figure>
+  );
+}
