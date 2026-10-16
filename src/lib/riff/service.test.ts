@@ -73,6 +73,7 @@ test("community Riffs are visible and interactive only for current members", asy
     assert.equal((await a.listRiffs()).some((item) => item.id === post.id), true);
     assert.equal((await b.listRiffs()).some((item) => item.id === post.id), false);
     await assert.rejects(() => b.getRiff(post.id), /Riff not found/);
+    await assert.rejects(() => b.createRiff({ body: "Unauthorized quote", quotePostId: post.id }), /Riff not found/);
     await assert.rejects(() => b.replyToRiff({ postId: post.id, body: "Unauthorized reply" }), /Riff not found/);
     await assert.rejects(() => b.toggleRiffLike(post.id), /Riff not found/);
     await assert.rejects(() => b.toggleRiffFollow(post.id), /Riff not found/);
@@ -80,6 +81,7 @@ test("community Riffs are visible and interactive only for current members", asy
     await pg.query("delete from community_members where community_id = $1 and user_id = $2", ["community-a", "user-a"]);
     assert.equal((await a.listRiffs()).some((item) => item.id === post.id), false);
     await assert.rejects(() => a.getRiff(post.id), /Riff not found/);
+    await assert.rejects(() => a.createRiff({ body: "Quote after leaving", quotePostId: post.id }), /Riff not found/);
   } finally { await pg.close(); }
 });
 
