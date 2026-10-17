@@ -32,7 +32,7 @@ export type LyncConfig = {
 
 /** Configurable activation — do not hard-code product magic numbers elsewhere. */
 export const DEFAULT_LYNC_CONFIG: LyncConfig = {
-  activationShares: 1,
+  activationShares: 2,
   bonusMilestones: [3, 7, 14, 30, 60, 100],
 };
 
