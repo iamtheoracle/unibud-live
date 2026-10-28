@@ -221,7 +221,20 @@ export const createListing = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const title = data.title.trim();
-    if (!title) throw new Error("Give it a title");
+    const description = data.description.trim();
+    const location = data.location.trim();
+    if (title.length < 4 || title.length > 100) {
+      throw new Error("Title must be between 4 and 100 characters.");
+    }
+    if (description.length < 20 || description.length > 5000) {
+      throw new Error("Description must be between 20 and 5,000 characters.");
+    }
+    if (!Number.isSafeInteger(data.priceKobo) || data.priceKobo <= 0) {
+      throw new Error("Price must be a positive whole number of minor currency units.");
+    }
+    if (location.length > 180) {
+      throw new Error("Location must be 180 characters or fewer.");
+    }
     const sql = await getSql();
     const profile = await sql<{ handle: string; university_id: string }>`
       select handle, university_id from student_profiles where user_id = ${context.userId} limit 1`;
@@ -234,7 +247,7 @@ export const createListing = createServerFn({ method: "POST" })
     ) values (
       ${id}, ${context.userId}, ${data.kind}, ${data.category}, ${title}, ${data.description.trim()},
       ${data.priceKobo}, ${data.priceNote}, ${"ink"}, ${handle}, ${universityId},
-      ${data.location.trim() || "Campus"}, ${"[]"}
+      ${location || "Campus"}, ${"[]"}
     )`;
     const rows = await sql`select * from listings where id = ${id} limit 1`;
     return mapListing(rows[0]);
