@@ -11,6 +11,7 @@ import { koboFromNairaInput } from "@/lib/unibud/format";
 import { createListing } from "@/lib/unibud/server";
 import { useCatalog } from "@/lib/unibud/queries";
 import { getMyProfile } from "@/lib/unibud/server";
+import { validateListingDraft } from "@/lib/unibud/marketplace-domain";
 
 export const Route = createFileRoute("/_app/creator")({ component: Creator });
 
@@ -32,7 +33,26 @@ function Creator() {
 
   const mut = useMutation({
     mutationFn: () => {
-      const kobo = koboFromNairaInput(price) ?? 0;
+      const kobo = koboFromNairaInput(price);
+      const issues = validateListingDraft({
+        kind: "service",
+        category: "services",
+        title,
+        description,
+        currency: "NGN",
+        priceMinor: kobo ?? 0,
+        priceBasis: "starting_at",
+        location: "Campus / remote",
+        imageUrls: [],
+        verificationState: "unverified",
+        status: "draft",
+      });
+      if (kobo === null || kobo <= 0) {
+        throw new Error("Enter a valid service price greater than zero.");
+      }
+      if (issues.length > 0) {
+        throw new Error(issues[0].message);
+      }
       return createListing({
         data: {
           kind: "service",
