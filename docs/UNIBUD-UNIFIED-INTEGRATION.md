@@ -39,3 +39,11 @@ UNIBUD is one application assembled from the strongest parts of the existing pro
 - No dead-end navigation, fake production records, or duplicate competing assistant experiences are introduced.
 - Typecheck, lint, tests, production build, auth/ownership checks, and key-flow browser checks pass.
 - A reviewable pull request and Deploy Preview are available; production remains untouched.
+
+
+## First code-audit findings (2026-10-29)
+
+- The live marketplace already uses a single TanStack route, catalog query, category chips, and existing listing cards. Its query previously searched only title, description, and location; it now also searches seller handle and tags, and invalid category query parameters fall back to `all`.
+- Arc Project One's listing domain model has been added at `src/lib/unibud/marketplace-domain.ts`. It provides draft validation for supported listing kinds, price basis/currency, HTTPS image URLs, used-item condition/defects, food quantities, accommodation availability/occupancy, deposits/fees, and publication requirements. It is intentionally a domain foundation, not yet wired into the current listing creation UI or persistence path.
+- Arc Project Two is a small Python/Ollama agent with a plugin loader. Its plugin execution model imports local Python modules and invokes named functions; do not expose that loader directly to web users or treat it as a secure multi-tenant runtime. Integration must go through the existing UNIBUD agent contracts/provider boundaries and enforce permissions server-side.
+- Verification limitation: repository files were reviewed through GitHub; no local dependency install, typecheck, lint, build, browser run, or deployment preview has been executed in this environment yet. These changes must remain unmerged until automated checks are observed.
