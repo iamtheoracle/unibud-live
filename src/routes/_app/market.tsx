@@ -14,7 +14,10 @@ type Search = { cat?: ListingCategory | "all" };
 
 export const Route = createFileRoute("/_app/market")({
   validateSearch: (s: Record<string, unknown>): Search => ({
-    cat: typeof s.cat === "string" ? (s.cat as Search["cat"]) : "all",
+    cat:
+      s.cat === "all" || CATEGORIES.some((category) => category.id === s.cat)
+        ? (s.cat as Search["cat"])
+        : "all",
   }),
   component: Market,
 });
@@ -29,9 +32,17 @@ function Market() {
   const filtered = useMemo(() => {
     return listings.filter((l) => {
       const catOk = cat === "all" || l.category === cat;
-      const qOk =
-        !q.trim() ||
-        `${l.title} ${l.description} ${l.location}`.toLowerCase().includes(q.toLowerCase());
+      const query = q.trim().toLocaleLowerCase();
+      const searchableText = [
+        l.title,
+        l.description,
+        l.location,
+        l.sellerHandle,
+        ...l.tags,
+      ]
+        .join(" ")
+        .toLocaleLowerCase();
+      const qOk = !query || searchableText.includes(query);
       return catOk && qOk;
     });
   }, [listings, cat, q]);
