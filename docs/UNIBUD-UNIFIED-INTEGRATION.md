@@ -47,3 +47,13 @@ UNIBUD is one application assembled from the strongest parts of the existing pro
 - Arc Project One's listing domain model has been added at `src/lib/unibud/marketplace-domain.ts`. It provides draft validation for supported listing kinds, price basis/currency, HTTPS image URLs, used-item condition/defects, food quantities, accommodation availability/occupancy, deposits/fees, and publication requirements. It is intentionally a domain foundation, not yet wired into the current listing creation UI or persistence path.
 - Arc Project Two is a small Python/Ollama agent with a plugin loader. Its plugin execution model imports local Python modules and invokes named functions; do not expose that loader directly to web users or treat it as a secure multi-tenant runtime. Integration must go through the existing UNIBUD agent contracts/provider boundaries and enforce permissions server-side.
 - Verification limitation: repository files were reviewed through GitHub; no local dependency install, typecheck, lint, build, browser run, or deployment preview has been executed in this environment yet. These changes must remain unmerged until automated checks are observed.
+
+
+## Follow-up implementation pass
+
+- Wired Arc listing draft validation into the authenticated Creator Space form before it calls `createListing`.
+- Added server-side validation to `createListing` as well. It now rejects too-short/too-long titles and descriptions, non-positive/non-safe-integer prices, and overlong locations. This is necessary because client-side checks alone can be bypassed.
+- Added `src/lib/unibud/marketplace-domain.test.ts` coverage for valid drafts, unsafe image URLs, used-item defect requirements, accommodation fields, and currency formatting.
+- Additional Arc Project Two security finding: `plugins/files.py` accepts arbitrary absolute or relative filesystem paths and reads them. That plugin is acceptable only as a trusted local tool in its current intended local setting; it must not be exposed to a hosted multi-user UNIBUD runtime without a strict workspace allowlist and authorization layer.
+- Arc Project Two README describes persistent conversation memory, but the inspected tree has no `core/memory.py`; its agent stores messages only in the live in-process `self.messages` list. Do not advertise durable memory from this source until persistence is implemented and tested.
+- CI workflow lookup for the latest commit returned no workflow runs. Checks remain unverified.
