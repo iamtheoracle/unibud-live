@@ -57,3 +57,10 @@ UNIBUD is one application assembled from the strongest parts of the existing pro
 - Additional Arc Project Two security finding: `plugins/files.py` accepts arbitrary absolute or relative filesystem paths and reads them. That plugin is acceptable only as a trusted local tool in its current intended local setting; it must not be exposed to a hosted multi-user UNIBUD runtime without a strict workspace allowlist and authorization layer.
 - Arc Project Two README describes persistent conversation memory, but the inspected tree has no `core/memory.py`; its agent stores messages only in the live in-process `self.messages` list. Do not advertise durable memory from this source until persistence is implemented and tested.
 - CI workflow lookup for the latest commit returned no workflow runs. Checks remain unverified.
+
+
+## CI wiring follow-up
+
+- Added `npm run test:marketplace` using Node 22's TypeScript stripping test runner.
+- Added the marketplace-domain test step to `.github/workflows/unibud-ci.yml` so the new validation tests are part of the pull-request verification gate.
+- GitHub's commit-workflow lookup still returns zero workflow runs for the latest branch commit. This is not a passing result; typecheck, tests, and build remain unverified until Actions reports actual results.
