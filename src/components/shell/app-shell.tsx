@@ -115,7 +115,7 @@ export function AppShell() {
           <div className="mx-auto max-w-3xl px-2 pt-1">
             <div className="flex items-center gap-2">
               <div className="min-w-0 flex-1">
-                <PrimaryNav />
+                <PrimaryNav onNavigate={() => setAway(true)} />
               </div>
               <SparkGate className="shrink-0 pr-1" />
             </div>
