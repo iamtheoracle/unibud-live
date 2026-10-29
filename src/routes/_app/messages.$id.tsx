@@ -11,7 +11,7 @@ import { persistAudioEvent, listRoomMessages, sendRoomMessage, uploadMedia } fro
 import { fileToDataUrl } from "@/lib/media/client";
 import { mediaUrl } from "@/lib/media/types";
 import { parseShareJson, type ChatShare } from "@/lib/media/share";
-import { campusRoomById, ROOM_SEED, type CampusRoom } from "@/lib/unibud/chat-rooms";
+import { campusRoomById, type CampusRoom } from "@/lib/unibud/chat-rooms";
 import { canGovernClass } from "@/lib/unibud/roles";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { useStudioStore } from "@/lib/studio/store";
@@ -73,7 +73,7 @@ function DirectThread({ id }: { id: string }) {
         <Avatar name={person?.name ?? "Student"} className="size-11" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold">{person?.name ?? q.data?.conversation.peerHandle}</p>
-          <p className="text-xs text-success">Active now · Direct</p>
+          <p className="text-xs text-muted-foreground">Direct conversation</p>
         </div>
         <CallButtons group={false} peer={person?.name ?? "them"} />
       </div>
@@ -222,20 +222,6 @@ function RoomThread({ room }: { room: CampusRoom }) {
         />
       </div>
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-5">
-        {(ROOM_SEED[room.id] ?? []).map((m, i) => (
-          <div
-            key={`seed-${i}`}
-            className={cn(
-              "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
-              m.sender === "You" ? "ml-auto bg-ink text-paper" : "bg-secondary text-foreground",
-            )}
-          >
-            {m.sender !== "You" ? (
-              <p className="mb-1 text-[11px] font-medium text-muted-foreground">{m.sender}</p>
-            ) : null}
-            {m.body}
-          </div>
-        ))}
         {(q.data ?? []).map((m) => (
           <div
             key={m.id}
