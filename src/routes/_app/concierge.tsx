@@ -58,7 +58,6 @@ function Concierge() {
     }
     if (action === "human") {
       void navigate({ to: "/help" });
-      setNotice("Help & Support opened. A live human-support queue is not connected by this preview.");
       return;
     }
     const starters: Record<Exclude<QuickAction, "marketplace" | "fixer" | "human">, string> = {
@@ -68,7 +67,7 @@ function Concierge() {
     };
     setMessage(starters[action]);
     setNotice("Starter text added to the composer. Nothing has been sent.");
-    setTimeout(() => document.getElementById("concierge-message")?.focus(), 0);
+    document.getElementById("concierge-message")?.focus();
   }
 
   return (
