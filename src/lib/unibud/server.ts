@@ -207,6 +207,31 @@ export async function notify(
     values (${crypto.randomUUID()}, ${userId}, ${kind}, ${title}, ${body}, ${href ?? null})`;
 }
 
+export const reportListing = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { listingId: string; reason: string }) => input)
+  .handler(async ({ context, data }) => {
+    const listingId = typeof data.listingId === "string" ? data.listingId.trim() : "";
+    const reason = typeof data.reason === "string" ? data.reason.trim() : "";
+    if (!listingId || listingId.length > 120) throw new Error("Choose a valid listing to report.");
+    if (reason.length < 10 || reason.length > 1000) {
+      throw new Error("Explain the concern in 10–1,000 characters.");
+    }
+    const sql = await getSql();
+    const rows = await sql<{ id: string; title: string }>`select id, title from listings where id = ${listingId} limit 1`;
+    if (!rows[0]) throw new Error("This listing is no longer available.");
+    const id = crypto.randomUUID();
+    const body = [
+      "Marketplace listing report",
+      `Listing ID: ${rows[0].id}`,
+      `Listing title: ${rows[0].title}`,
+      `Reason: ${reason}`,
+    ].join("\\n");
+    await sql`insert into feedback_submissions (id, user_id, category, body)
+      values (${id}, ${context.userId}, ${"listing_report"}, ${body})`;
+    return { ok: true as const, id };
+  });
+
 export const createListing = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator(
