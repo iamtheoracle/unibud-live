@@ -46,7 +46,7 @@ UNIBUD is one application assembled from the strongest parts of the existing pro
 - The live marketplace already uses a single TanStack route, catalog query, category chips, and existing listing cards. Its query previously searched only title, description, and location; it now also searches seller handle and tags, and invalid category query parameters fall back to `all`.
 - Arc Project One's listing domain model has been added at `src/lib/unibud/marketplace-domain.ts`. Draft validation is wired into the authenticated Creator Space service form. A separate runtime guard now validates the current persisted schema's listing kind/category, stay-category pairing, title/description, safe positive integer price, price note, and location before SQL writes. Arc's richer listing kinds remain blocked from the current create endpoint until the database schema and UI can represent them.
 - Arc Project Two is a small Python/Ollama agent with a plugin loader. Its plugin execution model imports local Python modules and invokes named functions; do not expose that loader directly to web users or treat it as a secure multi-tenant runtime. Integration must go through the existing UNIBUD agent contracts/provider boundaries and enforce permissions server-side.
-- Verification limitation: repository files were reviewed through GitHub; no local dependency install, typecheck, lint, build, browser run, or deployment preview has been executed in this environment yet. These changes must remain unmerged until automated checks are observed.
+- Verification limitation: repository files were reviewed through GitHub; no local dependency install or browser run has been executed in this environment. GitHub Actions run `40792258092` was queued/in progress after the latest changes, so its typecheck/lint/tests have not yet been confirmed. Keep the branch unmerged until the run finishes and results are reviewed.
 
 
 ## Follow-up implementation pass
@@ -64,7 +64,7 @@ UNIBUD is one application assembled from the strongest parts of the existing pro
 
 - Added `npm run test:marketplace` using Node 22's TypeScript stripping test runner.
 - Added the marketplace-domain test step to `.github/workflows/unibud-ci.yml` so the new validation tests are part of the pull-request verification gate.
-- GitHub's commit-workflow lookup still returns zero workflow runs for the latest branch commit. This is not a passing result; typecheck, tests, and build remain unverified until Actions reports actual results.
+- GitHub Actions run `40792258092` (`UNIBUD Pre-UI Verification Gate`) is in progress for the latest integration branch commit. The workflow runs typecheck, the agent/Spark test suite, and marketplace domain tests; it does not run a full production build or browser tests. No pass is claimed until its final conclusion is observed.
 
 
 ## Navigation and demo-surface audit follow-up
