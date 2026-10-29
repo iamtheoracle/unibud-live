@@ -82,7 +82,12 @@ function SellForm() {
           <button
             key={k}
             type="button"
-            onClick={() => setKind(k)}
+            onClick={() => {
+              setKind(k);
+              if (k === "stay") setCategory("accommodation");
+              else if (category === "accommodation") setCategory(k === "service" ? "services" : "other");
+              else if (k === "service" && category === "other") setCategory("services");
+            }}
             className={
               kind === k
                 ? "h-11 rounded-md bg-paper text-sm font-medium text-ink"
@@ -102,7 +107,7 @@ function SellForm() {
           onChange={(e) => setCategory(e.target.value as ListingCategory)}
           className="h-11 w-full rounded-md border border-input bg-secondary px-3 text-sm"
         >
-          {CATEGORIES.map((c) => (
+          {CATEGORIES.filter((c) => (kind === "stay" ? c.id === "accommodation" : c.id !== "accommodation")).map((c) => (
             <option key={c.id} value={c.id}>
               {c.label}
             </option>
