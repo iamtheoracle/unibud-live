@@ -93,6 +93,13 @@ test("server input guard rejects unsupported kinds and categories", () => {
   );
 });
 
+test("server input guard rejects listings without a cover photo", () => {
+  assert.match(
+    validateMarketplaceCreateInput(validCreateInput({ imageUrl: "" })) ?? "",
+    /HTTPS image URL/i,
+  );
+});
+
 test("server input guard keeps stay listings in the accommodation category", () => {
   assert.match(
     validateMarketplaceCreateInput(validCreateInput({ kind: "stay", category: "food" })) ?? "",
