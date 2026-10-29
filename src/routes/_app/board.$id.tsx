@@ -9,6 +9,7 @@ import { useCampusStore } from "@/lib/unibud/campus-store";
 import { canTeach } from "@/lib/unibud/roles";
 import { askInClass, listAnnouncements, listAttendance, listClassQuestions, logAttendance, postAnnouncement } from "@/lib/academic/server";
 import { Button } from "@/components/ui/button";
+import { DemoCallout } from "@/components/unibud/demo-callout";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/board/$id")({ component: UniBoard });
@@ -99,6 +100,9 @@ function UniBoard() {
         {course.title} · {course.lecturer} · {course.programme}
       </p>
       <p className="mt-3 max-w-xl text-sm leading-relaxed">{course.description}</p>
+      <DemoCallout>
+        This syllabus and any sample session are preview content until verified institution data is connected. Joining records an app event, not official attendance.
+      </DemoCallout>
 
       {session?.status === "live" ? (
         <section className="mt-6 rounded-3xl bg-ink px-5 py-5 text-paper">
