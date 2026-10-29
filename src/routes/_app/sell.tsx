@@ -33,6 +33,7 @@ function SellForm() {
   const [naira, setNaira] = useState("");
   const [priceNote, setPriceNote] = useState("asking");
   const [location, setLocation] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
@@ -53,11 +54,12 @@ function SellForm() {
           priceKobo: kobo,
           priceNote,
           location,
+          imageUrl,
         },
       });
       await router.invalidate();
       toast.success("Listed");
-      await router.navigate({ to: "/market/$listingId", params: { listingId: listing.id } });
+      await router.navigate({ to: "/market/$id", params: { id: listing.id } });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not list");
     } finally {
@@ -80,7 +82,12 @@ function SellForm() {
           <button
             key={k}
             type="button"
-            onClick={() => setKind(k)}
+            onClick={() => {
+              setKind(k);
+              if (k === "stay") setCategory("accommodation");
+              else if (category === "accommodation") setCategory(k === "service" ? "services" : "other");
+              else if (k === "service" && category === "other") setCategory("services");
+            }}
             className={
               kind === k
                 ? "h-11 rounded-md bg-paper text-sm font-medium text-ink"
@@ -100,7 +107,7 @@ function SellForm() {
           onChange={(e) => setCategory(e.target.value as ListingCategory)}
           className="h-11 w-full rounded-md border border-input bg-secondary px-3 text-sm"
         >
-          {CATEGORIES.map((c) => (
+          {CATEGORIES.filter((c) => (kind === "stay" ? c.id === "accommodation" : c.id !== "accommodation")).map((c) => (
             <option key={c.id} value={c.id}>
               {c.label}
             </option>
@@ -115,6 +122,20 @@ function SellForm() {
       <div className="space-y-1.5">
         <Label htmlFor="desc">Description</Label>
         <Textarea id="desc" required value={description} onChange={(e) => setDescription(e.target.value)} />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="imageUrl">Cover photo URL (HTTPS)</Label>
+        <Input
+          id="imageUrl"
+          type="url"
+          required
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+          placeholder="https://…"
+        />
+        <p className="text-xs text-muted-foreground">
+          Direct photo uploads are not connected yet. Use a secure image URL you have permission to share.
+        </p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">

@@ -6,14 +6,17 @@ import {
   CircleUser,
   Clapperboard,
   ExternalLink,
+  Heart,
   LogOut,
   Megaphone,
   MessageSquareText,
   Newspaper,
   Search,
   Settings,
+  ShoppingBag,
   Sparkles,
   Wrench,
+  type LucideIcon,
 } from "lucide-react";
 import { Wordmark } from "@/components/brand/logo";
 import { Avatar } from "@/components/unibud/person";
@@ -24,13 +27,22 @@ import { canTeach, roleLabel } from "@/lib/unibud/roles";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { cn } from "@/lib/utils";
 
-const items = [
+const preGuildItems = [
   { to: "/profile", label: "Profile", icon: CircleUser },
   { to: "/messages", label: "Chat", icon: MessageSquareText },
   { to: "/bud", label: "Bud", icon: Sparkles },
   { to: "/riff", label: "Riff", icon: Megaphone },
-  { to: "/search", label: "Search", icon: Search },
+] as const;
+
+const guildItems = [
+  { to: "/market", label: "The Quarter", icon: ShoppingBag },
+  { to: "/concierge", label: "Concierge", icon: BadgeHelp },
   { to: "/board", label: "Board", icon: Clapperboard },
+] as const;
+
+const postGuildItems = [
+  { to: "/soulync", label: "SouLync", icon: Heart },
+  { to: "/search", label: "Search", icon: Search },
   { to: "/studies", label: "Studies", icon: BookOpen },
   { to: "/news", label: "Educational News", icon: Newspaper },
   { to: "/settings", label: "Settings", icon: Settings },
@@ -38,6 +50,30 @@ const items = [
   { to: "/help", label: "Help & Support", icon: BadgeHelp },
   { to: "/feedback", label: "Feedback", icon: MessageSquareText },
 ] as const;
+
+type MenuItem = (typeof preGuildItems)[number] | (typeof guildItems)[number] | (typeof postGuildItems)[number];
+
+function MenuLinks({ items, idle, onClose }: { items: readonly MenuItem[]; idle: boolean; onClose: () => void }) {
+  return (
+    <>
+      {items.map((item) => {
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.to}
+            to={item.to}
+            onClick={onClose}
+            tabIndex={idle ? -1 : 0}
+            className="flex h-12 items-center gap-3 rounded-xl px-3 text-sm hover:bg-secondary"
+          >
+            <Icon className="size-4 text-muted-foreground" />
+            {item.label}
+          </Link>
+        );
+      })}
+    </>
+  );
+}
 
 type Props = {
   open: boolean;
@@ -64,8 +100,48 @@ export function SideMenu({
   const idle = progress <= 0.001 && !dragging;
 
   useEffect(() => {
-    if (open) panel.current?.focus();
-  }, [open]);
+    if (!open) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const drawer = panel.current;
+    drawer?.focus();
+
+    // Keep keyboard users inside the modal drawer and return focus to its opener.
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !drawer) return;
+
+      const focusable = Array.from(
+        drawer.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => element.getAttribute("aria-hidden") !== "true");
+      if (focusable.length === 0) {
+        event.preventDefault();
+        drawer.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === drawer)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      if (previousFocus?.isConnected) previousFocus.focus();
+    };
+  }, [open, onClose]);
 
   return (
     <div
@@ -117,21 +193,15 @@ export function SideMenu({
           </div>
         </div>
         <nav className="mt-4 flex-1 space-y-1 overflow-y-auto overscroll-contain">
-          {items.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                onClick={onClose}
-                tabIndex={idle ? -1 : 0}
-                className="flex h-12 items-center gap-3 rounded-xl px-3 text-sm hover:bg-secondary"
-              >
-                <Icon className="size-4 text-muted-foreground" />
-                {item.label}
-              </Link>
-            );
-          })}
+          <MenuLinks items={preGuildItems} idle={idle} onClose={onClose} />
+          <section className="mt-4 border-t border-border pt-3" aria-label="Guild">
+            <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Guild</p>
+            <MenuLinks items={guildItems} idle={idle} onClose={onClose} />
+          </section>
+          <section className="mt-4 border-t border-border pt-3" aria-label="More experiences">
+            <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">More experiences</p>
+            <MenuLinks items={postGuildItems} idle={idle} onClose={onClose} />
+          </section>
           {canTeach(role) ? (
             <Link
               to="/tutor"

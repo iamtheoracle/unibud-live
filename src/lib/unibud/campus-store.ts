@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { CampusRole } from "./roles";
 import type { IdentityTag } from "./identity-tags";
-import { SEED_SPILLS, type SpillPost, type SpillReply } from "./spill-data";
+import type { SpillPost, SpillReply } from "./spill-data";
 import type { ChatShare } from "@/lib/media/share";
 import { RightsManagement, SEED_ORIGINAL_AUDIO, type AudioReport, type UnibudAudio } from "@/lib/music/audio";
 

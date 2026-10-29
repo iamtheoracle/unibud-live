@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_app/live")({ component: Live });
 
 function Live() {
   const [open, setOpen] = useState(false);
-  const [lines, setLines] = useState(["Amaka: light is good from the second gate.", "Tunde: don’t pay off-platform."]);
+  const [lines, setLines] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
 
   return (
@@ -33,31 +33,31 @@ function Live() {
       {open ? (
         <div className="absolute inset-x-0 bottom-0 z-20 rounded-t-3xl bg-background text-foreground shadow-soft">
           <div className="flex items-center justify-between px-4 pt-4">
-            <p className="text-sm font-semibold">Live Chat</p>
+            <div><p className="text-sm font-semibold">Live Chat</p><p className="mt-1 text-xs text-muted-foreground">Local preview only. Messages are not broadcast or shared.</p></div>
             <button type="button" className="grid size-11 place-items-center" onClick={() => setOpen(false)} aria-label="Close">
               <X className="size-4" />
             </button>
           </div>
           <div className="max-h-56 space-y-2 overflow-y-auto px-4 py-2">
-            {lines.map((l, i) => (
-              <p key={i} className="text-sm">
-                {l}
-              </p>
-            ))}
+            {lines.length ? lines.map((l, i) => (
+              <p key={i} className="text-sm">{l}</p>
+            )) : (
+              <p className="py-4 text-sm text-muted-foreground">No live chat messages. Real chat will appear only when an authorized broadcast is connected.</p>
+            )}
           </div>
           <form
             className="sheet-safe flex gap-2 px-4 pt-2"
             onSubmit={(e) => {
               e.preventDefault();
               if (!draft.trim()) return;
-              setLines((x) => [...x, `You: ${draft.trim()}`]);
+              setLines((x) => [...x, `You (local preview): ${draft.trim()}`]);
               setDraft("");
             }}
           >
             <input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder="Say something…"
+              placeholder="Write a local preview message…"
               className={cn("h-11 flex-1 rounded-full bg-secondary px-4 text-sm outline-none")}
             />
             <Button type="submit" size="sm">

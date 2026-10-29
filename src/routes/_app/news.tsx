@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { EDUCATIONAL_NEWS } from "@/lib/unibud/news-data";
+import { DemoCallout } from "@/components/unibud/demo-callout";
 import { relativeTime } from "@/lib/unibud/format";
 import { cn } from "@/lib/utils";
 
@@ -17,13 +18,17 @@ function News() {
       <p className="kicker">Academic information</p>
       <h1 className="mt-1 font-display text-4xl">Educational News</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Official-feeling campus and academic notices. This is not the Square feed.
+        Academic notices from verified sources when connected. Preview cards below are illustrative only, not official announcements or deadlines.
       </p>
+      <DemoCallout>
+        The notices below are fixture content for layout review. No official university, exam, scholarship, admission, or deadline provider is connected.
+      </DemoCallout>
       <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
         {CATS.map((c) => (
           <button
             key={c}
             type="button"
+            aria-pressed={cat === c}
             onClick={() => setCat(c)}
             className={cn(
               "h-9 shrink-0 rounded-full px-4 text-sm capitalize",

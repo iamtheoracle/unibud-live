@@ -56,10 +56,36 @@ test("non-.sql entries are dropped (readdir also yields the auth/ directory)", (
   assert.deepEqual(pendingMigrations(["auth", "README.md"], []), []);
 });
 
-test("the auth schema ships outside the globbed directory", () => {
+
+test("renamed migration respects a legacy applied name", () => {
+  assert.deepEqual(
+    pendingMigrations(["migrations/0019_quad_groups.sql"], ["0013_quad_groups.sql"]),
+    [],
+  );
+  assert.deepEqual(
+    pendingMigrations(["migrations/0019_quad_groups.sql"], []),
+    [{ name: "0019_quad_groups.sql", path: "migrations/0019_quad_groups.sql" }],
+  );
+});
+
+test("duplicate numeric migration prefixes fail clearly", () => {
+  assert.throws(
+    () => pendingMigrations(["0013_feedback.sql", "0013_quad_groups.sql"], []),
+    /Duplicate migration prefix 0013/,
+  );
+});
+
+test("the auth schema has a canonical source and an optional root copy", () => {
   const migrationsDir = join(projectRoot(), "migrations");
-  assert.deepEqual(pendingMigrations(readdirSync(migrationsDir), []), []);
-  assert.ok(readdirSync(join(migrationsDir, "auth")).includes("0001_auth.sql"));
+  assert.ok(readdirSync(join(migrationsDir, "auth")).includes(AUTH_MIGRATION));
+  const pair = authSchemaCopy(projectRoot());
+  if (pair !== null) {
+    assert.equal(pair.copy, pair.source, "root auth migration must match its canonical source");
+  }
+  assert.ok(
+    pendingMigrations(readdirSync(migrationsDir), []).some(({ name }) => name === "0002_unibud.sql"),
+    "normal application migrations remain discoverable",
+  );
 });
 
 test("this workspace's auth schema copy is byte-identical to its source", () => {

@@ -134,6 +134,37 @@ export function executeAgent(context: AgentExecutionContext): AgentExecutionResu
     return timeoutResult(agent.id, context.request);
   }
 
+  const requiresExplicitAuthorization =
+    context.request.intent === 'execute' ||
+    (context.request.requiredCapabilities ?? []).some((capability) =>
+      ['action', 'payments', 'payment', 'browser-actions', 'workflow-execution', 'account-write', 'external-write'].includes(capability),
+    );
+
+  // Unknown authorization must never be treated as consent for a side effect.
+  if (
+    requiresExplicitAuthorization &&
+    context.authorization !== 'authorized' &&
+    hasRequiredCapabilities(context.request.requiredCapabilities ?? [], context.availableCapabilities)
+  ) {
+    return {
+      agent: agent.id,
+      outcome: 'blocked',
+      message: 'This action needs explicit permission before it can continue.',
+      nextActions: ['Request and verify permission from the user or authorized system.'],
+      requiredAgents: ['guardian'],
+      evidence: [],
+      userSafe: true,
+      response: {
+        requestId: context.request.id,
+        agent: agent.id,
+        status: 'blocked',
+        reason: context.authorization === 'not-authorized' ? 'authorization-required' : 'authorization-unverified',
+        next: ['guardian'],
+        traceId: context.request.traceId,
+      },
+    };
+  }
+
   if (context.authorization === 'not-authorized') {
     return {
       agent: agent.id,

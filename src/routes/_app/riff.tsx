@@ -4,15 +4,14 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Avatar } from "@/components/unibud/person";
 import { Button } from "@/components/ui/button";
-import { communityById, personByHandle } from "@/lib/unibud/catalog";
 import { relativeTime } from "@/lib/unibud/format";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { cn } from "@/lib/utils";
 import type { SpillPost } from "@/lib/unibud/spill-data";
-import { CHALLENGES } from "@/lib/unibud/discover-data";
 import { setBudDraft } from "@/lib/bud/draft";
 import { RiffMark } from "@/components/brand/identity-marks";
+import { DemoCallout } from "@/components/unibud/demo-callout";
 
 export const Route = createFileRoute("/_app/riff")({ component: Riff });
 
@@ -48,6 +47,9 @@ function Riff() {
         <p className="mt-2 text-sm text-muted-foreground">
           Short posts that can become a whole conversation. Not Square. Not Chat. Not a profile tab.
         </p>
+        <DemoCallout>
+          Riff posts, likes, replies, follows and reports are local to this device in this build. No shared feed or moderation queue is connected; no sample posts or participant counts are preloaded.
+        </DemoCallout>
       </header>
 
       <div className="mt-4 flex gap-2 overflow-x-auto px-5">
@@ -66,19 +68,10 @@ function Riff() {
         ))}
       </div>
 
-      <div className="mt-4 flex gap-2 overflow-x-auto px-5 pb-2">
-        {CHALLENGES.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            className="w-44 shrink-0 rounded-2xl bg-secondary p-3 text-left"
-            onClick={() => setDraft((d) => d || `${c.title}: ${c.body}`)}
-          >
-            <p className="text-[11px] font-medium text-bud">{c.joins.toLocaleString()} in</p>
-            <p className="mt-1 text-sm font-medium">{c.title}</p>
-          </button>
-        ))}
-      </div>
+      <section className="mx-5 mt-4 rounded-2xl border border-border bg-secondary/60 p-4">
+        <p className="text-sm font-medium">Community challenges are not connected</p>
+        <p className="mt-1 text-xs text-muted-foreground">Challenge cards and participant counts will appear only when a verified challenge service is available.</p>
+      </section>
 
       {user ? (
         <form
@@ -112,7 +105,7 @@ function Riff() {
           </div>
         </form>
       ) : (
-        <p className="mt-4 px-5 text-sm text-muted-foreground">Sign in to drop a Riff. You can still read.</p>
+        <p className="mt-4 px-5 text-sm text-muted-foreground">Sign in to prepare a local Riff. A shared feed is not connected.</p>
       )}
 
       {followed.length ? (
@@ -125,15 +118,14 @@ function Riff() {
         {list.map((s) => (
           <RiffCard key={s.id} spill={s} onQuote={() => setQuoting(s.id)} />
         ))}
+        {list.length === 0 ? <p className="mx-5 mt-4 rounded-2xl border border-border p-4 text-sm text-muted-foreground">No Riffs on this device yet. Posts you create here are local drafts and are not shared with other members.</p> : null}
       </div>
     </main>
   );
 }
 
 function RiffCard({ spill, onQuote }: { spill: SpillPost; onQuote: () => void }) {
-  const person = personByHandle(spill.authorHandle);
-  const name = person?.name ?? (spill.authorHandle === "you" ? "You" : spill.authorHandle);
-  const community = spill.communityId ? communityById(spill.communityId) : undefined;
+  const name = spill.authorHandle === "you" ? "You" : `@${spill.authorHandle}`;
   const liked = useCampusStore((s) => s.liked[spill.id]);
   const count = useCampusStore((s) => s.likeCounts[spill.id] ?? 0);
   const toggleLike = useCampusStore((s) => s.toggleLike);
@@ -150,21 +142,11 @@ function RiffCard({ spill, onQuote }: { spill: SpillPost; onQuote: () => void })
         <Avatar name={name} />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">
-            <Link to="/u/$handle" params={{ handle: spill.authorHandle }} className="hover:underline">
-              {name}
-            </Link>
+            <span>{name}</span>
             <span className="ml-1 font-normal text-muted-foreground">@{spill.authorHandle}</span>
             <span className="ml-1 font-normal text-muted-foreground">· {relativeTime(spill.createdAt)}</span>
           </p>
-          {community ? (
-            <Link
-              to="/communities/$id"
-              params={{ id: community.id }}
-              className="text-[11px] font-medium text-bud"
-            >
-              from {community.name}
-            </Link>
-          ) : null}
+          <p className="text-[11px] text-muted-foreground">Local to this device</p>
           <p className="mt-2 text-sm leading-relaxed">{spill.body}</p>
           {quote ? (
             <div className="mt-2 rounded-xl bg-secondary px-3 py-2 text-xs text-muted-foreground">
@@ -221,7 +203,7 @@ function RiffCard({ spill, onQuote }: { spill: SpillPost; onQuote: () => void })
               className="inline-flex h-9 items-center gap-1.5 text-sm"
               onClick={() => {
                 flagSpill(spill.id);
-                toast.success("Report noted. This is not The Fixer.");
+                toast("Hidden on this device only; no report was sent.");
               }}
               aria-label="Report"
             >

@@ -16,6 +16,7 @@ import {
 import type { ListingCategory, ListingKind, StudentProfile } from "./types";
 import { canTeach, type CampusRole } from "./roles";
 import { COMMUNITIES, DISCOVERY, LISTINGS, PEOPLE, POSTS, UNIVERSITIES } from "./catalog";
+import { validateMarketplaceCreateInput } from "./marketplace-domain";
 
 /** Production fallback when DB is unavailable — never surface fixture people/posts/communities. */
 function emptyCatalog() {
@@ -206,6 +207,31 @@ export async function notify(
     values (${crypto.randomUUID()}, ${userId}, ${kind}, ${title}, ${body}, ${href ?? null})`;
 }
 
+export const reportListing = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { listingId: string; reason: string }) => input)
+  .handler(async ({ context, data }) => {
+    const listingId = typeof data.listingId === "string" ? data.listingId.trim() : "";
+    const reason = typeof data.reason === "string" ? data.reason.trim() : "";
+    if (!listingId || listingId.length > 120) throw new Error("Choose a valid listing to report.");
+    if (reason.length < 10 || reason.length > 1000) {
+      throw new Error("Explain the concern in 10–1,000 characters.");
+    }
+    const sql = await getSql();
+    const rows = await sql<{ id: string; title: string }>`select id, title from listings where id = ${listingId} limit 1`;
+    if (!rows[0]) throw new Error("This listing is no longer available.");
+    const id = crypto.randomUUID();
+    const body = [
+      "Marketplace listing report",
+      `Listing ID: ${rows[0].id}`,
+      `Listing title: ${rows[0].title}`,
+      `Reason: ${reason}`,
+    ].join("\n");
+    await sql`insert into feedback_submissions (id, user_id, category, body)
+      values (${id}, ${context.userId}, ${"listing_report"}, ${body})`;
+    return { ok: true as const, id };
+  });
+
 export const createListing = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator(
@@ -217,11 +243,18 @@ export const createListing = createServerFn({ method: "POST" })
       priceKobo: number;
       priceNote: string;
       location: string;
+      imageUrl: string;
     }) => input,
   )
   .handler(async ({ context, data }) => {
+    const validationError = validateMarketplaceCreateInput(data);
+    if (validationError) throw new Error(validationError);
+
+    // Normalize again on the server before persistence; never trust client-side validation.
     const title = data.title.trim();
-    if (!title) throw new Error("Give it a title");
+    const description = data.description.trim();
+    const location = data.location.trim();
+    const priceNote = data.priceNote.trim();
     const sql = await getSql();
     const profile = await sql<{ handle: string; university_id: string }>`
       select handle, university_id from student_profiles where user_id = ${context.userId} limit 1`;
@@ -230,11 +263,11 @@ export const createListing = createServerFn({ method: "POST" })
     const id = `l_${crypto.randomUUID().slice(0, 8)}`;
     await sql`insert into listings (
       id, owner_user_id, kind, category, title, description, price_kobo, price_note,
-      tone, seller_handle, university_id, location, tags
+      tone, seller_handle, university_id, location, tags, image
     ) values (
-      ${id}, ${context.userId}, ${data.kind}, ${data.category}, ${title}, ${data.description.trim()},
-      ${data.priceKobo}, ${data.priceNote}, ${"ink"}, ${handle}, ${universityId},
-      ${data.location.trim() || "Campus"}, ${"[]"}
+      ${id}, ${context.userId}, ${data.kind}, ${data.category}, ${title}, ${description},
+      ${data.priceKobo}, ${priceNote}, ${"ink"}, ${handle}, ${universityId},
+      ${location || "Campus"}, ${"[]"}, ${data.imageUrl.trim()}
     )`;
     const rows = await sql`select * from listings where id = ${id} limit 1`;
     return mapListing(rows[0]);

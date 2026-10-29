@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { EmptyState } from "@/components/unibud/empty";
+import { DemoCallout } from "@/components/unibud/demo-callout";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
 import { listSaves } from "@/lib/unibud/server";
-import { POSTS } from "@/lib/unibud/catalog";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 
 export const Route = createFileRoute("/_app/saved")({ component: Saved });
@@ -15,9 +15,7 @@ function Saved() {
   const originals = useCampusStore((s) => s.originalAudios ?? []);
   const localPosts = useCampusStore((s) => s.localPosts);
   const toggleSavePost = useCampusStore((s) => s.toggleSavePost);
-  const savedFeed = savedIds
-    .map((id) => localPosts.find((p) => p.id === id) ?? POSTS.find((p) => p.id === id))
-    .filter(Boolean);
+  const savedFeed = savedIds.map((id) => localPosts.find((p) => p.id === id)).filter(Boolean);
   const q = useQuery({
     queryKey: ["saves"],
     queryFn: () => listSaves(),
@@ -37,7 +35,10 @@ function Saved() {
   return (
     <main className="px-4 pb-8 md:px-6">
       <h1 className="pt-2 text-2xl font-medium tracking-tight">Saved</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Videos and posts you kept. Saved audio is separate.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Saved account items and local drafts. Saved audio is separate.</p>
+      <DemoCallout>
+        This page does not substitute sample posts when a saved item is missing. Locally saved drafts stay on this device; account saves appear only when returned by the server.
+      </DemoCallout>
       {savedAudioIds.length ? (
         <div className="mt-5">
           <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">Saved audio</p>

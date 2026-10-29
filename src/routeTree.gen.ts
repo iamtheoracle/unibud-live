@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as StartRouteImport } from './routes/start'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppBoardRouteImport } from './routes/_app/board'
+import { Route as AppConciergeRouteImport } from './routes/_app/concierge'
 import { Route as AppBudRouteImport } from './routes/_app/bud'
 import { Route as AppCommunitiesRouteImport } from './routes/_app/communities'
 import { Route as AppConnectRouteImport } from './routes/_app/connect'
@@ -35,6 +36,7 @@ import { Route as AppSavedRouteImport } from './routes/_app/saved'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
 import { Route as AppSellRouteImport } from './routes/_app/sell'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
+import { Route as AppSoulyncRouteImport } from './routes/_app/soulync'
 import { Route as AppSocialRouteImport } from './routes/_app/social'
 import { Route as AppSpillRouteImport } from './routes/_app/spill'
 import { Route as AppStudiesRouteImport } from './routes/_app/studies'
@@ -47,9 +49,7 @@ import { Route as AppBudCommunitiesRouteImport } from './routes/_app/bud.communi
 import { Route as AppBudFixerRouteImport } from './routes/_app/bud.fixer'
 import { Route as AppCommunitiesCommunityIdRouteImport } from './routes/_app/communities/$communityId'
 import { Route as AppCommunitiesIdRouteImport } from './routes/_app/communities.$id'
-import { Route as AppMarketIndexRouteImport } from './routes/_app/market/index'
 import { Route as AppMarketIdRouteImport } from './routes/_app/market.$id'
-import { Route as AppMarketListingIdRouteImport } from './routes/_app/market/$listingId'
 import { Route as AppMessagesIdRouteImport } from './routes/_app/messages.$id'
 import { Route as AppRiffIdRouteImport } from './routes/_app/riff.$id'
 import { Route as AppSpillIdRouteImport } from './routes/_app/spill.$id'
@@ -79,6 +79,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppBoardRoute = AppBoardRouteImport.update({
   id: '/board',
   path: '/board',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppConciergeRoute = AppConciergeRouteImport.update({
+  id: '/concierge',
+  path: '/concierge',
   getParentRoute: () => AppRoute,
 } as any)
 const AppBudRoute = AppBudRouteImport.update({
@@ -186,6 +191,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSoulyncRoute = AppSoulyncRouteImport.update({
+  id: '/soulync',
+  path: '/soulync',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSocialRoute = AppSocialRouteImport.update({
   id: '/social',
   path: '/social',
@@ -247,19 +257,9 @@ const AppCommunitiesIdRoute = AppCommunitiesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppCommunitiesRoute,
 } as any)
-const AppMarketIndexRoute = AppMarketIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppMarketRoute,
-} as any)
 const AppMarketIdRoute = AppMarketIdRouteImport.update({
   id: '/$id',
   path: '/$id',
-  getParentRoute: () => AppMarketRoute,
-} as any)
-const AppMarketListingIdRoute = AppMarketListingIdRouteImport.update({
-  id: '/$listingId',
-  path: '/$listingId',
   getParentRoute: () => AppMarketRoute,
 } as any)
 const AppMessagesIdRoute = AppMessagesIdRouteImport.update({
@@ -298,6 +298,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/start': typeof StartRoute
   '/board': typeof AppBoardRouteWithChildren
+  '/concierge': typeof AppConciergeRoute
   '/bud': typeof AppBudRouteWithChildren
   '/communities': typeof AppCommunitiesRouteWithChildren
   '/connect': typeof AppConnectRoute
@@ -319,6 +320,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof AppSearchRoute
   '/sell': typeof AppSellRoute
   '/settings': typeof AppSettingsRoute
+  '/soulync': typeof AppSoulyncRoute
   '/social': typeof AppSocialRoute
   '/spill': typeof AppSpillRouteWithChildren
   '/studies': typeof AppStudiesRoute
@@ -332,19 +334,18 @@ export interface FileRoutesByFullPath {
   '/communities/$communityId': typeof AppCommunitiesCommunityIdRoute
   '/communities/$id': typeof AppCommunitiesIdRoute
   '/market/$id': typeof AppMarketIdRoute
-  '/market/$listingId': typeof AppMarketListingIdRoute
   '/messages/$id': typeof AppMessagesIdRoute
   '/riff/$id': typeof AppRiffIdRoute
   '/spill/$id': typeof AppSpillIdRoute
   '/u/$handle': typeof AppUHandleRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/media/$id': typeof ApiMediaIdRoute
-  '/market/': typeof AppMarketIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/start': typeof StartRoute
   '/board': typeof AppBoardRouteWithChildren
+  '/concierge': typeof AppConciergeRoute
   '/bud': typeof AppBudRouteWithChildren
   '/communities': typeof AppCommunitiesRouteWithChildren
   '/connect': typeof AppConnectRoute
@@ -365,6 +366,7 @@ export interface FileRoutesByTo {
   '/search': typeof AppSearchRoute
   '/sell': typeof AppSellRoute
   '/settings': typeof AppSettingsRoute
+  '/soulync': typeof AppSoulyncRoute
   '/social': typeof AppSocialRoute
   '/spill': typeof AppSpillRouteWithChildren
   '/studies': typeof AppStudiesRoute
@@ -379,14 +381,13 @@ export interface FileRoutesByTo {
   '/communities/$communityId': typeof AppCommunitiesCommunityIdRoute
   '/communities/$id': typeof AppCommunitiesIdRoute
   '/market/$id': typeof AppMarketIdRoute
-  '/market/$listingId': typeof AppMarketListingIdRoute
   '/messages/$id': typeof AppMessagesIdRoute
   '/riff/$id': typeof AppRiffIdRoute
   '/spill/$id': typeof AppSpillIdRoute
   '/u/$handle': typeof AppUHandleRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/media/$id': typeof ApiMediaIdRoute
-  '/market': typeof AppMarketIndexRoute
+  '/market': typeof AppMarketRouteWithChildren
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -394,6 +395,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/start': typeof StartRoute
   '/_app/board': typeof AppBoardRouteWithChildren
+  '/_app/concierge': typeof AppConciergeRoute
   '/_app/bud': typeof AppBudRouteWithChildren
   '/_app/communities': typeof AppCommunitiesRouteWithChildren
   '/_app/connect': typeof AppConnectRoute
@@ -415,6 +417,7 @@ export interface FileRoutesById {
   '/_app/search': typeof AppSearchRoute
   '/_app/sell': typeof AppSellRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/_app/soulync': typeof AppSoulyncRoute
   '/_app/social': typeof AppSocialRoute
   '/_app/spill': typeof AppSpillRouteWithChildren
   '/_app/studies': typeof AppStudiesRoute
@@ -429,14 +432,12 @@ export interface FileRoutesById {
   '/_app/communities/$communityId': typeof AppCommunitiesCommunityIdRoute
   '/_app/communities/$id': typeof AppCommunitiesIdRoute
   '/_app/market/$id': typeof AppMarketIdRoute
-  '/_app/market/$listingId': typeof AppMarketListingIdRoute
   '/_app/messages/$id': typeof AppMessagesIdRoute
   '/_app/riff/$id': typeof AppRiffIdRoute
   '/_app/spill/$id': typeof AppSpillIdRoute
   '/_app/u/$handle': typeof AppUHandleRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/media/$id': typeof ApiMediaIdRoute
-  '/_app/market/': typeof AppMarketIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -445,6 +446,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/start'
     | '/board'
+    | '/concierge'
     | '/bud'
     | '/communities'
     | '/connect'
@@ -466,6 +468,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/sell'
     | '/settings'
+    | '/soulync'
     | '/social'
     | '/spill'
     | '/studies'
@@ -479,19 +482,18 @@ export interface FileRouteTypes {
     | '/communities/$communityId'
     | '/communities/$id'
     | '/market/$id'
-    | '/market/$listingId'
     | '/messages/$id'
     | '/riff/$id'
     | '/spill/$id'
     | '/u/$handle'
     | '/api/auth/$'
     | '/api/media/$id'
-    | '/market/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
     | '/start'
     | '/board'
+    | '/concierge'
     | '/bud'
     | '/communities'
     | '/connect'
@@ -512,6 +514,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/sell'
     | '/settings'
+    | '/soulync'
     | '/social'
     | '/spill'
     | '/studies'
@@ -526,7 +529,6 @@ export interface FileRouteTypes {
     | '/communities/$communityId'
     | '/communities/$id'
     | '/market/$id'
-    | '/market/$listingId'
     | '/messages/$id'
     | '/riff/$id'
     | '/spill/$id'
@@ -540,6 +542,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/start'
     | '/_app/board'
+    | '/_app/concierge'
     | '/_app/bud'
     | '/_app/communities'
     | '/_app/connect'
@@ -561,6 +564,7 @@ export interface FileRouteTypes {
     | '/_app/search'
     | '/_app/sell'
     | '/_app/settings'
+    | '/_app/soulync'
     | '/_app/social'
     | '/_app/spill'
     | '/_app/studies'
@@ -575,14 +579,12 @@ export interface FileRouteTypes {
     | '/_app/communities/$communityId'
     | '/_app/communities/$id'
     | '/_app/market/$id'
-    | '/_app/market/$listingId'
     | '/_app/messages/$id'
     | '/_app/riff/$id'
     | '/_app/spill/$id'
     | '/_app/u/$handle'
     | '/api/auth/$'
     | '/api/media/$id'
-    | '/_app/market/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -649,6 +651,13 @@ declare module '@tanstack/react-router' {
       path: '/connect'
       fullPath: '/connect'
       preLoaderRoute: typeof AppConnectRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/concierge': {
+      id: '/_app/concierge'
+      path: '/concierge'
+      fullPath: '/concierge'
+      preLoaderRoute: typeof AppConciergeRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/creator': {
@@ -777,6 +786,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/soulync': {
+      id: '/_app/soulync'
+      path: '/soulync'
+      fullPath: '/soulync'
+      preLoaderRoute: typeof AppSoulyncRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/social': {
       id: '/_app/social'
       path: '/social'
@@ -861,25 +877,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCommunitiesIdRouteImport
       parentRoute: typeof AppCommunitiesRoute
     }
-    '/_app/market/': {
-      id: '/_app/market/'
-      path: '/'
-      fullPath: '/market/'
-      preLoaderRoute: typeof AppMarketIndexRouteImport
-      parentRoute: typeof AppMarketRoute
-    }
     '/_app/market/$id': {
       id: '/_app/market/$id'
       path: '/$id'
       fullPath: '/market/$id'
       preLoaderRoute: typeof AppMarketIdRouteImport
-      parentRoute: typeof AppMarketRoute
-    }
-    '/_app/market/$listingId': {
-      id: '/_app/market/$listingId'
-      path: '/$listingId'
-      fullPath: '/market/$listingId'
-      preLoaderRoute: typeof AppMarketListingIdRouteImport
       parentRoute: typeof AppMarketRoute
     }
     '/_app/messages/$id': {
@@ -968,14 +970,10 @@ const AppCommunitiesRouteWithChildren = AppCommunitiesRoute._addFileChildren(
 
 interface AppMarketRouteChildren {
   AppMarketIdRoute: typeof AppMarketIdRoute
-  AppMarketListingIdRoute: typeof AppMarketListingIdRoute
-  AppMarketIndexRoute: typeof AppMarketIndexRoute
 }
 
 const AppMarketRouteChildren: AppMarketRouteChildren = {
   AppMarketIdRoute: AppMarketIdRoute,
-  AppMarketListingIdRoute: AppMarketListingIdRoute,
-  AppMarketIndexRoute: AppMarketIndexRoute,
 }
 
 const AppMarketRouteWithChildren = AppMarketRoute._addFileChildren(
@@ -1019,6 +1017,7 @@ const AppSpillRouteWithChildren = AppSpillRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppBoardRoute: typeof AppBoardRouteWithChildren
+  AppConciergeRoute: typeof AppConciergeRoute
   AppBudRoute: typeof AppBudRouteWithChildren
   AppCommunitiesRoute: typeof AppCommunitiesRouteWithChildren
   AppConnectRoute: typeof AppConnectRoute
@@ -1040,6 +1039,7 @@ interface AppRouteChildren {
   AppSearchRoute: typeof AppSearchRoute
   AppSellRoute: typeof AppSellRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppSoulyncRoute: typeof AppSoulyncRoute
   AppSocialRoute: typeof AppSocialRoute
   AppSpillRoute: typeof AppSpillRouteWithChildren
   AppStudiesRoute: typeof AppStudiesRoute
@@ -1053,6 +1053,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppBoardRoute: AppBoardRouteWithChildren,
+  AppConciergeRoute: AppConciergeRoute,
   AppBudRoute: AppBudRouteWithChildren,
   AppCommunitiesRoute: AppCommunitiesRouteWithChildren,
   AppConnectRoute: AppConnectRoute,
@@ -1074,6 +1075,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSearchRoute: AppSearchRoute,
   AppSellRoute: AppSellRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppSoulyncRoute: AppSoulyncRoute,
   AppSocialRoute: AppSocialRoute,
   AppSpillRoute: AppSpillRouteWithChildren,
   AppStudiesRoute: AppStudiesRoute,

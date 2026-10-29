@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { DemoCallout } from "@/components/unibud/demo-callout";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { cn } from "@/lib/utils";
 
@@ -15,12 +16,7 @@ function TheFixer() {
   const [log, setLog] = useState<string[]>([]);
   const [peer, setPeer] = useState(false);
   const [draft, setDraft] = useState("");
-  const [lines, setLines] = useState<{ from: "you" | "peer"; body: string }[]>([
-    {
-      from: "peer",
-      body: "I’m another student. No names. Tell me what’s sitting heavy — I’ll stay with it.",
-    },
-  ]);
+  const [lines, setLines] = useState<{ from: "you" | "peer"; body: string }[]>([]);
   const [rating, setRating] = useState<number | null>(null);
   const addFixerRating = useCampusStore((s) => s.addFixerRating);
   const crisis =
@@ -33,7 +29,7 @@ function TheFixer() {
       `I’m with you. You said: “${issue.trim()}”. This is about you — not a UNIBUD bug.`,
       "Splitting it: what happened, what you hoped for, and what feels stuck.",
       "One question: do you need someone to listen, or a concrete next step you can take today?",
-      "Next step: write one sentence you’d tell a trusted person. If you want, you can talk to another student anonymously below. I am not a therapist.",
+      "Next step: write one sentence you could share with a trusted person. This preview cannot connect you to another student or a therapist.",
     ];
     setLog((l) => [...l, notes[step] ?? notes[notes.length - 1]]);
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
@@ -98,13 +94,14 @@ function TheFixer() {
           </p>
           {!peer ? (
             <Button className="mt-3" variant="outline" onClick={() => setPeer(true)}>
-              Request an anonymous conversation
+              Preview anonymous chat (not connected)
             </Button>
           ) : (
             <div className="mt-3 rounded-2xl bg-card p-4 ring-1 ring-border">
               <p className="text-xs text-muted-foreground">Connected · identity hidden</p>
               <div className="mt-3 max-h-48 space-y-2 overflow-y-auto">
-                {lines.map((l, i) => (
+                {lines.length === 0 ? <p className="text-sm text-muted-foreground">No peer messages. A real peer-support service is not connected.</p> : null}
+          {lines.map((l, i) => (
                   <p
                     key={i}
                     className={cn(

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/unibud/empty";
+import { DemoCallout } from "@/components/unibud/demo-callout";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { addCourse, addMaterial, addStudySession, getStudies, seedSampleSemester } from "@/lib/studies/server";
@@ -123,6 +124,9 @@ function Studies() {
       <p className="mt-2 text-sm text-muted-foreground">
         Your notes, revision and study plan. Board is live class. Bud is the AI platform. Study groups live in Communities.
       </p>
+      <DemoCallout>
+        The built-in course catalogue and “Use sample semester” option are prototype examples, not official university records or deadlines. Add your own courses until verified institution data is connected.
+      </DemoCallout>
       <div className="mt-4 flex flex-wrap gap-2">
         <Link
           to="/communities/$id"

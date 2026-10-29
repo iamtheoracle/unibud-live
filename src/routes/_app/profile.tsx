@@ -1,14 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { BadgeCheck } from "lucide-react";
 import { Avatar } from "@/components/unibud/person";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
-import { COMMUNITIES, UNIVERSITIES, uniById } from "@/lib/unibud/catalog";
+import { DemoCallout } from "@/components/unibud/demo-callout";
+import { UNIVERSITIES, uniById } from "@/lib/unibud/catalog";
+import { useCatalog } from "@/lib/unibud/queries";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { roleLabel } from "@/lib/unibud/roles";
 import { getMyProfile, upsertMyProfile } from "@/lib/unibud/server";
@@ -21,6 +22,7 @@ export const Route = createFileRoute("/_app/profile")({ component: Profile });
 
 function Profile() {
   const { user, isPending } = useAuthReady();
+  const { data: catalogData } = useCatalog();
   const qc = useQueryClient();
   const q = useQuery({
     queryKey: ["profile"],
@@ -114,7 +116,7 @@ function Profile() {
   }
 
   const uni = uniById(universityId);
-  const rooms = COMMUNITIES.filter((c) => mine.data?.includes(c.id)).slice(0, 6);
+  const rooms = (catalogData?.communities ?? []).filter((c) => mine.data?.includes(c.id)).slice(0, 6);
   const shownHandle = handle || "you";
 
   return (
@@ -123,6 +125,9 @@ function Profile() {
       <p className="mt-1 text-xs text-muted-foreground">
         One identity. Social and Academic are how you show up — not two accounts.
       </p>
+      <DemoCallout>
+        Student identity is not verified by this screen. Basic profile fields save to your account; avatar images, social links, highlights, connection counts and some visibility settings remain local to this device until the media and social-graph services are connected.
+      </DemoCallout>
       <div className="mt-4 flex items-start gap-4">
         {avatarDataUrl ? (
           <img src={avatarDataUrl} alt="" className="size-16 rounded-2xl object-cover" />
@@ -130,11 +135,9 @@ function Profile() {
           <Avatar name={displayName || user.displayName || "You"} className="size-16 text-lg rounded-2xl" />
         )}
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-3xl">
-            {displayName || user.displayName}
-            <BadgeCheck className="ml-1 inline size-4 text-bud" />
-          </h1>
+          <h1 className="font-display text-3xl">{displayName || user.displayName}</h1>
           <p className="text-sm text-muted-foreground">@{shownHandle}</p>
+          <span className="mt-1 inline-flex rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium text-muted-foreground">Verification not connected</span>
           {ctx === "academic" ? (
             <p className="mt-1 text-xs font-medium">{roleLabel(role, program || undefined)}</p>
           ) : identityTags.length ? (

@@ -3,8 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Avatar } from "@/components/unibud/person";
 import { EmptyState } from "@/components/unibud/empty";
+import { DemoCallout } from "@/components/unibud/demo-callout";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
-import { PEOPLE, personByHandle } from "@/lib/unibud/catalog";
+import { useCatalog } from "@/lib/unibud/queries";
 import { relativeTime } from "@/lib/unibud/format";
 import { listConversations, openConversation } from "@/lib/social/server";
 import { CAMPUS_ROOMS, type RoomKind } from "@/lib/unibud/chat-rooms";
@@ -18,6 +19,8 @@ function ChatList() {
   const { user, isPending } = useAuthReady();
   const nav = useNavigate();
   const [tab, setTab] = useState<Tab>("direct");
+  const { data: catalog } = useCatalog();
+  const people = catalog?.people ?? [];
   const convos = useQuery({
     queryKey: ["convos"],
     queryFn: () => listConversations(),
@@ -51,6 +54,9 @@ function ChatList() {
       <p className="mt-2 text-sm text-muted-foreground">
         Direct messages, group, class, study and community conversations. Chat is not Connect, not Communities, not Board.
       </p>
+      <DemoCallout>
+        Direct chats are currently account-scoped. Messages are saved to your account but are not delivered to another person's inbox yet.
+      </DemoCallout>
       <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
         {(
           [
@@ -79,7 +85,7 @@ function ChatList() {
         <>
           <div className="mt-5 space-y-1">
             {(convos.data ?? []).map((c) => {
-              const person = personByHandle(c.peerHandle);
+              const person = people.find((p) => p.handle === c.peerHandle);
               return (
                 <Link
                   key={c.id}
@@ -87,10 +93,7 @@ function ChatList() {
                   params={{ id: c.id }}
                   className="flex items-center gap-3 rounded-2xl px-1 py-3 hover:bg-secondary"
                 >
-                  <span className="relative">
-                    <Avatar name={person?.name ?? c.peerHandle} className="size-12" />
-                    <span className="absolute right-0 bottom-0 size-2.5 rounded-full bg-success ring-2 ring-card" />
-                  </span>
+                  <Avatar name={person?.name ?? c.peerHandle} className="size-12" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <p className="truncate text-sm font-semibold">{person?.name ?? `@${c.peerHandle}`}</p>
@@ -107,7 +110,7 @@ function ChatList() {
           ) : null}
           <h2 className="mt-8 text-sm font-medium">Suggested</h2>
           <ul className="mt-2">
-            {PEOPLE.filter((p) => p.role !== "lecturer").slice(0, 6).map((p) => (
+            {people.slice(0, 6).map((p) => (
               <li key={p.handle}>
                 <button
                   type="button"

@@ -15,7 +15,7 @@ function activePath(pathname: string, to: string) {
   return pathname === to || pathname.startsWith(`${to}/`);
 }
 
-export function PrimaryNav({ className }: { className?: string }) {
+export function PrimaryNav({ className, onNavigate }: { className?: string; onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
     <nav
@@ -31,6 +31,7 @@ export function PrimaryNav({ className }: { className?: string }) {
             to={item.to}
             aria-label={item.label}
             title={item.label}
+            onClick={() => onNavigate?.()}
             className={cn(
               "relative grid size-11 place-items-center rounded-full transition-colors",
               on ? "text-ink" : "text-muted-foreground hover:text-ink",

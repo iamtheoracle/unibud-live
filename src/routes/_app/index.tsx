@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useLoaderData, useNavigate } from "@tanstack/react-router";
-import { BadgeCheck, Bookmark, Heart, MessageCircle, MoreHorizontal, Play, Share2 } from "lucide-react";
+import { Bookmark, Heart, MessageCircle, MoreHorizontal, Play, Share2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/unibud/person";
+import { DemoCallout } from "@/components/unibud/demo-callout";
 import { CampusMoments } from "@/components/unibud/campus-moments";
 import { ReelsStage } from "@/components/unibud/reels-stage";
 import { EmptyState } from "@/components/unibud/empty";
-import { communityById, personByHandle } from "@/lib/unibud/catalog";
+
 import { relativeTime } from "@/lib/unibud/format";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { useStudioStore } from "@/lib/studio/store";
@@ -39,10 +40,6 @@ function Square() {
     if (user && !onboardingDone) void nav({ to: "/welcome" });
   }, [user, isPending, onboardingDone, nav]);
 
-  if (isPending || (user && !onboardingDone)) {
-    return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
-  }
-
   const [lane, setLane] = useState<SquareLane>("on-stream");
   const [peekStart, setPeekStart] = useState<string | undefined>();
   const [shown, setShown] = useState(10);
@@ -51,7 +48,8 @@ function Square() {
   const connections = useCampusStore((s) => s.connections);
   const interests = useCampusStore((s) => s.interests);
   const likeCounts = useCampusStore((s) => s.likeCounts);
-  const searches = useCampusStore((s) => s.searches);
+  const searches = useCampusStore((s) => s.recentSearches);
+  const homeCampusId = useCampusStore((s) => s.homeCampusId);
   const setComposeOpen = useCampusStore((s) => s.setComposeOpen);
   const setDropOpen = useCampusStore((s) => s.setDropOpen);
   const setSquareView = useCampusStore((s) => s.setSquareView);
@@ -64,8 +62,8 @@ function Square() {
   }, [catalog.posts, localPosts]);
 
   const lanePosts = useMemo(
-    () => postsForLane(merged, lane, { following, connections, interests, likeCounts, searches }),
-    [merged, lane, following, connections, interests, likeCounts, searches],
+    () => postsForLane(merged, lane, { following, interests, universityId: homeCampusId, likeCounts, searches }, connections),
+    [merged, lane, following, connections, interests, homeCampusId, likeCounts, searches],
   );
 
   const stream = useMemo(() => loopStream(lanePosts, shown), [lanePosts, shown]);
@@ -94,6 +92,10 @@ function Square() {
     setSquareView(v === "peek" ? "peek" : "feed");
     if (v !== "peek") setPeekStart(undefined);
     setShown(10);
+  }
+
+  if (isPending || (user && !onboardingDone)) {
+    return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
   }
 
   return (
@@ -142,6 +144,11 @@ function Square() {
             />
           </div>
           <StreamPicker lane={lane} onChange={chooseLane} />
+          <div className="px-4 pt-3">
+            <DemoCallout>
+              Posts in this feed come from connected records or your local drafts. Profile verification is not connected; follow and flag actions are local to this device, and no moderation report is sent.
+            </DemoCallout>
+          </div>
           <LaneFeed
             lane={lane}
             stream={stream}
@@ -274,8 +281,8 @@ async function sharePost(post: FeedPost) {
 }
 
 function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: string) => void }) {
-  const person = personByHandle(post.authorHandle);
-  const community = communityById(post.communityId);
+  const catalog = useLoaderData({ from: "/_app" });
+  const community = (catalog.communities ?? []).find((item) => item.id === post.communityId);
   const key = likeKey(post.id);
   const liked = useCampusStore((s) => s.liked[key]);
   const count = useCampusStore((s) => s.likeCounts[key] ?? 0);
@@ -286,7 +293,6 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
   const saved = useCampusStore((s) => (s.savedPosts ?? []).includes(key));
   const toggleSavePost = useCampusStore((s) => s.toggleSavePost);
   const { user } = useCurrentUserState();
-  const catalog = useLoaderData({ from: "/_app" });
   const dbReplies = (catalog.replies ?? [])
     .filter((r) => r.postId === key)
     .map((r) => ({
@@ -305,7 +311,7 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
   const [reply, setReply] = useState("");
-  const name = person?.name ?? post.authorHandle;
+  const name = post.authorHandle === "you" ? "You" : `@${post.authorHandle}`;
   const video = isVideoPost(post);
 
   return (
@@ -318,11 +324,7 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">
-                <Link to="/u/$handle" params={{ handle: post.authorHandle }} className="hover:underline">
-                  {name}
-                </Link>
-                {person?.verified ? <BadgeCheck className="ml-1 inline size-3.5 text-bud" /> : null}
-                <span className="ml-1 font-normal text-muted-foreground">@{post.authorHandle}</span>
+                {name}
                 <span className="ml-1 font-normal text-muted-foreground">· {relativeTime(post.createdAt)}</span>
               </p>
               {community ? (
@@ -337,13 +339,13 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
           </div>
           {menu ? (
             <div className="mt-2 flex flex-wrap gap-2 text-xs">
-              <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { following.includes(post.authorHandle) ? unfollow(post.authorHandle) : follow(post.authorHandle); setMenu(false); }}>
+              <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { if (following.includes(post.authorHandle)) { unfollow(post.authorHandle); } else { follow(post.authorHandle); } setMenu(false); }}>
                 {following.includes(post.authorHandle) ? "Unfollow" : "Follow"}
               </button>
               <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { hidePost(key); setMenu(false); }}>
                 Hide
               </button>
-              <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { reportPost(key); toast.message("Report noted."); setMenu(false); }}>
+              <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { reportPost(key); toast.message("Flagged on this device only; no moderation report was sent."); setMenu(false); }}>
                 Report
               </button>
             </div>
@@ -388,7 +390,7 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
                   e.preventDefault();
                   if (!reply.trim()) return;
                   const body = reply.trim();
-                  addPostReply(key, body, "you");
+                  addPostReply(key, { id: `local-reply-${Date.now()}`, authorHandle: "you", body, createdAt: new Date().toISOString() });
                   if (user) void addSquareReply({ data: { postId: key, body } }).catch(() => {});
                   setReply("");
                 }}
