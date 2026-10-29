@@ -108,3 +108,14 @@ test("server input guard rejects malformed price notes and unsafe prices", () =>
     /positive whole number/i,
   );
 });
+
+test("server input guard rejects accommodation and services category/type mismatches", () => {
+  assert.match(
+    validateMarketplaceCreateInput(validCreateInput({ kind: "goods", category: "accommodation" })) ?? "",
+    /stay listing type/i,
+  );
+  assert.match(
+    validateMarketplaceCreateInput(validCreateInput({ kind: "goods", category: "services" })) ?? "",
+    /service listing type/i,
+  );
+});
