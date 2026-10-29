@@ -67,6 +67,7 @@ export function SouLync() {
 
   return (
     <main className="safe-bottom mx-auto max-w-4xl px-5 pt-6">
+      <Link to="/" className="mb-3 inline-flex text-sm font-medium text-muted-foreground hover:text-foreground">← Back to Square</Link>
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="kicker">SOCIAL · PRIVATE BY DESIGN</p>
@@ -211,7 +212,6 @@ export function SouLync() {
       </aside>
       {notice && <p className="mt-4 rounded-xl bg-secondary p-3 text-sm" role="status">{notice}</p>}
       <p className="pb-8 pt-4 text-xs text-muted-foreground">SouLync · UNIBUD dating experience · UI integration preview only</p>
-      <Link to="/" className="sr-only">Back to Square</Link>
     </main>
   );
 }
