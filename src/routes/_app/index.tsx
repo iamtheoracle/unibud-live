@@ -324,7 +324,7 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">
-                {post.authorHandle === "you" ? name : <Link to="/u/$handle" params={{ handle: post.authorHandle }} className="hover:underline">{name}</Link>}
+                {name}
                 <span className="ml-1 font-normal text-muted-foreground">· {relativeTime(post.createdAt)}</span>
               </p>
               {community ? (
