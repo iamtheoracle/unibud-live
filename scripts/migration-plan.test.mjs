@@ -58,8 +58,16 @@ test("non-.sql entries are dropped (readdir also yields the auth/ directory)", (
 
 test("the auth schema ships outside the globbed directory", () => {
   const migrationsDir = join(projectRoot(), "migrations");
-  assert.deepEqual(pendingMigrations(readdirSync(migrationsDir), []), []);
-  assert.ok(readdirSync(join(migrationsDir, "auth")).includes("0001_auth.sql"));
+  const rootMigrations = pendingMigrations(readdirSync(migrationsDir), []);
+  // The application has its own migrations at the root; only the opt-in auth
+  // schema must remain outside the non-recursive migrator's discovery path.
+  assert.ok(rootMigrations.length > 0, "application migrations should be discoverable");
+  assert.equal(
+    rootMigrations.some(({ name }) => name === AUTH_MIGRATION),
+    false,
+    "the auth schema must not be discovered while sign-in is off",
+  );
+  assert.ok(readdirSync(join(migrationsDir, "auth")).includes(AUTH_MIGRATION));
 });
 
 test("this workspace's auth schema copy is byte-identical to its source", () => {
