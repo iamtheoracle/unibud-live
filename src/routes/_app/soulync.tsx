@@ -167,7 +167,7 @@ function SouLync() {
 
       <section className="mt-6">
         <div className="flex flex-wrap gap-2" aria-label="SouLync sections">
-          {tabs.map((item) => <Button key={item} size="sm" variant={tab === item ? "default" : "outline"} aria-pressed={tab === item} onClick={() => { setTab(item); setNotice(""); }}>{item}</Button>)}
+          {tabs.map((item) => <Button key={item} size="sm" variant={tab === item ? "primary" : "outline"} aria-pressed={tab === item} onClick={() => { setTab(item); setNotice(""); }}>{item}</Button>)}
         </div>
         <div className="mt-3 rounded-2xl border border-border bg-card px-5 py-8 text-center" role="status">
           {tab === "Likes" ? <Heart className="mx-auto size-6 text-bud" /> : tab === "Matches" ? <UsersRound className="mx-auto size-6 text-bud" /> : tab === "Date plans" ? <CalendarDays className="mx-auto size-6 text-bud" /> : <Sparkles className="mx-auto size-6 text-bud" />}
