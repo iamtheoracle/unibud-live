@@ -27,6 +27,7 @@ function Creator() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("15000");
+  const [imageUrl, setImageUrl] = useState("");
   const mine = (data?.listings ?? []).filter(
     (l) => l.sellerHandle === profile.data?.handle && l.kind === "service",
   );
@@ -43,9 +44,9 @@ function Creator() {
         priceMinor: kobo ?? 0,
         priceBasis: "starting_at",
         location: "Campus / remote",
-        imageUrls: [],
+        imageUrls: imageUrl.trim() ? [imageUrl.trim()] : [],
         verificationState: "unverified",
-        status: "draft",
+        status: "published",
       });
       if (kobo === null || kobo <= 0) {
         throw new Error("Enter a valid service price greater than zero.");
@@ -62,6 +63,7 @@ function Creator() {
           priceKobo: kobo,
           priceNote: "starting",
           location: "Campus / remote",
+          imageUrl,
         },
       });
     },
@@ -101,6 +103,17 @@ function Creator() {
         <Input className="mt-3" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="I edit graduation films" />
         <Textarea className="mt-2" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What you do, how long, where" />
         <Input className="mt-2" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Starting price ₦" />
+        <Input
+          className="mt-2"
+          inputType="url"
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+          placeholder="Cover photo URL (HTTPS)"
+          required
+        />
+        <p className="mt-1 text-xs text-muted-foreground">
+          Direct uploads are not connected yet. Add a secure image URL to publish this service.
+        </p>
         <Button className="mt-4" onClick={() => mut.mutate()} disabled={!title.trim() || mut.isPending}>
           Publish to market
         </Button>
