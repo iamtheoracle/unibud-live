@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Bell, BookOpen, Calendar, Clapperboard, Heart, MessageCircle, Newspaper, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { relativeTime } from "@/lib/unibud/format";
+import { DemoCallout } from "@/components/unibud/demo-callout";
 import { useCampusStore, type HumanNote } from "@/lib/unibud/campus-store";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,9 @@ function Notifications() {
     <main className="safe-bottom px-5 pt-6">
       <p className="kicker text-center">Your updates</p>
       <h1 className="mt-1 text-center font-display text-4xl">Notifications</h1>
+      <DemoCallout>
+        These notifications are stored in this device's local state. Remote push delivery and server-generated social, class, event, and money notifications are not connected here.
+      </DemoCallout>
       <button type="button" onClick={markAllRead} className="mx-auto mt-3 block text-sm font-medium text-bud">
         Mark all as read
       </button>
