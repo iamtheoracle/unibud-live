@@ -45,5 +45,7 @@ jobs:
 
       - name: Production-shaped Netlify build
         run: npm run build:netlify
+        env:
+          VITE_AUTH_ENABLED: "false"
 
       # Browser/UI interaction tests remain deferred until a browser runner is configured.
