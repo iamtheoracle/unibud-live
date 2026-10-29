@@ -138,7 +138,7 @@ export function validateListingDraft(draft: ListingDraft): ValidationIssue[] {
 export function isSafeImageUrl(value: string): boolean {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && url.hostname.length > 0;
+    return url.protocol === "https:" && url.hostname.length > 0 && !url.username && !url.password && value.length <= 2048;
   } catch {
     return false;
   }
@@ -170,6 +170,7 @@ export function validateMarketplaceCreateInput(input: {
   priceKobo: unknown;
   priceNote: unknown;
   location: unknown;
+  imageUrl: unknown;
 }): string | null {
   const kinds = ["goods", "service", "stay"];
   const categories = [
@@ -206,6 +207,9 @@ export function validateMarketplaceCreateInput(input: {
   }
   if (typeof input.location !== "string" || input.location.trim().length < 2 || input.location.trim().length > 180) {
     return "Location must be between 2 and 180 characters.";
+  }
+  if (typeof input.imageUrl !== "string" || input.imageUrl.trim().length > 2048 || !isSafeImageUrl(input.imageUrl.trim())) {
+    return "Add a photo using a valid HTTPS image URL (maximum 2,048 characters).";
   }
   return null;
 }
