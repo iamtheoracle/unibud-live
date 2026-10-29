@@ -99,11 +99,6 @@ UNIBUD is one application assembled from the strongest parts of the existing pro
 - The integration branch changed the CI and Netlify install commands to `npm install --no-audit --no-fund` as a temporary recovery path. The next Actions and Deploy Preview results must be inspected before claiming success.
 - The lockfile still needs a proper regeneration/commit. Browser/UI interaction checks and a successful Deploy Preview are not yet verified. Production remains untouched.
 
-- The `.npmrc` change allowed `npm ci` to complete in GitHub Actions.
-- The UNIBUD pre-UI gate passed on commit `c8b509e` (typecheck, integration-layer lint, agent/Spark tests, marketplace domain tests).
-- A newer run for the additional Connect, Chat, and Board changes is still in progress; the newest commit must pass before merge. No production build or browser test has been run.
-
-
 - Studies now labels the built-in course catalogue and sample-semester action as prototype examples, not official institution records or deadlines.
 - A public repository named `silverbai/Soulync` exists, but it describes an AI dating engine and is owned by a different GitHub account with read-only access here. It may not be the user's referenced snapshot, and its code is not being copied. The current migration's SouLync schema has a different relationship-discovery shape; confirm the intended source before integrating.
 - No matching `board-workspace` repository was found in the connected repository list or public repository search. The current Board implementation still uses static preview course/session data; those are now explicitly marked as prototype content.
@@ -113,4 +108,4 @@ UNIBUD is one application assembled from the strongest parts of the existing pro
 - The conversation-start endpoint now validates that the target handle is a real student profile and rejects self-conversations before creating an account-scoped thread. This does not solve cross-user delivery; it prevents ghost/self threads while the shared conversation model remains outstanding.
 
 
-- Netlify still reports a generic build-stage exit code 2 on the preview, even though GitHub Actions passes `npm run build:netlify` with `VITE_AUTH_ENABLED=false`. The connected Netlify deploy-detail action exposes the generic failure but not the build log, so the precise Netlify-only failure cause remains unresolved. Do not mark the preview deployable until the actual Netlify build log is inspected and the preview succeeds.
+- Earlier Netlify preview attempts reported a generic build-stage failure. The build command now uses the temporary npm install recovery path; a fresh Deploy Preview result and actual build outcome still need verification. Do not mark the preview deployable until it succeeds.
