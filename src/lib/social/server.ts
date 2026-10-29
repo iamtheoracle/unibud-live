@@ -2,8 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
 import { authMiddleware } from "@/lib/auth/middleware";
 import { mapConvo, mapMessage } from "@/lib/unibud/map";
-import { PEOPLE } from "@/lib/unibud/catalog";
-import { notify } from "@/lib/unibud/server";
 
 async function loadConversation(userId: string, id: string) {
   const sql = await getSql();
@@ -42,14 +40,8 @@ export const openConversation = createServerFn({ method: "POST" })
       values (${id}, ${context.userId}, ${handle}, ${data.listingId ?? null}, ${seed})`;
     await sql`insert into messages (id, conversation_id, user_id, sender, body)
       values (${crypto.randomUUID()}, ${id}, ${context.userId}, ${"me"}, ${seed})`;
-    const person = PEOPLE.find((p) => p.handle === handle);
-    const reply = person
-      ? `Hey, this is ${person.name.split(" ")[0]}. Happy to talk — keep payments inside UNIBUD demo so we both have a record.`
-      : "Got it. Let’s keep this on UNIBUD.";
-    await sql`insert into messages (id, conversation_id, user_id, sender, body)
-      values (${crypto.randomUUID()}, ${id}, ${context.userId}, ${"peer"}, ${reply})`;
-    await sql`update conversations set last_body = ${reply}, updated_at = now() where id = ${id} and user_id = ${context.userId}`;
-    await notify(context.userId, "message", `Chat with @${handle}`, reply, `/messages/${id}`);
+    // Do not synthesize a peer reply or notification. This conversation is currently
+    // account-scoped; cross-user delivery needs shared conversation membership.
     const rows = await sql`select * from conversations where id = ${id} and user_id = ${context.userId}`;
     return mapConvo(rows[0]);
   });
