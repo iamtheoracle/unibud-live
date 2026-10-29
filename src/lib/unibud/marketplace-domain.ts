@@ -186,6 +186,12 @@ export function validateMarketplaceCreateInput(input: {
   if (input.kind === "stay" && input.category !== "accommodation") {
     return "Stay listings must use the accommodation category.";
   }
+  if (input.category === "accommodation" && input.kind !== "stay") {
+    return "Accommodation listings must use the stay listing type.";
+  }
+  if (input.category === "services" && input.kind !== "service") {
+    return "Service listings must use the service listing type.";
+  }
   if (typeof input.title !== "string" || input.title.trim().length < 4 || input.title.trim().length > 100) {
     return "Title must be between 4 and 100 characters.";
   }
