@@ -38,7 +38,7 @@ jobs:
         run: npx eslint src/lib/agents src/lib/spark src/lib/bud/server.ts src/lib/bud/spark.ts
 
       - name: Lint modified marketplace and workspace UI
-        run: npx eslint src/routes/_app/board.tsx src/routes/_app/concierge.tsx src/routes/_app/soulync.tsx src/routes/_app/search.tsx src/routes/_app/news.tsx src/routes/_app/podcasts.tsx src/routes/_app/live.tsx src/routes/_app/riff.tsx src/routes/_app/profile.tsx src/routes/_app/market.tsx src/routes/_app/creator.tsx src/routes/_app/sell.tsx src/components/shell/side-menu.tsx src/lib/unibud/campus-store.ts src/lib/unibud/marketplace-domain.ts src/lib/unibud/marketplace-domain.test.ts src/lib/unibud/server.ts
+        run: npx eslint src/routes/_app/board.tsx src/routes/_app/concierge.tsx src/routes/_app/soulync.tsx src/routes/_app/search.tsx src/routes/_app/news.tsx src/routes/_app/podcasts.tsx src/routes/_app/live.tsx src/routes/_app/riff.tsx src/routes/_app/profile.tsx src/routes/_app/index.tsx 'src/routes/_app/u.$handle.tsx' src/routes/_app/fixer.tsx src/routes/_app/notifications.tsx src/routes/_app/saved.tsx src/routes/_app/market.tsx src/routes/_app/creator.tsx src/routes/_app/sell.tsx src/components/shell/side-menu.tsx src/lib/social/server.ts src/lib/unibud/campus-store.ts src/lib/unibud/marketplace-domain.ts src/lib/unibud/marketplace-domain.test.ts src/lib/unibud/server.ts
 
       # The existing UI/studio/routes lint baseline remains intentionally outside the pre-UI gate.
       # Full application linting will be restored when UI implementation begins.
