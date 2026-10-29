@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_app/soulync")({ component: SouLync });
 type SouLyncTab = "Discover" | "Likes" | "Matches" | "Date plans";
 const tabs: SouLyncTab[] = ["Discover", "Likes", "Matches", "Date plans"];
 
-function SouLync() {
+export function SouLync() {
   const [tab, setTab] = useState<SouLyncTab>("Discover");
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [adultConfirmed, setAdultConfirmed] = useState(false);
