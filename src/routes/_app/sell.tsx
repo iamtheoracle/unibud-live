@@ -33,6 +33,7 @@ function SellForm() {
   const [naira, setNaira] = useState("");
   const [priceNote, setPriceNote] = useState("asking");
   const [location, setLocation] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
@@ -53,6 +54,7 @@ function SellForm() {
           priceKobo: kobo,
           priceNote,
           location,
+          imageUrl,
         },
       });
       await router.invalidate();
@@ -115,6 +117,20 @@ function SellForm() {
       <div className="space-y-1.5">
         <Label htmlFor="desc">Description</Label>
         <Textarea id="desc" required value={description} onChange={(e) => setDescription(e.target.value)} />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="imageUrl">Cover photo URL (HTTPS)</Label>
+        <Input
+          id="imageUrl"
+          inputType="url"
+          required
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+          placeholder="https://…"
+        />
+        <p className="text-xs text-muted-foreground">
+          Direct photo uploads are not connected yet. Use a secure image URL you have permission to share.
+        </p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
