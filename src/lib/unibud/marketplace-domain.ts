@@ -156,3 +156,50 @@ export function formatMinorAmount(amountMinor: number, currency: string): string
     maximumFractionDigits: fractionDigits,
   }).format(amountMinor / 100);
 }
+
+
+/**
+ * Runtime guard for the current persisted marketplace schema.
+ * Arc's richer listing kinds are deliberately not accepted until the DB and UI support them.
+ */
+export function validateMarketplaceCreateInput(input: {
+  kind: unknown;
+  category: unknown;
+  title: unknown;
+  description: unknown;
+  priceKobo: unknown;
+  priceNote: unknown;
+  location: unknown;
+}): string | null {
+  const kinds = ["goods", "service", "stay"];
+  const categories = [
+    "accommodation", "food", "fashion", "electronics", "books",
+    "beauty", "transport", "events", "services", "other",
+  ];
+
+  if (typeof input.kind !== "string" || !kinds.includes(input.kind)) {
+    return "Choose a supported listing type.";
+  }
+  if (typeof input.category !== "string" || !categories.includes(input.category)) {
+    return "Choose a supported listing category.";
+  }
+  if (input.kind === "stay" && input.category !== "accommodation") {
+    return "Stay listings must use the accommodation category.";
+  }
+  if (typeof input.title !== "string" || input.title.trim().length < 4 || input.title.trim().length > 100) {
+    return "Title must be between 4 and 100 characters.";
+  }
+  if (typeof input.description !== "string" || input.description.trim().length < 20 || input.description.trim().length > 5000) {
+    return "Description must be between 20 and 5,000 characters.";
+  }
+  if (typeof input.priceKobo !== "number" || !Number.isSafeInteger(input.priceKobo) || input.priceKobo <= 0) {
+    return "Price must be a positive whole number of minor currency units.";
+  }
+  if (typeof input.priceNote !== "string" || input.priceNote.trim().length < 1 || input.priceNote.trim().length > 80) {
+    return "Price description must be between 1 and 80 characters.";
+  }
+  if (typeof input.location !== "string" || input.location.trim().length < 2 || input.location.trim().length > 180) {
+    return "Location must be between 2 and 180 characters.";
+  }
+  return null;
+}
