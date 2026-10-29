@@ -181,7 +181,7 @@ async function runAsk(
   const sparkNotes = sparkSystemNotes(prompt).join("\n");
   const communication = communicationInstruction(prompt);
 
-  const provider = getAIProvider();
+  const provider = getAIProvider(userId);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 22_000);
   let result = await provider.complete([
