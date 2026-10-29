@@ -243,6 +243,7 @@ export const createListing = createServerFn({ method: "POST" })
       priceKobo: number;
       priceNote: string;
       location: string;
+      imageUrl: string;
     }) => input,
   )
   .handler(async ({ context, data }) => {
@@ -266,7 +267,7 @@ export const createListing = createServerFn({ method: "POST" })
     ) values (
       ${id}, ${context.userId}, ${data.kind}, ${data.category}, ${title}, ${data.description.trim()},
       ${data.priceKobo}, ${priceNote}, ${"ink"}, ${handle}, ${universityId},
-      ${location || "Campus"}, ${"[]"}
+      ${location || "Campus"}, ${"[]"}, ${data.imageUrl.trim()}
     )`;
     const rows = await sql`select * from listings where id = ${id} limit 1`;
     return mapListing(rows[0]);
