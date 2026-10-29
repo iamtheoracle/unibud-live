@@ -3,9 +3,9 @@
 
 [build]
   # Include devDependencies (nitro, vite plugins) — required for TanStack Start build.
-  # Temporary dependency-resolution fallback: the checked-in lockfile is inconsistent with package.json.
-  # Restore npm ci after regenerating and committing package-lock.json.
-  command = "npm install --no-audit --no-fund && npm run build:netlify"
+  # Match the verified GitHub build and install build-time tools explicitly.
+  # Keep npm install until package-lock.json is regenerated and verified for npm ci.
+  command = "npm install --legacy-peer-deps --include=dev --no-audit --no-fund && npm run build:netlify"
   publish = "dist"
 
 [build.environment]
