@@ -75,3 +75,24 @@ The private `iamtheoracle/arc-project-one` repository was discoverable but its a
 - [ ] Mobile and desktop browser flows are audited.
 - [ ] Typecheck, lint, tests, and production build pass.
 - [ ] Provider, security, and compliance review is complete before any live-money release.
+
+
+## Build order: banking first, Flow-wide connections second
+
+Student Bank is the first implementation priority. Do not begin by wiring every mini-app into unfinished financial services. First establish a safe, testable financial foundation and its contracts; then connect Flow surfaces incrementally.
+
+1. **Audit and harden the existing wallet demo:** make demo status unmistakable, review authorization and runtime validation, prevent invalid amounts/status transitions, and test ledger/activity behavior. Do not label this production banking.
+2. **Define the core banking domain:** account, balance/ledger entry, transaction, beneficiary, payment instruction, card, provider event, dispute, and audit event. Keep monetary values in integer minor units and use explicit transaction states.
+3. **Design the provider boundary:** server-only adapter contracts for accounts, balances, transfers, cards, and payment status. Provider credentials stay in server secrets; no real provider is assumed until selected and approved.
+4. **Implement provider sandbox integration:** authentication, idempotency, signed callback verification, pending/failed/succeeded states, reconciliation, and failure recovery.
+5. **Verify security and operations:** authorization, limits, fraud controls, monitoring, support/disputes, audit trails, and legal/compliance approval.
+6. **Connect Flow one surface at a time:** marketplace checkout, shared expenses, subscriptions, student services, and other approved experiences call the same server-side financial contracts. Each integration needs explicit user consent, a clear confirmation step, and its own tests.
+7. **Release gradually:** feature flags, sandbox validation, staff review, limited rollout, and provider-confirmed reconciliation before enabling production money movement.
+
+### Non-negotiable rules
+
+- A demo balance is not a deposit, and a demo transaction is not a payment.
+- Never claim a transfer succeeded until the provider confirms it.
+- Never trust client-supplied transaction status or provider callbacks that have not been authenticated.
+- Never let the browser access provider secrets or perform privileged ledger writes.
+- Keep every Flow integration on the same authorization, audit, and reconciliation foundation rather than implementing separate money logic in each mini-app.
