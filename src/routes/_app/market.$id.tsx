@@ -3,6 +3,7 @@ import { Bookmark, Flag, MessageCircle, Shield } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { DemoCallout } from "@/components/unibud/demo-callout";
 import { ListingCard } from "@/components/unibud/listing-card";
@@ -12,11 +13,11 @@ import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
 import { VaultGate } from "@/components/unibud/vault-gate";
 import { uniById } from "@/lib/unibud/catalog";
 import { formatNaira } from "@/lib/unibud/format";
-import { getListing, toggleSave } from "@/lib/unibud/server";
+import { getListing, reportListing, toggleSave } from "@/lib/unibud/server";
 import { payListingDemo } from "@/lib/money/server";
 import { openConversation } from "@/lib/social/server";
 import { isUnauthorized } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_app/market/$id")({
   component: ListingPage,
@@ -31,6 +32,17 @@ function ListingPage() {
     queryFn: () => getListing({ data: id }),
   });
   const [busy, setBusy] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const reportMut = useMutation({
+    mutationFn: () => reportListing({ data: { listingId: id, reason: reportReason } }),
+    onSuccess: () => {
+      toast.success("Report saved for review.");
+      setReportReason("");
+      setReportOpen(false);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   if (isPending) {
     return <div className="m-4 h-80 animate-pulse rounded-3xl bg-secondary" />;
@@ -180,10 +192,48 @@ function ListingPage() {
           Pay (demo)
         </Button>
       </div>
-      <button type="button" className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-        <Flag className="size-3.5" />
-        Report listing
-      </button>
+      <div className="mt-3">
+        <button
+          type="button"
+          onClick={() => {
+            if (!user) {
+              nav({ to: "/login" });
+              return;
+            }
+            setReportOpen((open) => !open);
+          }}
+          className="flex items-center gap-2 text-xs text-muted-foreground"
+          aria-expanded={reportOpen}
+        >
+          <Flag className="size-3.5" />
+          Report listing
+        </button>
+        {reportOpen ? (
+          <section className="mt-3 rounded-2xl bg-card p-4 ring-1 ring-border" aria-label="Report listing">
+            <p className="text-sm font-medium">What is wrong with this listing?</p>
+            <p className="mt-1 text-xs text-muted-foreground">Reports are saved for the UNIBUD team to review.</p>
+            <Textarea
+              className="mt-3"
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              placeholder="Explain the safety, fraud, or policy concern."
+              maxLength={1000}
+            />
+            <div className="mt-3 flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => reportMut.mutate()}
+                disabled={reportReason.trim().length < 10 || reportMut.isPending}
+              >
+                {reportMut.isPending ? "Sending…" : "Submit report"}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setReportOpen(false)}>
+                Cancel
+              </Button>
+            </div>
+          </section>
+        ) : null}
+      </div>
 
       {!user && !authPending ? (
         <div className="mt-6">
