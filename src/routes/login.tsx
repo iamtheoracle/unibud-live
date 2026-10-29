@@ -107,8 +107,8 @@ function Login() {
               Where people, ideas and discovery meet.
             </h1>
             <p className="mt-4 text-sm text-paper/70">
-              Social, learning, culture, and a quiet assistant named Bud. Wallet money here is a demo
-              ledger. No real naira moves.
+              Social, learning, culture, and a quiet assistant named Bud. Flow’s student-money
+              experience currently uses a demo ledger. No real naira moves.
             </p>
           </div>
         </div>
