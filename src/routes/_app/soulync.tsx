@@ -8,7 +8,6 @@ import {
   SlidersHorizontal,
   Sparkles,
   UsersRound,
-  UtensilsCrossed,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DemoCallout } from "@/components/unibud/demo-callout";
