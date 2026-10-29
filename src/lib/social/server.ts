@@ -28,20 +28,17 @@ export const getConversation = createServerFn({ method: "GET" })
 
 export const openConversation = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
-  .validator((input: { handle: string; listingId?: string; seed?: string }) => input)
+  .validator((input: { handle: string; listingId?: string }) => input)
   .handler(async ({ context, data }) => {
     const handle = data.handle.replace(/^@/, "").trim().toLowerCase();
     const sql = await getSql();
     const existing = await sql`select * from conversations where user_id = ${context.userId} and peer_handle = ${handle} limit 1`;
     if (existing[0]) return mapConvo(existing[0]);
     const id = crypto.randomUUID();
-    const seed = data.seed || `Hi — I saw your listing on UNIBUD.`;
     await sql`insert into conversations (id, user_id, peer_handle, listing_id, last_body)
-      values (${id}, ${context.userId}, ${handle}, ${data.listingId ?? null}, ${seed})`;
-    await sql`insert into messages (id, conversation_id, user_id, sender, body)
-      values (${crypto.randomUUID()}, ${id}, ${context.userId}, ${"me"}, ${seed})`;
-    // Do not synthesize a peer reply or notification. This conversation is currently
-    // account-scoped; cross-user delivery needs shared conversation membership.
+      values (${id}, ${context.userId}, ${handle}, ${data.listingId ?? null}, ${""})`;
+    // Do not synthesize a sent message, peer reply, or notification. This conversation
+    // is currently account-scoped; cross-user delivery needs shared conversation membership.
     const rows = await sql`select * from conversations where id = ${id} and user_id = ${context.userId}`;
     return mapConvo(rows[0]);
   });
