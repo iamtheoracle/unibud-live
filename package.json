@@ -17,7 +17,7 @@
     "preview:stop": "node scripts/preview.mjs stop",
     "typecheck": "tsc --noEmit",
     "check:auth": "node scripts/check-auth-invariant.mjs",
-    "test:agents": "node --experimental-strip-types --test src/lib/agents/organization.test.ts src/lib/agents/acceptance.test.ts src/lib/agents/activation.test.ts src/lib/agents/response-policy.test.ts src/lib/agents/runtime.test.ts src/lib/agents/content-context.test.ts src/lib/agents/tools.test.ts",
+    "test:agents": "node --experimental-strip-types --test src/lib/agents/organization.test.ts src/lib/agents/acceptance.test.ts src/lib/agents/activation.test.ts src/lib/agents/response-policy.test.ts src/lib/agents/runtime.test.ts src/lib/agents/content-context.test.ts src/lib/agents/tools.test.ts src/lib/bud/provider.test.ts",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
