@@ -107,7 +107,7 @@ The relevant feature branches were enumerated directly from `iamtheoracle/arc-pr
 | `feat/agent-plugin-extension-foundation-2026-10-16` | Capability grants, policy evaluation, execution ledger, audit events, trusted context and extension transport | Candidate for Spark/Oracle tooling; security review and tenant-boundary adaptation required before exposure |
 | `feat/arc-agent-platform-foundation-2026-10-16` | Smaller plugin/agent registry, policy and extension foundation | Compare with the later capability-grant branch; avoid merging duplicate registries |
 | `feat/unibud-flow-student-services-2026-10-20` | Payment intents, international payment flows, verification, recovery and security policy | High-risk financial capability; inspect authorization, idempotency, provider contracts and audit trail before porting |
-| `feat/unibud-concierge-service-hub-2026-10-19` | Concierge workspace, request lifecycle, chat handoff and tests | Not yet connected to a live UNIBUD route or request service |
+| `feat/unibud-concierge-service-hub-2026-10-19` | Concierge workspace, request lifecycle, chat handoff and tests | Preview route `/concierge` and Guild side-menu group added; local request drafts only, no live request service |
 | `feat/chat-media-capabilities-2026-10-20` | Media and rich-content capability slices plus tests | Not yet connected to the live messaging transport/storage path |
 | `feat/wayward-discovery-ui-2026-10-20` / `feat/wayward-arcade-spec-2026-10-19` | Wayward discovery/arcade product work | No live Wayward route or authorized data adapter yet |
 | `feat/movies-series-miniapp-2026-10-20`, `feat/music-culture-miniapp-2026-10-20`, `feat/sports-live-match-miniapp-2026-10-20` | Separate media/culture/sports mini-apps | Not yet surfaced through the live secondary navigation; each needs source/rights and data-provider review |
@@ -120,7 +120,7 @@ The relevant feature branches were enumerated directly from `iamtheoracle/arc-pr
 - The Arc Quarter lifecycle command and idempotent PostgreSQL repository are not yet used by the live listing server function. Current server validation is useful defense-in-depth, but it is not the full lifecycle implementation.
 - SouLync currently has a preview route only. The existing tables are not proof of implemented matching; production needs verified adult eligibility, explicit consent, block/report enforcement, privacy-safe discovery, mutual-match rules, and transactionally confirmed date plans.
 - Board course/session/attendance demo controls remain local/prototype behavior until an authorized institution provider is connected.
-- Secondary destinations without implemented routes must not be linked as if they work. The Quarter and SouLync are now reachable; Concierge, Wayward, Lync, Compass, Bud Stories and Spark Calendar still need route/provider work.
+- The secondary menu now groups Guild in the required order: The Quarter → Concierge → Board. The Quarter, Concierge and SouLync are reachable as existing/preview routes; Wayward, Lync, Compass, Bud Stories and Spark Calendar still need routes/provider work.
 - The lockfile and hosted Netlify Deploy Preview remain release gates; see verification status below.
 
 ## Current verification status
