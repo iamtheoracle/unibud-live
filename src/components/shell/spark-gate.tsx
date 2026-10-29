@@ -14,8 +14,8 @@ const SPARK_ACTIONS = [
   },
   {
     id: "commerce",
-    label: "Commerce",
-    description: "Wallet, payments, and marketplace",
+    label: "Flow",
+    description: "Student money, requests, and marketplace payments",
     to: "/money" as const,
     icon: Wallet,
   },
