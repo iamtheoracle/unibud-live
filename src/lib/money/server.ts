@@ -172,21 +172,47 @@ export const updateMoneyRequest = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { id: string; status: RequestStatus }) => input)
   .handler(async ({ context, data }) => {
-    const sql = await getSql();
-    await sql`update payment_requests set status = ${data.status}
-      where id = ${data.id} and user_id = ${context.userId}`;
-    if (data.status === "paid") {
-      const rows = await sql<{ amount_kobo: number; peer_handle: string }>`
-        select amount_kobo, peer_handle from payment_requests
-        where id = ${data.id} and user_id = ${context.userId}`;
-      const row = rows[0];
-      if (row) {
-        await ensureWallet(context.userId);
-        await sql`update wallets set balance_kobo = balance_kobo + ${row.amount_kobo}, updated_at = now() where user_id = ${context.userId}`;
-        await sql`insert into wallet_tx (id, user_id, type, amount_kobo, status, counterparty, note)
-          values (${crypto.randomUUID()}, ${context.userId}, ${"receive"}, ${row.amount_kobo}, ${"demo_recorded"}, ${row.peer_handle}, ${"Demo request marked paid. No real money received."})`;
-      }
+    if (data.status !== "paid" && data.status !== "cancelled") {
+      throw new Error("A pending demo request can only be paid or cancelled.");
     }
+
+    const sql = await getSql();
+    // Change the request and, when paid, credit + log it in the same SQL statement.
+    // The pending-only predicate makes retries and concurrent clicks idempotent.
+    const changed = await sql<{ status: RequestStatus }>`
+      with changed as (
+        update payment_requests
+        set status = ${data.status}
+        where id = ${data.id}
+          and user_id = ${context.userId}
+          and status = 'pending'
+        returning amount_kobo, peer_handle, status
+      ),
+      credited as (
+        insert into wallets (user_id, balance_kobo, updated_at)
+        select ${context.userId}, amount_kobo, now()
+        from changed
+        where status = 'paid'
+        on conflict (user_id) do update
+          set balance_kobo = wallets.balance_kobo + excluded.balance_kobo,
+              updated_at = now()
+        returning user_id
+      ),
+      logged as (
+        insert into wallet_tx (id, user_id, type, amount_kobo, status, counterparty, note)
+        select ${crypto.randomUUID()}, ${context.userId}, 'receive', amount_kobo,
+          'demo_recorded', peer_handle, 'Demo request marked paid. No real money received.'
+        from changed
+        where status = 'paid'
+        returning id
+      )
+      select status from changed
+    `;
+
+    if (changed.length === 0) {
+      throw new Error("This request is no longer pending or does not belong to your account.");
+    }
+
     return loadWallet(context.userId);
   });
 
