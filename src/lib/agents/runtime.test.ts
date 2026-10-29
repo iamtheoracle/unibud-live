@@ -38,6 +38,37 @@ test('authorization failure is explicit and routes to Guardian', () => {
   assert.ok(result.requiredAgents.includes('guardian'));
 });
 
+test('execute intent is blocked when authorization is unknown', () => {
+  const result = executeAgent({
+    request: request('navigator', 'Submit this action', { intent: 'execute' }),
+    authorizedContext: {},
+    availableCapabilities: ['workflow-execution'],
+  });
+  assert.equal(result.outcome, 'blocked');
+  assert.equal(result.response.reason, 'authorization-unverified');
+  assert.ok(result.requiredAgents.includes('guardian'));
+});
+
+test('action capabilities require explicit authorization even when intent is not execute', () => {
+  const result = executeAgent({
+    request: request('navigator', 'Open and submit', { requiredCapabilities: ['browser-actions'] }),
+    authorizedContext: {},
+    availableCapabilities: ['browser-actions'],
+  });
+  assert.equal(result.outcome, 'blocked');
+  assert.equal(result.response.reason, 'authorization-unverified');
+});
+
+test('explicitly authorized execute intent can proceed to the execution planning stage', () => {
+  const result = executeAgent({
+    request: request('navigator', 'Submit this action', { intent: 'execute' }),
+    authorizedContext: {},
+    availableCapabilities: ['workflow-execution'],
+    authorization: 'authorized',
+  });
+  assert.notEqual(result.outcome, 'blocked');
+});
+
 test('Bud remains the only user-facing presentation boundary', () => {
   const nonBud = ORGANIZATION_AGENTS.filter((agent) => agent.id !== 'bud');
   assert.ok(nonBud.every((agent) => agent.userFacing === false));
