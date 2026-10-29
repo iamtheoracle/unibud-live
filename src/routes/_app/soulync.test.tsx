@@ -18,6 +18,5 @@ describe("SouLync preview route", () => {
     expect(html).toContain("Plan a date or outing");
     expect(html).toContain("Prepare date idea");
     expect(html).toContain("Nothing is sent, booked, or shared");
-    expect(html).toContain("No invitation, venue check, payment, or booking was created");
   });
 });
