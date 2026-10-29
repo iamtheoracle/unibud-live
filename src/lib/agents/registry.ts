@@ -16,6 +16,7 @@ const definitions: AgentDefinition[] = [
   { id: "guardian", role: "safety specialist", responsibility: "Handle safety, abuse, scam and harmful-content concerns.", contextScope: ["safety"], memoryScope: ["safety-state"], permissions: ["safety-review"], collaborators: ["spark", "bud"] },
   { id: "voice", role: "voice specialist", responsibility: "Handle real speech recognition and synthesis when voice providers are connected.", contextScope: ["audio", "voice"], memoryScope: ["voice-preferences"], permissions: ["voice"], collaborators: ["spark", "creator"] },
   { id: "navigator", role: "UNIBUD navigator", responsibility: "Navigate students to real UNIBUD surfaces without duplicating them inside Bud.", contextScope: ["navigation", "routes"], memoryScope: ["navigation-preferences"], permissions: ["navigate"], collaborators: ["spark", "bud"] },
+  { id: "browser", role: "browsing capability", responsibility: "Access real external sources only when a browsing provider is connected; never fabricate results.", contextScope: ["web", "sources", "discovery"], memoryScope: ["source-history"], permissions: ["browse"], collaborators: ["spark", "oracle"] },
 
 ];
 
