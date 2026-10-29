@@ -3,6 +3,7 @@ import { useState } from "react";
 import { EDU_PODCASTS } from "@/lib/unibud/podcast-data";
 import { relativeTime } from "@/lib/unibud/format";
 import { Button } from "@/components/ui/button";
+import { DemoCallout } from "@/components/unibud/demo-callout";
 
 export const Route = createFileRoute("/_app/podcasts")({ component: Podcasts });
 
@@ -14,8 +15,11 @@ function Podcasts() {
       <p className="kicker">Educational audio</p>
       <h1 className="mt-1 font-display text-4xl">Podcasts</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Lecturer-created audio lessons. Listening later does not affect Board attendance.
+        Sample educational-audio catalogue. No real audio streams are connected; listening state never affects Board attendance.
       </p>
+      <DemoCallout>
+        These episode cards are fixtures to review the layout. The player is a UI state only; no audio file is streamed, and no lecturer or course should be inferred from these examples.
+      </DemoCallout>
       <ul className="mt-5 space-y-3">
         {EDU_PODCASTS.map((p) => {
           const on = playing === p.id;
@@ -33,7 +37,7 @@ function Podcasts() {
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button size="sm" variant={on ? "outline" : "primary"} onClick={() => setPlaying(on ? null : p.id)}>
-                  {on ? "Pause" : "Listen"}
+                  {on ? "Close preview" : "Preview player"}
                 </Button>
                 {p.classId ? (
                   <Link
@@ -47,7 +51,7 @@ function Podcasts() {
               </div>
               {on ? (
                 <p className="mt-3 text-xs text-muted-foreground">
-                  Demo playback. This is recorded access — not live attendance.
+                  Player preview only. No audio is streamed or attendance recorded.
                 </p>
               ) : null}
             </li>
