@@ -48,6 +48,8 @@ def test_memory_crud_is_persistent_and_owner_scoped():
     assert deleted.status_code == 200
     listed_after = client.get("/v1/memories", headers=AUTH, params={"owner_id": "oracle-owner"})
     assert all(item["id"] != memory_id for item in listed_after.json()["data"])
+    with oracle_app.db() as conn:
+        assert conn.execute("SELECT 1 FROM memories WHERE id=?", (memory_id,)).fetchone() is None
 
 
 def test_mutating_tools_require_explicit_approval():
