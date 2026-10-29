@@ -65,3 +65,12 @@ UNIBUD is one application assembled from the strongest parts of the existing pro
 - Added `npm run test:marketplace` using Node 22's TypeScript stripping test runner.
 - Added the marketplace-domain test step to `.github/workflows/unibud-ci.yml` so the new validation tests are part of the pull-request verification gate.
 - GitHub's commit-workflow lookup still returns zero workflow runs for the latest branch commit. This is not a passing result; typecheck, tests, and build remain unverified until Actions reports actual results.
+
+
+## Navigation and demo-surface audit follow-up
+
+- The current primary navigator is the intended four-space set: Square, Connect, Quad/Communities, and Chat. It already hides while scrolling down and reappears while scrolling up; selecting a destination now also collapses it immediately, matching the contextual-navigation requirement more closely.
+- The shared `DemoCallout` is already used on marketplace listing details and the demo wallet. It now exposes a semantic note role and accessible label, keeping demo-only money behavior explicit to assistive technology as well as visually.
+- Removed the unsupported “Active now” claim from direct chat headers and stopped rendering the hard-coded `ROOM_SEED` message examples as if they were real room history. Room threads now show persisted messages only. This aligns the live UI with the no-fabricated-activity rule.
+- The current repository tree includes `migrations/0016_soulync_wayward.sql` and the Board routes/data, but the connected GitHub repository list and branch search did not surface standalone repositories or branches named `soulync` or `board-workspace`. Their referenced snapshots therefore remain unverified until the exact source refs/archives are accessible.
+- The v2 UI prototype ZIP is present in the Git tree, but this connector cannot retrieve binary repository downloads for direct ZIP inspection. Do not claim its contents have been audited yet.
