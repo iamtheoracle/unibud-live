@@ -62,6 +62,7 @@ test("only HTTPS image URLs are accepted", () => {
   assert.equal(isSafeImageUrl("https://cdn.example.test/listing.jpg"), true);
   assert.equal(isSafeImageUrl("http://cdn.example.test/listing.jpg"), false);
   assert.equal(isSafeImageUrl("javascript:alert(1)"), false);
+  assert.equal(isSafeImageUrl("https://user:pass@example.test/photo.jpg"), false);
 });
 
 
@@ -73,6 +74,7 @@ const validCreateInput = (overrides: Record<string, unknown> = {}) => ({
   priceKobo: 500000,
   priceNote: "starting",
   location: "Campus / remote",
+  imageUrl: "https://cdn.example.test/listing.jpg",
   ...overrides,
 });
 
@@ -95,6 +97,17 @@ test("server input guard keeps stay listings in the accommodation category", () 
   assert.match(
     validateMarketplaceCreateInput(validCreateInput({ kind: "stay", category: "food" })) ?? "",
     /accommodation/i,
+  );
+});
+
+test("server input guard requires a valid HTTPS cover photo", () => {
+  assert.match(
+    validateMarketplaceCreateInput(validCreateInput({ imageUrl: "javascript:alert(1)" })) ?? "",
+    /HTTPS image URL/i,
+  );
+  assert.match(
+    validateMarketplaceCreateInput(validCreateInput({ imageUrl: "https://user:pass@example.test/photo.jpg" })) ?? "",
+    /HTTPS image URL/i,
   );
 });
 
