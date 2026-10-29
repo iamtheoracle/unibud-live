@@ -97,3 +97,9 @@ UNIBUD is one application assembled from the strongest parts of the existing pro
 - The `.npmrc` change allowed `npm ci` to complete in GitHub Actions.
 - The UNIBUD pre-UI gate passed on commit `c8b509e` (typecheck, integration-layer lint, agent/Spark tests, marketplace domain tests).
 - A newer run for the additional Connect, Chat, and Board changes is still in progress; the newest commit must pass before merge. No production build or browser test has been run.
+
+
+- Studies now labels the built-in course catalogue and sample-semester action as prototype examples, not official institution records or deadlines.
+- A public repository named `silverbai/Soulync` exists, but it describes an AI dating engine and is owned by a different GitHub account with read-only access here. It may not be the user's referenced snapshot, and its code is not being copied. The current migration's SouLync schema has a different relationship-discovery shape; confirm the intended source before integrating.
+- No matching `board-workspace` repository was found in the connected repository list or public repository search. The current Board implementation still uses static preview course/session data; those are now explicitly marked as prototype content.
+- The first Netlify Deploy Preview attempts failed while using `npm install --legacy-peer-deps --include=dev`, even though the same production-shaped Vite build passed in GitHub Actions. The Netlify build command is now aligned to `npm ci && npm run build:netlify` and relies on the committed `.npmrc`. The preview for that command change must finish successfully before the PR is considered deployable.
