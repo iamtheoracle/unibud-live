@@ -40,4 +40,7 @@ jobs:
       - name: Agent and Spark tests (pre-UI gate)
         run: npm run test:agents
 
+      - name: Student money request idempotency regression
+        run: node --test scripts/money-request-policy.test.mjs
+
       # Full UI/template tests and production build remain deferred until UI implementation begins.
