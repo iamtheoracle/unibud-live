@@ -9,6 +9,7 @@
  * either non-recursive applier until deliberately copied into the root.
  */
 /** @type {Record<string, string[]>} */
+/** @type {Readonly<Record<string, readonly string[]>>} */
 const LEGACY_MIGRATION_ALIASES = Object.freeze({
   "0019_quad_groups.sql": ["0013_quad_groups.sql"],
 });
@@ -38,6 +39,7 @@ export function pendingMigrations(paths, applied) {
     .map((path) => ({ name: migrationName(path), path }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
+  /** @type {Map<string, string>} */
   const prefixes = new Map();
   for (const { name } of files) {
     const prefix = /^(\d+)_/.exec(name)?.[1];
