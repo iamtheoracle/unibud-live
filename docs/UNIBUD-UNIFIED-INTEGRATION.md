@@ -76,12 +76,13 @@ UNIBUD is one application assembled from the strongest parts of the existing pro
 - The v2 UI prototype ZIP is present in the Git tree, but this connector cannot retrieve binary repository downloads for direct ZIP inspection. Do not claim its contents have been audited yet.
 
 
-## CI blocker discovered and attempted repair
+## CI dependency blocker and recovery
 
-- GitHub Actions run `40792258092` failed during `npm ci`, before typecheck, lint, or tests. The exact error is that the lockfile is out of sync around `ajv`, `json-schema-traverse`, `fast-uri`, `require-from-string`, and `lru-cache`; no code checks ran.
-- The lockfile includes `@hookform/resolvers` with optional peer dependencies that are not installed in this app, while the current dependency tree includes ESLint's Ajv 6 line. Added project-level `.npmrc` with `legacy-peer-deps=true` to match the existing lockfile's optional-peer installation strategy.
-- This is an attempted repair, not a verified fix. A new Actions run must confirm `npm ci` succeeds. If it still fails, regenerate and commit `package-lock.json` with the repository's intended npm settings rather than weakening the verification gate.
-
+- GitHub Actions run [40788007233](https://github.com/iamtheoracle/unibud-live/actions/runs/40788007233) failed at `npm ci`, before typecheck, lint, or tests. The exact npm error reports the lockfile's Ajv 6 / Ajv 8 tree mismatch and missing `fast-uri`, `require-from-string`, and nested `lru-cache` / `json-schema-traverse` entries.
+- The same `package-lock.json` blob is present on `main` and this integration branch, so this is a pre-existing dependency-lock inconsistency, not introduced by the marketplace-domain changes.
+- To allow verification to progress, the integration branch now temporarily uses `npm install --no-audit --no-fund` in GitHub Actions and the Netlify build command. This is a recovery workaround, **not the final release-quality fix**: it allows npm to reconcile the lock in the ephemeral build environment but does not update the committed lockfile.
+- Before release, regenerate and commit `package-lock.json` using Node 22/npm 10 and the repository's intended `.npmrc` settings, then restore `npm ci` in both CI and Netlify. Do not claim deterministic dependency installation until that is done.
+- A new CI run must confirm the install workaround actually reaches typecheck, tests, and build. No successful result is assumed from the prior failed run.
 
 ## Latest source-audit fixes
 
@@ -93,6 +94,10 @@ UNIBUD is one application assembled from the strongest parts of the existing pro
 - The current route tree has both `src/routes/_app/market.$id.tsx` and `src/routes/_app/market/$listingId.tsx` representing marketplace detail paths. Consolidating this duplicate route remains an audit item; update links and regenerate the route tree together before removing either route.
 
 ## Current verification status
+
+- The latest confirmed CI run failed during dependency installation; it did not run typecheck, lint, marketplace tests, agent/Spark tests, or the production-shaped build.
+- The integration branch changed the CI and Netlify install commands to `npm install --no-audit --no-fund` as a temporary recovery path. The next Actions and Deploy Preview results must be inspected before claiming success.
+- The lockfile still needs a proper regeneration/commit. Browser/UI interaction checks and a successful Deploy Preview are not yet verified. Production remains untouched.
 
 - The `.npmrc` change allowed `npm ci` to complete in GitHub Actions.
 - The UNIBUD pre-UI gate passed on commit `c8b509e` (typecheck, integration-layer lint, agent/Spark tests, marketplace domain tests).
