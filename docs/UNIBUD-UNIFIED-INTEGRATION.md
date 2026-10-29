@@ -81,3 +81,19 @@ UNIBUD is one application assembled from the strongest parts of the existing pro
 - GitHub Actions run `40792258092` failed during `npm ci`, before typecheck, lint, or tests. The exact error is that the lockfile is out of sync around `ajv`, `json-schema-traverse`, `fast-uri`, `require-from-string`, and `lru-cache`; no code checks ran.
 - The lockfile includes `@hookform/resolvers` with optional peer dependencies that are not installed in this app, while the current dependency tree includes ESLint's Ajv 6 line. Added project-level `.npmrc` with `legacy-peer-deps=true` to match the existing lockfile's optional-peer installation strategy.
 - This is an attempted repair, not a verified fix. A new Actions run must confirm `npm ci` succeeds. If it still fails, regenerate and commit `package-lock.json` with the repository's intended npm settings rather than weakening the verification gate.
+
+
+## Latest source-audit fixes
+
+- Connect now reads people from the live campus catalogue and uses the signed-in user's real profile fields for ranking. The hard-coded discovery lanes and fallback sample people were removed from this route. Follow/connect state is still local-only, and the UI says so.
+- Chat no longer inserts a synthetic peer reply, fake active-presence dot, or auto-sent opening message. Direct conversations are currently stored per account and are not delivered to another user's inbox; both chat list and thread disclose that limitation. True shared conversation membership/delivery remains unimplemented.
+- Marketplace listing reports now require authentication, validate the listing and reason, and store the report in `feedback_submissions` under the `listing_report` category for review.
+- Board now avoids showing sample sessions when the user has no enrolled courses and marks its remaining static syllabus/session data and attendance actions as prototype-only. These records are not official university timetable or attendance data.
+- SouLync and Wayward have database tables in `migrations/0016_soulync_wayward.sql`, but the source audit found no corresponding route/server-function references. Implementing those experiences faithfully still depends on recovering the referenced snapshots; do not treat the migrations alone as completed features.
+- The current route tree has both `src/routes/_app/market.$id.tsx` and `src/routes/_app/market/$listingId.tsx` representing marketplace detail paths. Consolidating this duplicate route remains an audit item; update links and regenerate the route tree together before removing either route.
+
+## Current verification status
+
+- The `.npmrc` change allowed `npm ci` to complete in GitHub Actions.
+- The UNIBUD pre-UI gate passed on commit `c8b509e` (typecheck, integration-layer lint, agent/Spark tests, marketplace domain tests).
+- A newer run for the additional Connect, Chat, and Board changes is still in progress; the newest commit must pass before merge. No production build or browser test has been run.
