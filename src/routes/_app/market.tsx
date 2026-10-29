@@ -134,16 +134,14 @@ function SellSheet({ onClose }: { onClose: () => void }) {
       >
         <h2 className="text-lg font-medium">List something</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Goods, a service, or a room. Sign in first so the listing is yours.
+          List goods, a service, or a room. Sign in first so the listing is tied to your account.
         </p>
         <div className="mt-4 grid gap-2">
-          <Link to="/creator" onClick={onClose}>
-            <Button className="w-full">Offer a service</Button>
+          <Link to="/sell" onClick={onClose}>
+            <Button className="w-full">List goods or a room</Button>
           </Link>
-          <Link to="/profile" onClick={onClose}>
-            <Button variant="outline" className="w-full">
-              List from your profile
-            </Button>
+          <Link to="/creator" onClick={onClose}>
+            <Button variant="outline" className="w-full">Offer a creator service</Button>
           </Link>
           <Button variant="ghost" className="w-full" onClick={onClose}>
             Close
