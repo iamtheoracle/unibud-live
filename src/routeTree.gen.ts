@@ -358,6 +358,7 @@ export interface FileRoutesByTo {
   '/search': typeof AppSearchRoute
   '/sell': typeof AppSellRoute
   '/settings': typeof AppSettingsRoute
+  '/soulync': typeof AppSoulyncRoute
   '/social': typeof AppSocialRoute
   '/spill': typeof AppSpillRouteWithChildren
   '/studies': typeof AppStudiesRoute
@@ -502,6 +503,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/sell'
     | '/settings'
+    | '/soulync'
     | '/social'
     | '/spill'
     | '/studies'
