@@ -307,6 +307,7 @@ test("emits og:image for a public host and prefers a custom card", () => {
     appName: "Wild Race",
     host: "wild-race.grok.me",
     site: { title: "Wild Race" },
+    cwd: mkdtempSync(join(tmpdir(), "grok-placeholder-card-")),
   });
   assert.match(
     placeholder,
@@ -318,6 +319,7 @@ test("emits og:image for a public host and prefers a custom card", () => {
     appName: "Wild Race",
     host: "wild-race.grok.me",
     site: { title: "Wild Race", card: "custom", type: "x:game" },
+    cwd: mkdtempSync(join(tmpdir(), "grok-custom-card-")),
   });
   assert.match(custom, /property="og:image" content="https:\/\/wild-race\.grok\.me\/og\.jpg"/);
   assert.match(custom, /property="og:type" content="x:game"/);
@@ -327,6 +329,7 @@ test("placeholder og:image appends site.color when it is 6-digit hex", () => {
   const themed = injectGrokPwaHead("<html><head></head></html>", {
     host: "wild-race.grok.me",
     site: { title: "Wild Race", color: "#FF4D2E" },
+    cwd: mkdtempSync(join(tmpdir(), "grok-color-card-")),
   });
   assert.match(
     themed,
@@ -336,12 +339,14 @@ test("placeholder og:image appends site.color when it is 6-digit hex", () => {
   const invalid = injectGrokPwaHead("<html><head></head></html>", {
     host: "wild-race.grok.me",
     site: { title: "Wild Race", color: "red" },
+    cwd: mkdtempSync(join(tmpdir(), "grok-invalid-color-")),
   });
   assert.doesNotMatch(invalid, /color=/);
 
   const custom = injectGrokPwaHead("<html><head></head></html>", {
     host: "wild-race.grok.me",
     site: { title: "Wild Race", card: "custom", color: "FF4D2E" },
+    cwd: mkdtempSync(join(tmpdir(), "grok-custom-color-")),
   });
   assert.doesNotMatch(custom, /color=/);
 });
@@ -395,7 +400,11 @@ test("is idempotent", () => {
 });
 
 test("uses the app name in the injected title tag", () => {
-  const out = injectGrokPwaHead("<html><head></head></html>", { appName: "Wild Race" });
+  const out = injectGrokPwaHead("<html><head></head></html>", {
+    appName: "Wild Race",
+    site: {},
+    cwd: mkdtempSync(join(tmpdir(), "grok-app-title-")),
+  });
   assert.match(out, /apple-mobile-web-app-title" content="Wild Race"/);
 });
 
