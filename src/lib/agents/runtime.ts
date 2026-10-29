@@ -141,7 +141,11 @@ export function executeAgent(context: AgentExecutionContext): AgentExecutionResu
     );
 
   // Unknown authorization must never be treated as consent for a side effect.
-  if (requiresExplicitAuthorization && context.authorization !== 'authorized') {
+  if (
+    requiresExplicitAuthorization &&
+    context.authorization !== 'authorized' &&
+    hasRequiredCapabilities(context.request.requiredCapabilities ?? [], context.availableCapabilities)
+  ) {
     return {
       agent: agent.id,
       outcome: 'blocked',
