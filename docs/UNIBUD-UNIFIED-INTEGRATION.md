@@ -91,9 +91,14 @@ UNIBUD is one application assembled from the strongest parts of the existing pro
 - Marketplace listing reports now require authentication, validate the listing and reason, and store the report in `feedback_submissions` under the `listing_report` category for review.
 - Board now avoids showing sample sessions when the user has no enrolled courses and marks its remaining static syllabus/session data and attendance actions as prototype-only. These records are not official university timetable or attendance data.
 - SouLync and Wayward have database tables in `migrations/0016_soulync_wayward.sql`, but the source audit found no corresponding route/server-function references. Implementing those experiences faithfully still depends on recovering the referenced snapshots; do not treat the migrations alone as completed features.
-- The current route tree has both `src/routes/_app/market.$id.tsx` and `src/routes/_app/market/$listingId.tsx` representing marketplace detail paths. Consolidating this duplicate route remains an audit item; update links and regenerate the route tree together before removing either route.
+- Consolidated the duplicate marketplace detail routes into the UNIBUD-live `src/routes/_app/market.$id.tsx` page, removed the stale nested `/market/$listingId` and `/market/` index route files, updated the generated route tree and legacy card/sell links, and connected the Market sell sheet to the existing goods/service/stay form. The canonical detail path is `/market/$id`.
 
 ## Current verification status
+
+- GitHub Actions run [40794920288](https://github.com/iamtheoracle/unibud-live/actions/runs/40794920288) passed on the current integration head at the time of verification. All configured steps succeeded: dependency installation using the temporary recovery command, TypeScript typecheck, integration-layer lint, Agent/Spark tests, marketplace domain tests, and production-shaped Netlify build.
+- The duplicate marketplace routes have been removed and the latest run includes those route changes, with typecheck and build passing.
+- The committed lockfile remains out of sync and still needs proper regeneration/commit. The temporary `npm install --no-audit --no-fund` recovery is not the final release-quality dependency fix.
+- Full application lint, browser/UI interaction tests, and a successful hosted Netlify Deploy Preview remain unverified. Production remains untouched.
 
 - The latest confirmed CI run failed during dependency installation; it did not run typecheck, lint, marketplace tests, agent/Spark tests, or the production-shaped build.
 - The integration branch changed the CI and Netlify install commands to `npm install --no-audit --no-fund` as a temporary recovery path. The next Actions and Deploy Preview results must be inspected before claiming success.
