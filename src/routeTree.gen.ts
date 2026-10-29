@@ -35,6 +35,7 @@ import { Route as AppSavedRouteImport } from './routes/_app/saved'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
 import { Route as AppSellRouteImport } from './routes/_app/sell'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
+import { Route as AppSoulyncRouteImport } from './routes/_app/soulync'
 import { Route as AppSocialRouteImport } from './routes/_app/social'
 import { Route as AppSpillRouteImport } from './routes/_app/spill'
 import { Route as AppStudiesRouteImport } from './routes/_app/studies'
@@ -184,6 +185,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSoulyncRoute = AppSoulyncRouteImport.update({
+  id: '/soulync',
+  path: '/soulync',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSocialRoute = AppSocialRouteImport.update({
   id: '/social',
   path: '/social',
@@ -307,6 +313,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof AppSearchRoute
   '/sell': typeof AppSellRoute
   '/settings': typeof AppSettingsRoute
+  '/soulync': typeof AppSoulyncRoute
   '/social': typeof AppSocialRoute
   '/spill': typeof AppSpillRouteWithChildren
   '/studies': typeof AppStudiesRoute
@@ -400,6 +407,7 @@ export interface FileRoutesById {
   '/_app/search': typeof AppSearchRoute
   '/_app/sell': typeof AppSellRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/_app/soulync': typeof AppSoulyncRoute
   '/_app/social': typeof AppSocialRoute
   '/_app/spill': typeof AppSpillRouteWithChildren
   '/_app/studies': typeof AppStudiesRoute
@@ -449,6 +457,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/sell'
     | '/settings'
+    | '/soulync'
     | '/social'
     | '/spill'
     | '/studies'
@@ -541,6 +550,7 @@ export interface FileRouteTypes {
     | '/_app/search'
     | '/_app/sell'
     | '/_app/settings'
+    | '/_app/soulync'
     | '/_app/social'
     | '/_app/spill'
     | '/_app/studies'
@@ -753,6 +763,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/soulync': {
+      id: '/_app/soulync'
+      path: '/soulync'
+      fullPath: '/soulync'
+      preLoaderRoute: typeof AppSoulyncRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/social': {
@@ -1000,6 +1017,7 @@ interface AppRouteChildren {
   AppSearchRoute: typeof AppSearchRoute
   AppSellRoute: typeof AppSellRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppSoulyncRoute: typeof AppSoulyncRoute
   AppSocialRoute: typeof AppSocialRoute
   AppSpillRoute: typeof AppSpillRouteWithChildren
   AppStudiesRoute: typeof AppStudiesRoute
@@ -1034,6 +1052,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSearchRoute: AppSearchRoute,
   AppSellRoute: AppSellRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppSoulyncRoute: AppSoulyncRoute,
   AppSocialRoute: AppSocialRoute,
   AppSpillRoute: AppSpillRouteWithChildren,
   AppStudiesRoute: AppStudiesRoute,
