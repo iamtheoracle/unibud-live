@@ -4,7 +4,7 @@ import { getAIProvider } from './provider.ts';
 
 const names = ['ORACLE_ARC_URL', 'ORACLE_ARC_API_KEY', 'ORACLE_ARC_OWNER_ID', 'XAI_API_KEY', 'OPENAI_API_KEY'];
 
-function withEnv(values, fn) {
+function withEnv<T>(values: Record<string, string>, fn: () => Promise<T>): Promise<T> {
   const previous = Object.fromEntries(names.map((name) => [name, process.env[name]]));
   for (const name of names) delete process.env[name];
   Object.assign(process.env, values);
