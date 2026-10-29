@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as StartRouteImport } from './routes/start'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppBoardRouteImport } from './routes/_app/board'
+import { Route as AppConciergeRouteImport } from './routes/_app/concierge'
 import { Route as AppBudRouteImport } from './routes/_app/bud'
 import { Route as AppCommunitiesRouteImport } from './routes/_app/communities'
 import { Route as AppConnectRouteImport } from './routes/_app/connect'
@@ -78,6 +79,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppBoardRoute = AppBoardRouteImport.update({
   id: '/board',
   path: '/board',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppConciergeRoute = AppConciergeRouteImport.update({
+  id: '/concierge',
+  path: '/concierge',
   getParentRoute: () => AppRoute,
 } as any)
 const AppBudRoute = AppBudRouteImport.update({
@@ -292,6 +298,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/start': typeof StartRoute
   '/board': typeof AppBoardRouteWithChildren
+  '/concierge': typeof AppConciergeRoute
   '/bud': typeof AppBudRouteWithChildren
   '/communities': typeof AppCommunitiesRouteWithChildren
   '/connect': typeof AppConnectRoute
@@ -338,6 +345,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/start': typeof StartRoute
   '/board': typeof AppBoardRouteWithChildren
+  '/concierge': typeof AppConciergeRoute
   '/bud': typeof AppBudRouteWithChildren
   '/communities': typeof AppCommunitiesRouteWithChildren
   '/connect': typeof AppConnectRoute
@@ -387,6 +395,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/start': typeof StartRoute
   '/_app/board': typeof AppBoardRouteWithChildren
+  '/_app/concierge': typeof AppConciergeRoute
   '/_app/bud': typeof AppBudRouteWithChildren
   '/_app/communities': typeof AppCommunitiesRouteWithChildren
   '/_app/connect': typeof AppConnectRoute
@@ -437,6 +446,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/start'
     | '/board'
+    | '/concierge'
     | '/bud'
     | '/communities'
     | '/connect'
@@ -531,6 +541,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/start'
     | '/_app/board'
+    | '/_app/concierge'
     | '/_app/bud'
     | '/_app/communities'
     | '/_app/connect'
@@ -639,6 +650,13 @@ declare module '@tanstack/react-router' {
       path: '/connect'
       fullPath: '/connect'
       preLoaderRoute: typeof AppConnectRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/concierge': {
+      id: '/_app/concierge'
+      path: '/concierge'
+      fullPath: '/concierge'
+      preLoaderRoute: typeof AppConciergeRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/creator': {
@@ -998,6 +1016,7 @@ const AppSpillRouteWithChildren = AppSpillRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppBoardRoute: typeof AppBoardRouteWithChildren
+  AppConciergeRoute: typeof AppConciergeRoute
   AppBudRoute: typeof AppBudRouteWithChildren
   AppCommunitiesRoute: typeof AppCommunitiesRouteWithChildren
   AppConnectRoute: typeof AppConnectRoute
@@ -1033,6 +1052,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppBoardRoute: AppBoardRouteWithChildren,
+  AppConciergeRoute: AppConciergeRoute,
   AppBudRoute: AppBudRouteWithChildren,
   AppCommunitiesRoute: AppCommunitiesRouteWithChildren,
   AppConnectRoute: AppConnectRoute,
