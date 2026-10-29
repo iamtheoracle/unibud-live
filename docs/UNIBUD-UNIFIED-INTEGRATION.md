@@ -90,9 +90,38 @@ UNIBUD is one application assembled from the strongest parts of the existing pro
 - Chat no longer inserts a synthetic peer reply, fake active-presence dot, or auto-sent opening message. Direct conversations are currently stored per account and are not delivered to another user's inbox; both chat list and thread disclose that limitation. True shared conversation membership/delivery remains unimplemented.
 - Marketplace listing reports now require authentication, validate the listing and reason, and store the report in `feedback_submissions` under the `listing_report` category for review.
 - Board now avoids showing sample sessions when the user has no enrolled courses and marks its remaining static syllabus/session data and attendance actions as prototype-only. These records are not official university timetable or attendance data.
-- The previously missing feature snapshots are present as branches in `iamtheoracle/arc-project-one`: `feat/soulync-integration-2026-10-19` and `feat/unibud-board-workspace-2026-10-19`. Their components and tests have now been inspected. They provide SouLync and Board UI foundations with honest empty states, but they do not provide connected member matching, consent enforcement, academic records, or live class services. Porting must preserve the UNIBUD-live UI system and must not present those previews as working backend features.
+- The feature snapshots are present as branches in `iamtheoracle/arc-project-one`: `feat/soulync-integration-2026-10-19` and `feat/unibud-board-workspace-2026-10-19`. Their UI patterns have been adapted into UNIBUD-live: Board now has Overview/Courses/Learning/Tasks/Discussions/Discover sections, and SouLync is available at `/soulync` from the secondary menu. These are still UI foundations: no connected member matching, server-enforced consent/age checks, academic records, or live class services have been added.
 - Consolidated the duplicate marketplace detail routes into the UNIBUD-live `src/routes/_app/market.$id.tsx` page, removed the stale nested `/market/$listingId` and `/market/` index route files, updated the generated route tree and legacy card/sell links, and connected the Market sell sheet to the existing goods/service/stay form. The canonical detail path is `/market/$id`.
 - The current marketplace create flows now require a valid HTTPS cover-photo URL, reject embedded URL credentials, and persist the validated cover image in the existing `listings.image` column. The UI explicitly states that direct file uploads are not yet connected; this is a URL-based bridge, not a finished media-upload pipeline.
+
+## Cross-branch source inventory and remaining integration
+
+The relevant feature branches were enumerated directly from `iamtheoracle/arc-project-one`. The user's integration rule remains authoritative: **UNIBUD-live supplies the UI/UX host; Arc Project One supplies feature concepts, domain logic, and upgrade candidates.** Do not replace the host with Arc's standalone shell or copy its authentication stack wholesale.
+
+| Source branch | What the source contains | Integration status / next action |
+|---|---|---|
+| `feat/extract-moon-unibud-uiux-2026-10-19` | Fixed Square → Connect → Quad → Chat navigation, secondary experience map, interaction and empty-state contracts | Used as product/navigation reference; keep UNIBUD-live shell as the host |
+| `feat/unibud-board-workspace-2026-10-19` | Board workspace sections, honest empty states, Bud/Chat/Calendar handoffs and tests | Section structure adapted into `/board`; data providers remain unconnected |
+| `feat/soulync-integration-2026-10-19` | SouLync discover/likes/matches/date-plan UI, adult/consent/safety product contract | Preview route `/soulync` added; no real matching, age verification, blocking, reporting, or booking |
+| `feat/quarter-listing-validation-2026-10-16` | Expanded listing kinds, lifecycle validation, command boundary, idempotency, PostgreSQL repository and tests | Domain validation is imported; robust lifecycle/repository/event-log path is **not** yet wired into the live listing endpoint |
+| `feat/agent-plugin-extension-foundation-2026-10-16` | Capability grants, policy evaluation, execution ledger, audit events, trusted context and extension transport | Candidate for Spark/Oracle tooling; security review and tenant-boundary adaptation required before exposure |
+| `feat/arc-agent-platform-foundation-2026-10-16` | Smaller plugin/agent registry, policy and extension foundation | Compare with the later capability-grant branch; avoid merging duplicate registries |
+| `feat/unibud-flow-student-services-2026-10-20` | Payment intents, international payment flows, verification, recovery and security policy | High-risk financial capability; inspect authorization, idempotency, provider contracts and audit trail before porting |
+| `feat/unibud-concierge-service-hub-2026-10-19` | Concierge workspace, request lifecycle, chat handoff and tests | Not yet connected to a live UNIBUD route or request service |
+| `feat/chat-media-capabilities-2026-10-20` | Media and rich-content capability slices plus tests | Not yet connected to the live messaging transport/storage path |
+| `feat/wayward-discovery-ui-2026-10-20` / `feat/wayward-arcade-spec-2026-10-19` | Wayward discovery/arcade product work | No live Wayward route or authorized data adapter yet |
+| `feat/movies-series-miniapp-2026-10-20`, `feat/music-culture-miniapp-2026-10-20`, `feat/sports-live-match-miniapp-2026-10-20` | Separate media/culture/sports mini-apps | Not yet surfaced through the live secondary navigation; each needs source/rights and data-provider review |
+| `feat/unibud-oracle-daily-practice-2026-10-20` | Oracle daily-practice learning slice | Not yet integrated into the current Bud/Oracle boundary |
+| `feat/unibud-bamboo-shell-2026-10-25` | Larger umbrella shell with auth/app-data readiness, Board, Bud, Concierge, Flow, Quarter, Riff, media and Oracle slices | Audit source contracts and reuse individual capabilities only; do not replace UNIBUD-live shell/auth/data ownership wholesale |
+
+### Explicit remaining risks
+
+- Marketplace creation currently persists a single HTTPS image URL in `listings.image`; direct uploads, multi-photo storage, moderation and image-host allowlisting are not connected.
+- The Arc Quarter lifecycle command and idempotent PostgreSQL repository are not yet used by the live listing server function. Current server validation is useful defense-in-depth, but it is not the full lifecycle implementation.
+- SouLync currently has a preview route only. The existing tables are not proof of implemented matching; production needs verified adult eligibility, explicit consent, block/report enforcement, privacy-safe discovery, mutual-match rules, and transactionally confirmed date plans.
+- Board course/session/attendance demo controls remain local/prototype behavior until an authorized institution provider is connected.
+- Secondary destinations without implemented routes must not be linked as if they work. The Quarter and SouLync are now reachable; Concierge, Wayward, Lync, Compass, Bud Stories and Spark Calendar still need route/provider work.
+- The lockfile and hosted Netlify Deploy Preview remain release gates; see verification status below.
 
 ## Current verification status
 
@@ -108,7 +137,7 @@ UNIBUD is one application assembled from the strongest parts of the existing pro
 
 - Studies now labels the built-in course catalogue and sample-semester action as prototype examples, not official institution records or deadlines.
 - A public repository named `silverbai/Soulync` also exists, but it is owned by a different GitHub account and is not treated as the user's source. The intended product snapshot is the branch `feat/soulync-integration-2026-10-19` in `iamtheoracle/arc-project-one`; only its UI and product contract are being used as a feature reference, not its backend as a substitute for the UNIBUD-live identity or privacy model.
-- No separate `board-workspace` repository exists in the connected repo list, but the `feat/unibud-board-workspace-2026-10-19` branch in `arc-project-one` is the matching snapshot. The current UNIBUD-live Board route retains its existing course/enrollment flow and labels its remaining static session/attendance actions as prototype content.
+- No separate `board-workspace` repository exists in the connected repo list, but the `feat/unibud-board-workspace-2026-10-19` branch in `arc-project-one` is the matching snapshot. The current UNIBUD-live Board route retains its existing course/enrollment flow and labels its remaining static session/attendance actions as prototype content. The workspace section structure is now integrated without copying Arc's separate shell or CSS.
 - The first Netlify Deploy Preview attempts failed during the build stage. Both GitHub CI and `netlify.toml` now use `npm install --no-audit --no-fund` as a temporary recovery path because `npm ci` fails on the existing lockfile. The production-shaped Vite build has passed in GitHub Actions, but a hosted Netlify Deploy Preview still needs independent confirmation.
 
 
