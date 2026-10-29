@@ -4,8 +4,8 @@ export const Route = createFileRoute("/_app/help")({ component: Help });
 
 const FAQS = [
   {
-    q: "Is the wallet real money?",
-    a: "No. UNIBUD’s wallet is a demo ledger unless a real payment provider is connected. Nothing here is a bank transfer, card charge, or NELFUND disbursement.",
+    q: "Is Flow real money?",
+    a: "Not yet. Flow’s student-money experience currently uses a demo ledger. Nothing here is a bank transfer, card charge, or NELFUND disbursement.",
   },
   {
     q: "Is UNIBUD NELFUND?",
