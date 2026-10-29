@@ -1,11 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Avatar, PersonMeta } from "@/components/unibud/person";
 import { RelationActions } from "@/components/unibud/relation-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { uniById } from "@/lib/unibud/catalog";
 import { useCatalog } from "@/lib/unibud/queries";
+import { getMyProfile } from "@/lib/unibud/server";
+import { useAuthReady } from "@/components/unibud/sign-in-gate";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { academicLine, proximityScore, sharedContext } from "@/lib/unibud/identity";
 import { cn } from "@/lib/utils";
@@ -18,6 +21,8 @@ function Connect() {
   const [tab, setTab] = useState<Tab>("discover");
   const [q, setQ] = useState("");
   const { data: catalog, isPending } = useCatalog();
+  const { user } = useAuthReady();
+  const profile = useQuery({ queryKey: ["profile"], queryFn: () => getMyProfile(), enabled: Boolean(user) });
   const people = catalog?.people ?? [];
   const incoming = useCampusStore((s) => s.incoming);
   const outgoing = useCampusStore((s) => s.outgoing);
@@ -31,9 +36,9 @@ function Connect() {
   const faculty = useCampusStore((s) => s.faculty);
   const department = useCampusStore((s) => s.department);
   const lens = {
-    universityId: homeCampusId || "unilag",
-    program: "Computer Engineering",
-    year: "300",
+    universityId: profile.data?.universityId ?? "",
+    program: profile.data?.program ?? "",
+    year: profile.data?.year ?? "",
     faculty,
     department,
   };
