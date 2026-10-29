@@ -265,7 +265,7 @@ export const createListing = createServerFn({ method: "POST" })
       id, owner_user_id, kind, category, title, description, price_kobo, price_note,
       tone, seller_handle, university_id, location, tags, image
     ) values (
-      ${id}, ${context.userId}, ${data.kind}, ${data.category}, ${title}, ${data.description.trim()},
+      ${id}, ${context.userId}, ${data.kind}, ${data.category}, ${title}, ${description},
       ${data.priceKobo}, ${priceNote}, ${"ink"}, ${handle}, ${universityId},
       ${location || "Campus"}, ${"[]"}, ${data.imageUrl.trim()}
     )`;
