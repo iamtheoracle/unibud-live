@@ -20,7 +20,8 @@
     "test:agents": "node --experimental-strip-types --test src/lib/agents/organization.test.ts src/lib/agents/acceptance.test.ts src/lib/agents/activation.test.ts src/lib/agents/response-policy.test.ts src/lib/agents/runtime.test.ts src/lib/agents/content-context.test.ts src/lib/agents/tools.test.ts",
     "test:marketplace": "node --experimental-strip-types --test src/lib/unibud/marketplace-domain.test.ts",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test": "node --test scripts/*.test.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
