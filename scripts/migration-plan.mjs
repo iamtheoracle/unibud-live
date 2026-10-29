@@ -8,11 +8,13 @@
  * filename. Auth schema under migrations/auth is opt-in and not discovered by
  * either non-recursive applier until deliberately copied into the root.
  */
+/** @type {Record<string, string[]>} */
 const LEGACY_MIGRATION_ALIASES = Object.freeze({
   "0019_quad_groups.sql": ["0013_quad_groups.sql"],
 });
 
 /** The _migrations key for a migration path (or bare filename). */
+/** @param {string} path */
 export function migrationName(path) {
   return path.split("/").pop() ?? path;
 }
