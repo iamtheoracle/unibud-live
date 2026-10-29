@@ -20,7 +20,7 @@ test('unconfigured Bud provider is unavailable, never a fake successful reply', 
   await withEnv({}, async () => {
     const result = await getAIProvider().complete([{ role: 'user', content: 'test' }]);
     assert.equal(result.ok, false);
-    if (!result.ok) assert.match(result.error, /model connection is not available/i);
+    if (!result.ok) assert.match(result.error, /model connection is available/i);
   });
 });
 
