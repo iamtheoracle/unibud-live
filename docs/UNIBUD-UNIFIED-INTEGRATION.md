@@ -96,9 +96,8 @@ UNIBUD is one application assembled from the strongest parts of the existing pro
 
 ## Current verification status
 
-- GitHub Actions run [40795219397](https://github.com/iamtheoracle/unibud-live/actions/runs/40795219397) passed on the marketplace photo-validation changes: dependency installation (temporary recovery), TypeScript typecheck, integration-layer lint, Agent/Spark tests, marketplace domain tests, and production-shaped Netlify build.
+- GitHub Actions run [40795327548](https://github.com/iamtheoracle/unibud-live/actions/runs/40795327548) passed on the current integration head. Dependency installation (temporary recovery), TypeScript typecheck, integration-layer lint, Agent/Spark tests, marketplace domain tests, and production-shaped Netlify build all succeeded.
 - GitHub Actions run [40794920288](https://github.com/iamtheoracle/unibud-live/actions/runs/40794920288) also passed after duplicate marketplace routes were consolidated.
-- A newer run for the latest empty-state and normalized-description edits is in progress; re-check its result before calling the current head verified.
 - The committed lockfile remains out of sync and still needs proper regeneration/commit. The temporary `npm install --no-audit --no-fund` recovery is not the final release-quality dependency fix.
 - Full application lint, browser/UI interaction tests, and a successful hosted Netlify Deploy Preview remain unverified. Production remains untouched.
 
