@@ -46,6 +46,9 @@ jobs:
       - name: Marketplace domain tests
         run: npm run test:marketplace
 
+      - name: Repository script tests
+        run: npm test
+
       - name: Production-shaped Netlify build
         run: npm run build:netlify
         env:
