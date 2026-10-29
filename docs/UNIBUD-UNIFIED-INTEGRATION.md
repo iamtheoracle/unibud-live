@@ -92,22 +92,25 @@ UNIBUD is one application assembled from the strongest parts of the existing pro
 - Board now avoids showing sample sessions when the user has no enrolled courses and marks its remaining static syllabus/session data and attendance actions as prototype-only. These records are not official university timetable or attendance data.
 - SouLync and Wayward have database tables in `migrations/0016_soulync_wayward.sql`, but the source audit found no corresponding route/server-function references. Implementing those experiences faithfully still depends on recovering the referenced snapshots; do not treat the migrations alone as completed features.
 - Consolidated the duplicate marketplace detail routes into the UNIBUD-live `src/routes/_app/market.$id.tsx` page, removed the stale nested `/market/$listingId` and `/market/` index route files, updated the generated route tree and legacy card/sell links, and connected the Market sell sheet to the existing goods/service/stay form. The canonical detail path is `/market/$id`.
+- The current marketplace create flows now require a valid HTTPS cover-photo URL, reject embedded URL credentials, and persist the validated cover image in the existing `listings.image` column. The UI explicitly states that direct file uploads are not yet connected; this is a URL-based bridge, not a finished media-upload pipeline.
 
 ## Current verification status
+
+- GitHub Actions run [40795219397](https://github.com/iamtheoracle/unibud-live/actions/runs/40795219397) passed on the marketplace photo-validation changes: dependency installation (temporary recovery), TypeScript typecheck, integration-layer lint, Agent/Spark tests, marketplace domain tests, and production-shaped Netlify build.
+- GitHub Actions run [40794920288](https://github.com/iamtheoracle/unibud-live/actions/runs/40794920288) also passed after duplicate marketplace routes were consolidated.
+- A newer run for the latest empty-state and normalized-description edits is in progress; re-check its result before calling the current head verified.
+- The committed lockfile remains out of sync and still needs proper regeneration/commit. The temporary `npm install --no-audit --no-fund` recovery is not the final release-quality dependency fix.
+- Full application lint, browser/UI interaction tests, and a successful hosted Netlify Deploy Preview remain unverified. Production remains untouched.
 
 - GitHub Actions run [40794920288](https://github.com/iamtheoracle/unibud-live/actions/runs/40794920288) passed on the current integration head at the time of verification. All configured steps succeeded: dependency installation using the temporary recovery command, TypeScript typecheck, integration-layer lint, Agent/Spark tests, marketplace domain tests, and production-shaped Netlify build.
 - The duplicate marketplace routes have been removed and the latest run includes those route changes, with typecheck and build passing.
 - The committed lockfile remains out of sync and still needs proper regeneration/commit. The temporary `npm install --no-audit --no-fund` recovery is not the final release-quality dependency fix.
 - Full application lint, browser/UI interaction tests, and a successful hosted Netlify Deploy Preview remain unverified. Production remains untouched.
 
-- The latest confirmed CI run failed during dependency installation; it did not run typecheck, lint, marketplace tests, agent/Spark tests, or the production-shaped build.
-- The integration branch changed the CI and Netlify install commands to `npm install --no-audit --no-fund` as a temporary recovery path. The next Actions and Deploy Preview results must be inspected before claiming success.
-- The lockfile still needs a proper regeneration/commit. Browser/UI interaction checks and a successful Deploy Preview are not yet verified. Production remains untouched.
-
 - Studies now labels the built-in course catalogue and sample-semester action as prototype examples, not official institution records or deadlines.
 - A public repository named `silverbai/Soulync` exists, but it describes an AI dating engine and is owned by a different GitHub account with read-only access here. It may not be the user's referenced snapshot, and its code is not being copied. The current migration's SouLync schema has a different relationship-discovery shape; confirm the intended source before integrating.
 - No matching `board-workspace` repository was found in the connected repository list or public repository search. The current Board implementation still uses static preview course/session data; those are now explicitly marked as prototype content.
-- The first Netlify Deploy Preview attempts failed while using `npm install --legacy-peer-deps --include=dev`, even though the same production-shaped Vite build passed in GitHub Actions. The Netlify build command now uses `npm ci --legacy-peer-deps --include=dev && npm run build:netlify` and relies on the committed `.npmrc`. GitHub CI also runs the production-shaped build with `VITE_AUTH_ENABLED=false` to match Netlify. The latest preview must finish successfully before the PR is considered deployable.
+- The first Netlify Deploy Preview attempts failed during the build stage. Both GitHub CI and `netlify.toml` now use `npm install --no-audit --no-fund` as a temporary recovery path because `npm ci` fails on the existing lockfile. The production-shaped Vite build has passed in GitHub Actions, but a hosted Netlify Deploy Preview still needs independent confirmation.
 
 
 - The conversation-start endpoint now validates that the target handle is a real student profile and rejects self-conversations before creating an account-scoped thread. This does not solve cross-user delivery; it prevents ghost/self threads while the shared conversation model remains outstanding.
