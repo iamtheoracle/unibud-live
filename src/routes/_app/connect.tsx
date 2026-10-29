@@ -32,7 +32,6 @@ function Connect() {
   const accept = useCampusStore((s) => s.accept);
   const decline = useCampusStore((s) => s.decline);
   const cancelRequest = useCampusStore((s) => s.cancelRequest);
-  const homeCampusId = useCampusStore((s) => s.homeCampusId);
   const faculty = useCampusStore((s) => s.faculty);
   const department = useCampusStore((s) => s.department);
   const lens = {
