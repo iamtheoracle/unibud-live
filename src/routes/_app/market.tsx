@@ -89,6 +89,19 @@ function Market() {
             <div key={i} className="aspect-4/3 animate-pulse rounded-2xl bg-secondary" />
           ))}
         </div>
+      ) : filtered.length === 0 ? (
+        <section className="mt-5 rounded-3xl border border-border bg-card px-5 py-8 text-center">
+          <h2 className="text-base font-medium">No listings match yet</h2>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+            Try a different search or open all categories to see what students are offering.
+          </p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <Button variant="outline" onClick={() => setQ("")}>Clear search</Button>
+            <Link to="/market" search={{ cat: "all" }}>
+              <Button>View all listings</Button>
+            </Link>
+          </div>
+        </section>
       ) : (
         <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3">
           {filtered.map((l) => (
