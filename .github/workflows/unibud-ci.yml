@@ -43,4 +43,7 @@ jobs:
       - name: Marketplace domain tests
         run: npm run test:marketplace
 
-      # Full UI/template tests and production build remain deferred until UI implementation begins.
+      - name: Production-shaped Netlify build
+        run: npm run build:netlify
+
+      # Browser/UI interaction tests remain deferred until a browser runner is configured.
