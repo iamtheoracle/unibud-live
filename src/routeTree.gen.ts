@@ -493,6 +493,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/start'
     | '/board'
+    | '/concierge'
     | '/bud'
     | '/communities'
     | '/connect'
