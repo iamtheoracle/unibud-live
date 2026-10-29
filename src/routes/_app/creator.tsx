@@ -105,7 +105,7 @@ function Creator() {
         <Input className="mt-2" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Starting price ₦" />
         <Input
           className="mt-2"
-          inputType="url"
+          type="url"
           value={imageUrl}
           onChange={(e) => setImageUrl(e.target.value)}
           placeholder="Cover photo URL (HTTPS)"
