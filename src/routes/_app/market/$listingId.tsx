@@ -30,7 +30,6 @@ function ListingPage() {
         data: {
           handle: data!.listing.sellerHandle,
           listingId: data!.listing.id,
-          seed: `Hi — I’m interested in “${data!.listing.title}”.`,
         },
       }),
     onSuccess: (convo) => {
