@@ -263,7 +263,7 @@ export const createListing = createServerFn({ method: "POST" })
     const id = `l_${crypto.randomUUID().slice(0, 8)}`;
     await sql`insert into listings (
       id, owner_user_id, kind, category, title, description, price_kobo, price_note,
-      tone, seller_handle, university_id, location, tags
+      tone, seller_handle, university_id, location, tags, image
     ) values (
       ${id}, ${context.userId}, ${data.kind}, ${data.category}, ${title}, ${data.description.trim()},
       ${data.priceKobo}, ${priceNote}, ${"ink"}, ${handle}, ${universityId},
