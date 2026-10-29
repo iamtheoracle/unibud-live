@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { relativeTime } from "@/lib/unibud/format";
 import { useAuthReady } from "@/components/unibud/sign-in-gate";
+import { DemoCallout } from "@/components/unibud/demo-callout";
 
 export const Route = createFileRoute("/_app/board")({ component: Board });
 
@@ -29,9 +30,7 @@ function Board() {
   });
   const mine = enrolled.data ?? [];
   const codes = new Set(mine.map((c) => c.code));
-  const sessions = codes.size
-    ? BOARD_SESSIONS.filter((s) => codes.has(s.course))
-    : BOARD_SESSIONS;
+  const sessions = codes.size ? BOARD_SESSIONS.filter((s) => codes.has(s.course)) : [];
 
   return (
     <main className="safe-bottom px-5 pt-6">
@@ -40,6 +39,9 @@ function Board() {
       <p className="mt-2 max-w-xl text-sm text-muted-foreground">
         Course rooms, live class, syllabus and attendance. Not Square. Not Chat.
       </p>
+      <DemoCallout>
+        The sample session schedule is a prototype until your institution's timetable provider is connected. Demo attendance here is not an official university record.
+      </DemoCallout>
       {mine.length ? (
         <ul className="mt-6 grid gap-3">
           {mine.map((c) => (
@@ -75,7 +77,7 @@ function Board() {
         </Link>
       ) : null}
 
-      <ul className="mt-6 space-y-3">
+      {sessions.length ? <ul className="mt-6 space-y-3">
         {sessions.map((s) => {
           const present = liveAttendance[s.id] === "present";
           const inRoom = livePresence[s.id] === "in";
@@ -120,7 +122,11 @@ function Board() {
             </li>
           );
         })}
-      </ul>
+      </ul> : (
+        <p className="mt-6 text-sm text-muted-foreground">
+          No live or recorded sessions are connected to your enrolled courses yet.
+        </p>
+      )}
     </main>
   );
 }
