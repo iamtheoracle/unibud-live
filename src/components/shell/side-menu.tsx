@@ -100,8 +100,16 @@ export function SideMenu({
   const idle = progress <= 0.001 && !dragging;
 
   useEffect(() => {
-    if (open) panel.current?.focus();
-  }, [open]);
+    if (!open) return;
+    panel.current?.focus();
+
+    // Match the expected keyboard behavior of a modal navigation drawer.
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
 
   return (
     <div
