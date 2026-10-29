@@ -24,8 +24,8 @@ export function ListingCard({
   const uni = uniById(listing.universityId);
   return (
     <Link
-      to="/market/$listingId"
-      params={{ listingId: listing.id }}
+      to="/market/$id"
+      params={{ id: listing.id }}
       className={cn(
         "group block overflow-hidden rounded-xl border border-border bg-card transition-opacity hover:opacity-95",
         featured && "rounded-2xl",
