@@ -4,8 +4,9 @@ import { Image as ImageIcon, MoreHorizontal, Paperclip, Phone, Send, Video } fro
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Avatar } from "@/components/unibud/person";
+import { DemoCallout } from "@/components/unibud/demo-callout";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
-import { personByHandle } from "@/lib/unibud/catalog";
+import { useCatalog } from "@/lib/unibud/queries";
 import { getConversation, sendMessage } from "@/lib/social/server";
 import { persistAudioEvent, listRoomMessages, sendRoomMessage, uploadMedia } from "@/lib/media/server";
 import { fileToDataUrl } from "@/lib/media/client";
@@ -33,6 +34,7 @@ function Thread() {
 function DirectThread({ id }: { id: string }) {
   const { user, isPending } = useAuthReady();
   const qc = useQueryClient();
+  const { data: catalog } = useCatalog();
   const [body, setBody] = useState("");
   const q = useQuery({
     queryKey: ["convo", id],
@@ -65,7 +67,7 @@ function DirectThread({ id }: { id: string }) {
       </main>
     );
   }
-  const person = personByHandle(q.data?.conversation.peerHandle ?? "");
+  const person = catalog?.people.find((p) => p.handle === q.data?.conversation.peerHandle);
 
   return (
     <main className="flex min-h-[calc(100dvh-3.5rem)] flex-col bg-card">
@@ -76,6 +78,11 @@ function DirectThread({ id }: { id: string }) {
           <p className="text-xs text-muted-foreground">Direct conversation</p>
         </div>
         <CallButtons group={false} peer={person?.name ?? "them"} />
+      </div>
+      <div className="px-4 pt-3">
+        <DemoCallout>
+          Direct chat is currently account-scoped. Messages are saved to your account but are not delivered to the other person's inbox yet.
+        </DemoCallout>
       </div>
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-5">
         <p className="text-center text-xs text-muted-foreground">Today</p>
