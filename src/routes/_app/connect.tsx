@@ -4,7 +4,8 @@ import { Avatar, PersonMeta } from "@/components/unibud/person";
 import { RelationActions } from "@/components/unibud/relation-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PEOPLE, uniById } from "@/lib/unibud/catalog";
+import { uniById } from "@/lib/unibud/catalog";
+import { useCatalog } from "@/lib/unibud/queries";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { academicLine, proximityScore, sharedContext } from "@/lib/unibud/identity";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,8 @@ type Tab = "discover" | "requests" | "sent" | "connections" | "following" | "fol
 function Connect() {
   const [tab, setTab] = useState<Tab>("discover");
   const [q, setQ] = useState("");
+  const { data: catalog, isPending } = useCatalog();
+  const people = catalog?.people ?? [];
   const incoming = useCampusStore((s) => s.incoming);
   const outgoing = useCampusStore((s) => s.outgoing);
   const connections = useCampusStore((s) => s.connections);
@@ -37,24 +40,24 @@ function Connect() {
 
   const filtered = useMemo(
     () =>
-      PEOPLE.filter((p) => {
+      people.filter((p) => {
         const hay = `${p.name} ${p.handle} ${p.program} ${p.year} ${p.universityId} ${p.faculty ?? ""} ${p.department ?? ""}`.toLowerCase();
         return !q.trim() || hay.includes(q.toLowerCase());
       }),
-    [q],
+    [people, q],
   );
 
   const list =
     tab === "requests"
-      ? PEOPLE.filter((p) => incoming.includes(p.handle))
+      ? people.filter((p) => incoming.includes(p.handle))
       : tab === "sent"
-        ? PEOPLE.filter((p) => outgoing.includes(p.handle))
+        ? people.filter((p) => outgoing.includes(p.handle))
         : tab === "connections"
-          ? PEOPLE.filter((p) => connections.includes(p.handle))
+          ? people.filter((p) => connections.includes(p.handle))
           : tab === "following"
-            ? PEOPLE.filter((p) => following.includes(p.handle))
+            ? people.filter((p) => following.includes(p.handle))
             : tab === "followers"
-              ? PEOPLE.filter((p) => followers.includes(p.handle))
+              ? people.filter((p) => followers.includes(p.handle))
               : filtered;
 
   const suggested = [...filtered].sort((a, b) => proximityScore(b, connections, lens) - proximityScore(a, connections, lens));
@@ -65,8 +68,7 @@ function Connect() {
       <p className="kicker">People</p>
       <h1 className="mt-1 font-display text-4xl">Connect</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Find people you would not normally meet — same interests, other cities, other schools.
-        Connect is mutual. Follow is one-way.
+        Find people across campuses using real directory profiles. Connect is mutual; follow is one-way.
       </p>
       <div className="mt-5">
         <Input
@@ -111,21 +113,13 @@ function Connect() {
           <p className="kicker text-bud">People you may never have met</p>
           <h2 className="mt-3 font-display text-3xl text-paper">Same interests beat same postcode.</h2>
           <p className="mt-3 text-sm text-paper/70">
-            Robotics in Nairobi. Physics in Johannesburg. Language exchange. Builders, players, and
-            people who like the same strange things you like.
+            Explore real campus profiles and build connections around shared interests, programmes, and goals.
           </p>
         </section>
       ) : null}
 
-      {tab === "discover" ? (
-        <div className="mt-5 grid gap-3">
-          <Lane title="Builders far from you" handles={["aisha_nbo", "chinedu", "adaeze"]} />
-          <Lane title="Sky, games, language" handles={["jonas_wits", "yuki_lang", "ibrahim"]} />
-          <Lane title="Creators" handles={PEOPLE.filter((p) => p.tags?.includes("creator")).map((p) => p.handle)} />
-        </div>
-      ) : null}
-
-      <ul className="mt-5 space-y-3">
+      {isPending ? <div className="mt-5 h-28 animate-pulse rounded-2xl bg-secondary" /> : null}
+      {!isPending ? <ul className="mt-5 space-y-3">
         {shown.map((p) => {
           const uni = uniById(p.universityId);
           const ctx = sharedContext(p, lens);
@@ -172,36 +166,14 @@ function Connect() {
             </li>
           );
         })}
-      </ul>
-      {shown.length === 0 ? (
-        <p className="py-12 text-center text-sm text-muted-foreground">Nobody in this list yet.</p>
+      </ul> : null}
+      {!isPending && shown.length === 0 ? (
+        <p className="py-12 text-center text-sm text-muted-foreground">
+          {people.length === 0
+            ? "No campus directory profiles are available yet. Profiles will appear when real campus data is connected."
+            : "Nobody in this list yet."}
+        </p>
       ) : null}
     </main>
-  );
-}
-
-function Lane({ title, handles }: { title: string; handles: string[] }) {
-  const people = handles.map((h) => PEOPLE.find((p) => p.handle === h)).filter(Boolean);
-  if (!people.length) return null;
-  return (
-    <section className="rounded-2xl bg-card p-4 ring-1 ring-border">
-      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{title}</p>
-      <ul className="mt-3 space-y-3">
-        {people.map((p) => (
-          <li key={p!.handle} className="flex items-center gap-3">
-            <Link to="/u/$handle" params={{ handle: p!.handle }}>
-              <Avatar name={p!.name} />
-            </Link>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{p!.name}</p>
-              <p className="truncate text-[11px] text-muted-foreground">
-                @{p!.handle} · {p!.bio}
-              </p>
-            </div>
-            <RelationActions handle={p!.handle} />
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }
