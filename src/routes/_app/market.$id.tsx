@@ -72,7 +72,6 @@ function ListingPage() {
         data: {
           handle: listing.sellerHandle,
           listingId: listing.id,
-          seed: `Hi, I’m interested in “${listing.title}”.`,
         },
       });
       nav({ to: "/messages/$id", params: { id: convo.id } });
