@@ -4,6 +4,7 @@ import {
   formatMinorAmount,
   isSafeImageUrl,
   validateListingDraft,
+  validateMarketplaceCreateInput,
   type ListingDraft,
 } from "./marketplace-domain.ts";
 
@@ -61,4 +62,49 @@ test("only HTTPS image URLs are accepted", () => {
   assert.equal(isSafeImageUrl("https://cdn.example.test/listing.jpg"), true);
   assert.equal(isSafeImageUrl("http://cdn.example.test/listing.jpg"), false);
   assert.equal(isSafeImageUrl("javascript:alert(1)"), false);
+});
+
+
+const validCreateInput = (overrides: Record<string, unknown> = {}) => ({
+  kind: "service",
+  category: "services",
+  title: "Laptop repair service",
+  description: "Affordable laptop troubleshooting and repair for students on campus.",
+  priceKobo: 500000,
+  priceNote: "starting",
+  location: "Campus / remote",
+  ...overrides,
+});
+
+test("server input guard accepts valid current-schema listing data", () => {
+  assert.equal(validateMarketplaceCreateInput(validCreateInput()), null);
+});
+
+test("server input guard rejects unsupported kinds and categories", () => {
+  assert.match(
+    validateMarketplaceCreateInput(validCreateInput({ kind: "student_accommodation" })) ?? "",
+    /supported listing type/i,
+  );
+  assert.match(
+    validateMarketplaceCreateInput(validCreateInput({ category: "made_up" })) ?? "",
+    /supported listing category/i,
+  );
+});
+
+test("server input guard keeps stay listings in the accommodation category", () => {
+  assert.match(
+    validateMarketplaceCreateInput(validCreateInput({ kind: "stay", category: "food" })) ?? "",
+    /accommodation/i,
+  );
+});
+
+test("server input guard rejects malformed price notes and unsafe prices", () => {
+  assert.match(
+    validateMarketplaceCreateInput(validCreateInput({ priceNote: "x".repeat(81) })) ?? "",
+    /price description/i,
+  );
+  assert.match(
+    validateMarketplaceCreateInput(validCreateInput({ priceKobo: Number.MAX_SAFE_INTEGER + 1 })) ?? "",
+    /positive whole number/i,
+  );
 });
