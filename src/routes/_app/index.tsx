@@ -94,6 +94,10 @@ function Square() {
     setShown(10);
   }
 
+  if (isPending || (user && !onboardingDone)) {
+    return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
+  }
+
   return (
     <main className="bg-card">
       {lane === "peek" ? (
