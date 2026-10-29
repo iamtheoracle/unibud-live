@@ -6,7 +6,7 @@ A separately deployable, single-owner AI API backed by a local Ollama model. Thi
 
 - Ollama-backed inference; default model is `qwen2.5:7b` (choose a model that fits your RAM/VRAM).
 - Owner-bound bearer authentication. The service refuses requests unless both a long API key and `ORACLE_ARC_OWNER_ID` are configured.
-- SQLite memory persisted in a Docker volume; list, save, and soft-delete endpoints.
+- SQLite memory persisted in a Docker volume; list, save, and permanent delete endpoints.
 - Memory context is clearly marked as user data, not trusted instructions.
 - An allowlisted tool registry limited to memory operations. No shell, arbitrary code, file-system, browser, money, or external-account tools are exposed.
 - Mutating tool calls require explicit `approved: true`; actions are audit logged.
