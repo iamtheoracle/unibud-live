@@ -95,7 +95,7 @@ export function validateListingDraft(draft: ListingDraft): ValidationIssue[] {
   }
   if (draft.imageUrls.length > 12) add("imageUrls", "A listing can have up to 12 photos.");
   if (draft.imageUrls.some((url) => !isSafeImageUrl(url))) {
-    add("imageUrls", "Photos must use HTTPS URLs from the configured image storage.");
+    add("imageUrls", "Photos must use valid HTTPS URLs without embedded credentials.");
   }
   if (draft.kind === "preowned" && !draft.condition) {
     add("condition", "Describe the item's condition.");
