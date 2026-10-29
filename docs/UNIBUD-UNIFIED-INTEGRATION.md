@@ -74,3 +74,10 @@ UNIBUD is one application assembled from the strongest parts of the existing pro
 - Removed the unsupported “Active now” claim from direct chat headers and stopped rendering the hard-coded `ROOM_SEED` message examples as if they were real room history. Room threads now show persisted messages only. This aligns the live UI with the no-fabricated-activity rule.
 - The current repository tree includes `migrations/0016_soulync_wayward.sql` and the Board routes/data, but the connected GitHub repository list and branch search did not surface standalone repositories or branches named `soulync` or `board-workspace`. Their referenced snapshots therefore remain unverified until the exact source refs/archives are accessible.
 - The v2 UI prototype ZIP is present in the Git tree, but this connector cannot retrieve binary repository downloads for direct ZIP inspection. Do not claim its contents have been audited yet.
+
+
+## CI blocker discovered and attempted repair
+
+- GitHub Actions run `40792258092` failed during `npm ci`, before typecheck, lint, or tests. The exact error is that the lockfile is out of sync around `ajv`, `json-schema-traverse`, `fast-uri`, `require-from-string`, and `lru-cache`; no code checks ran.
+- The lockfile includes `@hookform/resolvers` with optional peer dependencies that are not installed in this app, while the current dependency tree includes ESLint's Ajv 6 line. Added project-level `.npmrc` with `legacy-peer-deps=true` to match the existing lockfile's optional-peer installation strategy.
+- This is an attempted repair, not a verified fix. A new Actions run must confirm `npm ci` succeeds. If it still fails, regenerate and commit `package-lock.json` with the repository's intended npm settings rather than weakening the verification gate.
