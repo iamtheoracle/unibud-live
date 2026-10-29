@@ -3,7 +3,7 @@
 
 [build]
   # Include devDependencies (nitro, vite plugins) — required for TanStack Start build.
-  command = "npm install --legacy-peer-deps --include=dev && npm run build:netlify"
+  command = "npm ci && npm run build:netlify"
   publish = "dist"
 
 [build.environment]
