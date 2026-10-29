@@ -45,7 +45,7 @@ function Money() {
   if (isPending) return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
   if (!user) {
     return (
-      <VaultGate title="Wallet">
+      <VaultGate title="Flow Student Bank">
         <div />
       </VaultGate>
     );
@@ -55,12 +55,16 @@ function Money() {
   const active = tab === "requests" || tab === "funding" ? tab : "wallet";
 
   return (
-    <VaultGate title="Wallet">
+    <VaultGate title="Flow Student Bank">
     <main className="px-4 pb-10 md:px-6">
       <p className="pt-2 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-        Wallet
+        FLOW · STUDENT BANK
       </p>
-      <h1 className="mt-1 text-2xl font-medium tracking-tight">Your pocket</h1>
+      <h1 className="mt-1 text-2xl font-medium tracking-tight">Your student money, in one place</h1>
+      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+        A clearer home for student spending, shared costs, funding notes, and the future of connected
+        banking. Real accounts and payments will only appear when licensed providers are integrated.
+      </p>
       <div className="mt-4 flex gap-2">
         {[
           ["wallet", "Wallet"],
@@ -94,6 +98,32 @@ function Money() {
       <BudNudge draft="Explain this demo wallet: balance, add, send, withdraw. It is not a bank. Stay as Bud.">
         What does this wallet actually do?
       </BudNudge>
+
+      <section aria-labelledby="flow-benefits-title" className="mt-5 space-y-3">
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">The Flow vision</p>
+          <h2 id="flow-benefits-title" className="mt-1 text-lg font-medium">Built around student life</h2>
+          <p className="mt-1 text-sm text-muted-foreground">These capabilities are planned, not live banking services.</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[
+            { title: "Accounts & cards", detail: "Provider-backed student accounts, virtual or physical cards, card controls, and clear account details.", status: "Planned" },
+            { title: "Transfers & payments", detail: "Verified recipients, payment confirmation, receipts, and status updates after a provider confirms settlement.", status: "Provider required" },
+            { title: "Budgets & savings", detail: "Track food, transport, data, rent, subscriptions, goals, and recurring bills without mixing plans with real balances.", status: "Planned" },
+            { title: "Student funding", detail: "Keep scholarship and tuition checklists, deadlines, and personal notes beside official funding links.", status: "Guidance available" },
+            { title: "Marketplace checkout", detail: "A safer checkout path for student listings, with seller trust signals and payment protection only when supported.", status: "Demo ledger only" },
+            { title: "Security & support", detail: "Transaction alerts, dispute pathways, account recovery, privacy controls, and an auditable support history.", status: "Planned" },
+          ].map((item) => (
+            <article key={item.title} className="rounded-2xl bg-card p-4 ring-1 ring-border">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="text-sm font-medium">{item.title}</h3>
+                <Badge tone="muted">{item.status}</Badge>
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.detail}</p>
+            </article>
+          ))}
+        </div>
+      </section>
 
       {active === "wallet" ? (
         <WalletPane
