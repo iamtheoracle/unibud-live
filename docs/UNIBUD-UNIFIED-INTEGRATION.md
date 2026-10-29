@@ -125,7 +125,7 @@ The relevant feature branches were enumerated directly from `iamtheoracle/arc-pr
 
 ## Current verification status
 
-- GitHub Actions run [40796349861](https://github.com/iamtheoracle/unibud-live/actions/runs/40796349861) passed on the current integration head. Dependency installation (temporary recovery), TypeScript typecheck, integration-layer lint, lint of the modified marketplace/workspace UI, Agent/Spark tests, marketplace domain tests, repository script regression tests, and the production-shaped Netlify build all succeeded.
+- GitHub Actions run [40796545353](https://github.com/iamtheoracle/unibud-live/actions/runs/40796545353) passed on commit `7d36e5d`. Dependency installation (temporary recovery), TypeScript typecheck, integration-layer lint, lint of the modified marketplace/workspace UI, Agent/Spark tests, marketplace domain tests, repository script regression tests, and the production-shaped Netlify build all succeeded.
 - GitHub Actions run [40794920288](https://github.com/iamtheoracle/unibud-live/actions/runs/40794920288) also passed after duplicate marketplace routes were consolidated.
 - The committed lockfile remains out of sync and still needs proper regeneration/commit. The temporary `npm install --no-audit --no-fund` recovery is not the final release-quality dependency fix.
 - Full application lint, browser/UI interaction tests, and a successful hosted Netlify Deploy Preview remain unverified. Production remains untouched.
