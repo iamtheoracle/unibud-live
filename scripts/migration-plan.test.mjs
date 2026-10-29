@@ -56,6 +56,25 @@ test("non-.sql entries are dropped (readdir also yields the auth/ directory)", (
   assert.deepEqual(pendingMigrations(["auth", "README.md"], []), []);
 });
 
+
+test("renamed migration respects a legacy applied name", () => {
+  assert.deepEqual(
+    pendingMigrations(["migrations/0019_quad_groups.sql"], ["0013_quad_groups.sql"]),
+    [],
+  );
+  assert.deepEqual(
+    pendingMigrations(["migrations/0019_quad_groups.sql"], []),
+    [{ name: "0019_quad_groups.sql", path: "migrations/0019_quad_groups.sql" }],
+  );
+});
+
+test("duplicate numeric migration prefixes fail clearly", () => {
+  assert.throws(
+    () => pendingMigrations(["0013_feedback.sql", "0013_quad_groups.sql"], []),
+    /Duplicate migration prefix 0013/,
+  );
+});
+
 test("the auth schema ships outside the globbed directory", () => {
   const migrationsDir = join(projectRoot(), "migrations");
   assert.deepEqual(pendingMigrations(readdirSync(migrationsDir), []), []);
