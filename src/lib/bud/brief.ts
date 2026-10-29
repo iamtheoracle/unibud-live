@@ -15,7 +15,7 @@ export type AtlasSnap = {
 };
 
 const ROUTES: { test: RegExp; to: string; label: string }[] = [
-  { test: /\b(wallet|money|balance|send naira)\b/i, to: "/money", label: "Wallet" },
+  { test: /\b(wallet|money|balance|send naira)\b/i, to: "/money", label: "Flow" },
   { test: /\b(market|listing|hostel|buy|sell)\b/i, to: "/market", label: "Market" },
   { test: /\b(riff|gist|conversation)\b/i, to: "/riff", label: "Riff" },
   { test: /\b(connect|people|friends)\b/i, to: "/connect", label: "Connect" },
@@ -91,7 +91,7 @@ function specialistNote(id: SpecialistId, prompt: string): string | null {
     case "voice":
       return "Voice: keep sentences easy to say out loud.";
     case "navigator":
-      return "Navigator: only real UNIBUD places. Square, Connect, Communities, Chat, Riff, Board, Studies, Watch, Market, Wallet, Profile.";
+      return "Navigator: only real UNIBUD places. Square, Connect, Communities, Chat, Riff, Board, Studies, Watch, Market, Flow, Profile.";
     default:
       return null;
   }
