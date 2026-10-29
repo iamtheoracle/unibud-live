@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BOARD_SESSIONS, SESSION_LIFECYCLE } from "@/lib/unibud/board-data";
 import { boardIdFor } from "@/lib/unibud/academic";
@@ -13,8 +14,13 @@ import { DemoCallout } from "@/components/unibud/demo-callout";
 
 export const Route = createFileRoute("/_app/board")({ component: Board });
 
+type BoardSection = "Overview" | "Courses" | "Learning" | "Tasks" | "Discussions" | "Discover";
+const BOARD_SECTIONS: BoardSection[] = ["Overview", "Courses", "Learning", "Tasks", "Discussions", "Discover"];
+
 function Board() {
   const { user } = useAuthReady();
+  const [section, setSection] = useState<BoardSection>("Overview");
+  const [resourceQuery, setResourceQuery] = useState("");
   const role = useCampusStore((s) => s.role ?? "student");
   const liveAttendance = useCampusStore((s) => s.liveAttendance);
   const livePresence = useCampusStore((s) => s.livePresence);
@@ -40,8 +46,17 @@ function Board() {
         Course rooms, live class, syllabus and attendance. Not Square. Not Chat.
       </p>
       <DemoCallout>
-        The sample session schedule is a prototype until your institution's timetable provider is connected. Demo attendance here is not an official university record.
+        The academic schedule and attendance controls are previews until your institution's authorized services are connected. Nothing here is an official university record.
       </DemoCallout>
+      <nav aria-label="Board sections" className="mt-5 flex gap-2 overflow-x-auto pb-1">
+        {BOARD_SECTIONS.map((item) => (
+          <Button key={item} size="sm" variant={section === item ? "primary" : "outline"} aria-pressed={section === item} onClick={() => setSection(item)}>
+            {item}
+          </Button>
+        ))}
+      </nav>
+      {section === "Overview" && (
+        <>
       {mine.length ? (
         <ul className="mt-6 grid gap-3">
           {mine.map((c) => (
@@ -127,6 +142,75 @@ function Board() {
           No live or recorded sessions are connected to your enrolled courses yet.
         </p>
       )}
+
+        </>
+      )}
+
+      {section === "Courses" && (
+        <section className="mt-6">
+          <div className="flex items-end justify-between gap-3">
+            <div><p className="kicker">COURSE DIRECTORY</p><h2 className="mt-1 font-display text-2xl">My courses</h2></div>
+            <Link to="/studies" className="text-sm font-medium">Manage in Studies</Link>
+          </div>
+          {mine.length ? (
+            <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+              {mine.map((course) => (
+                <li key={course.id}>
+                  <Link to="/board/$id" params={{ id: boardIdFor(course.code) }} className="block rounded-2xl bg-card p-4 ring-1 ring-border">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-bud">{course.code}</p>
+                    <p className="mt-1 font-medium">{course.title}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{course.catalog?.lecturer} · {course.catalog?.programme}</p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="mt-4 rounded-2xl bg-card p-5 ring-1 ring-border">
+              <h3 className="font-medium">Your courses will appear here</h3>
+              <p className="mt-1 text-sm text-muted-foreground">Choose this semester's courses in Studies. No course records are fabricated.</p>
+              <Link to="/studies" className="mt-3 inline-block text-sm font-medium">Open Studies</Link>
+            </div>
+          )}
+        </section>
+      )}
+
+      {section === "Learning" && (
+        <section className="mt-6 rounded-2xl bg-card p-4 ring-1 ring-border">
+          <p className="kicker">RESOURCE LIBRARY</p>
+          <h2 className="mt-1 font-display text-2xl">Learning materials</h2>
+          <label className="mt-4 flex h-11 items-center gap-2 rounded-xl border border-border px-3">
+            <span aria-hidden="true">⌕</span>
+            <input className="min-w-0 flex-1 bg-transparent text-sm outline-none" value={resourceQuery} onChange={(event) => setResourceQuery(event.target.value)} placeholder="Search notes, slides, readings and recordings" aria-label="Search learning materials" />
+          </label>
+          <div className="mt-4 rounded-xl bg-secondary p-4" role="status">
+            <h3 className="font-medium">{resourceQuery.trim() ? "No connected resources found" : "Your learning library is waiting"}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">{resourceQuery.trim() ? "A search cannot return academic records until the authorized resource service is connected." : "Approved notes, PDFs, slides, readings, lecture recordings and podcasts will be organised by course here."}</p>
+          </div>
+        </section>
+      )}
+
+      {section === "Tasks" && (
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <section className="rounded-2xl bg-card p-4 ring-1 ring-border"><p className="kicker">TO DO</p><h2 className="mt-1 text-xl font-medium">Assignments and deadlines</h2><p className="mt-2 text-sm text-muted-foreground">Assignments and due dates require a connected course and assessment service.</p></section>
+          <section className="rounded-2xl bg-card p-4 ring-1 ring-border"><p className="kicker">YOUR RESULTS</p><h2 className="mt-1 text-xl font-medium">Progress and feedback</h2><p className="mt-2 text-sm text-muted-foreground">Grades and feedback remain private and appear only from authorized academic records. No scores are fabricated.</p></section>
+        </div>
+      )}
+
+      {section === "Discussions" && (
+        <section className="mt-6 rounded-2xl bg-card p-5 ring-1 ring-border">
+          <p className="kicker">COURSE CONVERSATIONS</p><h2 className="mt-1 font-display text-2xl">Questions and collaboration</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Board keeps academic context close to your courses; it does not create a separate messaging system.</p>
+          <Link to="/messages" className="mt-4 inline-block text-sm font-medium">Open Chat</Link>
+        </section>
+      )}
+
+      {section === "Discover" && (
+        <section className="mt-6 rounded-2xl bg-card p-5 ring-1 ring-border">
+          <p className="kicker">ACADEMIC OPPORTUNITIES</p><h2 className="mt-1 font-display text-2xl">Explore beyond your courses</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Verified scholarships, research, seminars, workshops and external learning resources will be labelled by source when available. The discovery provider is not connected yet.</p>
+        </section>
+      )}
+
     </main>
   );
 }
