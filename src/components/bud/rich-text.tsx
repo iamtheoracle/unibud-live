@@ -4,7 +4,7 @@ const NAV_RE = /^NAV:(\/[A-Za-z0-9/_-]*)\s*$/m;
 
 const LABELS: Record<string, string> = {
   "/": "Square",
-  "/money": "Wallet",
+  "/money": "Flow",
   "/market": "Market",
   "/riff": "Riff",
   "/connect": "Connect",
