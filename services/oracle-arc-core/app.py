@@ -229,8 +229,8 @@ def delete_memory(memory_id: str, owner_id: str = Query(..., min_length=1, max_l
     _authorize(authorization, owner_id)
     with db() as conn:
         result = conn.execute(
-            "UPDATE memories SET deleted_at=?, updated_at=? WHERE id=? AND owner_id=? AND deleted_at IS NULL",
-            (int(time.time()), int(time.time()), memory_id, owner_id),
+            "DELETE FROM memories WHERE id=? AND owner_id=?",
+            (memory_id, owner_id),
         )
     if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="Memory not found.")
@@ -283,8 +283,8 @@ def execute_tool(request: ToolRequest, authorization: str | None = Header(defaul
         memory_id = str(args.get("id", "")).strip()
         with db() as conn:
             result = conn.execute(
-                "UPDATE memories SET deleted_at=?, updated_at=? WHERE id=? AND owner_id=? AND deleted_at IS NULL",
-                (int(time.time()), int(time.time()), memory_id, request.owner_id),
+                "DELETE FROM memories WHERE id=? AND owner_id=?",
+                (memory_id, request.owner_id),
             )
         if result.rowcount == 0:
             _audit(request.owner_id, request.tool, True, "not-found")
