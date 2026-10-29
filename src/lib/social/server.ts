@@ -87,22 +87,6 @@ export const myCommunities = createServerFn({ method: "GET" })
     return rows.map((r) => r.community_id);
   });
 
-/**
- * Public profile lookup deliberately returns only the member's display name and handle.
- * Academic details, verification and relationship state are not exposed until their
- * visibility/verification controls are persisted and enforced server-side.
- */
-export const getPublicProfileByHandle = createServerFn({ method: "GET" })
-  .validator((rawHandle: string) => rawHandle)
-  .handler(async ({ data: rawHandle }) => {
-    const handle = rawHandle.replace(/^@/, "").trim().toLowerCase();
-    if (!/^[a-z0-9_]{2,40}$/.test(handle)) return null;
-    const sql = await getSql();
-    const rows = await sql<{ display_name: string; handle: string }>`select display_name, handle from student_profiles where lower(handle) = ${handle} limit 1`;
-    if (!rows[0]) return null;
-    return { displayName: rows[0].display_name, handle: rows[0].handle };
-  });
-
 export const createPost = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator(
