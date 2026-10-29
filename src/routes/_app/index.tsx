@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useLoaderData, useNavigate } from "@tanstack/react-router";
-import { BadgeCheck, Bookmark, Heart, MessageCircle, MoreHorizontal, Play, Share2 } from "lucide-react";
+import { Bookmark, Heart, MessageCircle, MoreHorizontal, Play, Share2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/unibud/person";
+import { DemoCallout } from "@/components/unibud/demo-callout";
 import { CampusMoments } from "@/components/unibud/campus-moments";
 import { ReelsStage } from "@/components/unibud/reels-stage";
 import { EmptyState } from "@/components/unibud/empty";
-import { communityById, personByHandle } from "@/lib/unibud/catalog";
+
 import { relativeTime } from "@/lib/unibud/format";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { useStudioStore } from "@/lib/studio/store";
@@ -143,6 +144,11 @@ function Square() {
             />
           </div>
           <StreamPicker lane={lane} onChange={chooseLane} />
+          <div className="px-4 pt-3">
+            <DemoCallout>
+              Posts in this feed come from connected records or your local drafts. Profile verification is not connected; follow and flag actions are local to this device, and no moderation report is sent.
+            </DemoCallout>
+          </div>
           <LaneFeed
             lane={lane}
             stream={stream}
@@ -275,8 +281,8 @@ async function sharePost(post: FeedPost) {
 }
 
 function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: string) => void }) {
-  const person = personByHandle(post.authorHandle);
-  const community = communityById(post.communityId);
+  const catalog = useLoaderData({ from: "/_app" });
+  const community = (catalog.communities ?? []).find((item) => item.id === post.communityId);
   const key = likeKey(post.id);
   const liked = useCampusStore((s) => s.liked[key]);
   const count = useCampusStore((s) => s.likeCounts[key] ?? 0);
@@ -287,7 +293,6 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
   const saved = useCampusStore((s) => (s.savedPosts ?? []).includes(key));
   const toggleSavePost = useCampusStore((s) => s.toggleSavePost);
   const { user } = useCurrentUserState();
-  const catalog = useLoaderData({ from: "/_app" });
   const dbReplies = (catalog.replies ?? [])
     .filter((r) => r.postId === key)
     .map((r) => ({
@@ -306,7 +311,7 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
   const [reply, setReply] = useState("");
-  const name = person?.name ?? post.authorHandle;
+  const name = post.authorHandle === "you" ? "You" : `@${post.authorHandle}`;
   const video = isVideoPost(post);
 
   return (
@@ -319,11 +324,7 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">
-                <Link to="/u/$handle" params={{ handle: post.authorHandle }} className="hover:underline">
-                  {name}
-                </Link>
-                {person?.verified ? <BadgeCheck className="ml-1 inline size-3.5 text-bud" /> : null}
-                <span className="ml-1 font-normal text-muted-foreground">@{post.authorHandle}</span>
+                {post.authorHandle === "you" ? name : <Link to="/u/$handle" params={{ handle: post.authorHandle }} className="hover:underline">{name}</Link>}
                 <span className="ml-1 font-normal text-muted-foreground">· {relativeTime(post.createdAt)}</span>
               </p>
               {community ? (
@@ -344,7 +345,7 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
               <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { hidePost(key); setMenu(false); }}>
                 Hide
               </button>
-              <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { reportPost(key); toast.message("Report noted."); setMenu(false); }}>
+              <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { reportPost(key); toast.message("Flagged on this device only; no moderation report was sent."); setMenu(false); }}>
                 Report
               </button>
             </div>
