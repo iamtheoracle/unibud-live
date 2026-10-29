@@ -31,7 +31,11 @@ export const openConversation = createServerFn({ method: "POST" })
   .validator((input: { handle: string; listingId?: string }) => input)
   .handler(async ({ context, data }) => {
     const handle = data.handle.replace(/^@/, "").trim().toLowerCase();
+    if (!handle || handle.length > 40) throw new Error("Choose a valid student profile.");
     const sql = await getSql();
+    const peers = await sql<{ user_id: string; handle: string }>`select user_id, handle from student_profiles where lower(handle) = ${handle} limit 1`;
+    if (!peers[0]) throw new Error("This student profile is not available for chat.");
+    if (peers[0].user_id === context.userId) throw new Error("You cannot start a conversation with yourself.");
     const existing = await sql`select * from conversations where user_id = ${context.userId} and peer_handle = ${handle} limit 1`;
     if (existing[0]) return mapConvo(existing[0]);
     const id = crypto.randomUUID();
