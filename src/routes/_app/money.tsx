@@ -45,7 +45,7 @@ function Money() {
   if (isPending) return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
   if (!user) {
     return (
-      <VaultGate title="Wallet">
+      <VaultGate title="Flow">
         <div />
       </VaultGate>
     );
@@ -58,12 +58,12 @@ function Money() {
     <VaultGate title="Wallet">
     <main className="px-4 pb-10 md:px-6">
       <p className="pt-2 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-        Wallet
+        Flow Student Bank
       </p>
-      <h1 className="mt-1 text-2xl font-medium tracking-tight">Your pocket</h1>
+      <h1 className="mt-1 text-2xl font-medium tracking-tight">Your student money</h1>
       <div className="mt-4 flex gap-2">
         {[
-          ["wallet", "Wallet"],
+          ["wallet", "Overview"],
           ["requests", "Requests"],
           ["funding", "Funding"],
         ].map(([id, label]) => (
