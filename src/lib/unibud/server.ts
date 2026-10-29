@@ -226,7 +226,7 @@ export const reportListing = createServerFn({ method: "POST" })
       `Listing ID: ${rows[0].id}`,
       `Listing title: ${rows[0].title}`,
       `Reason: ${reason}`,
-    ].join("\\n");
+    ].join("\n");
     await sql`insert into feedback_submissions (id, user_id, category, body)
       values (${id}, ${context.userId}, ${"listing_report"}, ${body})`;
     return { ok: true as const, id };
