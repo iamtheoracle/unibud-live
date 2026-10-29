@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Avatar, PersonMeta } from "@/components/unibud/person";
 import { RelationActions } from "@/components/unibud/relation-actions";
 import { Button } from "@/components/ui/button";
+import { DemoCallout } from "@/components/unibud/demo-callout";
 import { Input } from "@/components/ui/input";
 import { uniById } from "@/lib/unibud/catalog";
 import { useCatalog } from "@/lib/unibud/queries";
@@ -74,6 +75,9 @@ function Connect() {
       <p className="mt-2 text-sm text-muted-foreground">
         Find people across campuses using real directory profiles. Connect is mutual; follow is one-way.
       </p>
+      <DemoCallout>
+        Connection requests and follows are currently stored on this device. They are not yet synced to other users.
+      </DemoCallout>
       <div className="mt-5">
         <Input
           value={q}
