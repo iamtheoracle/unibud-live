@@ -122,7 +122,7 @@ function SellForm() {
         <Label htmlFor="imageUrl">Cover photo URL (HTTPS)</Label>
         <Input
           id="imageUrl"
-          inputType="url"
+          type="url"
           required
           value={imageUrl}
           onChange={(e) => setImageUrl(e.target.value)}
