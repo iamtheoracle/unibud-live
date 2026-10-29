@@ -30,7 +30,8 @@ export const openConversation = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { handle: string; listingId?: string }) => input)
   .handler(async ({ context, data }) => {
-    const handle = data.handle.replace(/^@/, "").trim().toLowerCase();
+    const rawHandle = typeof data.handle === "string" ? data.handle : "";
+    const handle = rawHandle.replace(/^@/, "").trim().toLowerCase();
     if (!handle || handle.length > 40) throw new Error("Choose a valid student profile.");
     const sql = await getSql();
     const peers = await sql<{ user_id: string; handle: string }>`select user_id, handle from student_profiles where lower(handle) = ${handle} limit 1`;
