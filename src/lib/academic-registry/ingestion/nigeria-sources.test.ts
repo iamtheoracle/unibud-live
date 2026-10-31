@@ -47,7 +47,7 @@ test("a source can run only after terms approval, adapter configuration, and exp
   assert.equal(canImportAcademicSource({
     ...source,
     automationPermission: "approved",
-    adapterStatus: "configured",
+    adapterStatus: "verified",
     enabled: true,
   }), true);
   assert.equal(canImportAcademicSource({
@@ -59,7 +59,7 @@ test("a source can run only after terms approval, adapter configuration, and exp
   assert.equal(canImportAcademicSource({
     ...source,
     automationPermission: "approved",
-    adapterStatus: "not_implemented",
+    adapterStatus: "configured",
     enabled: true,
   }), false);
 });
