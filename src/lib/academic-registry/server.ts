@@ -123,11 +123,11 @@ export const searchAcademicInstitutions = createServerFn({ method: "GET" })
               and ql.level_label ilike $${first+6}
               and exists (select 1 from academic_sources ql_source where ql_source.id = ql.source_id and ql_source.reliability_status in ('official','reviewed'))
               and exists (select 1 from academic_sources qf_source where qf_source.id = qf.source_id and qf_source.reliability_status in ('official','reviewed')))
-          or it.label ilike ${first+7}
+          or it.label ilike $${first+7}
           or exists (select 1 from academic_programmes subject_programme
             where subject_programme.institution_id = i.id
               and subject_programme.verification_status = 'verified'
-              and subject_programme.subject_area_code ilike ${first+8}
+              and subject_programme.subject_area_code ilike $${first+8}
               and exists (select 1 from academic_sources subject_source where subject_source.id = subject_programme.source_id and subject_source.reliability_status in ('official','reviewed'))))`,
       );
     }
