@@ -323,15 +323,42 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
            union select source_id from academic_accreditations where institution_id = $1
            union select source_id from academic_programmes where institution_id = $1
            union select ql.source_id from academic_qualification_levels ql
-             join academic_qualification_frameworks qf on qf.id = ql.framework_id
-             where qf.country_code = (select country_code from academic_institutions where id = $1)
-           union select source_id from academic_qualification_frameworks
-             where country_code = (select country_code from academic_institutions where id = $1)
+             join academic_programmes programme on programme.qualification_level_id = ql.id
+             where programme.institution_id = $1
+           union select qf.source_id from academic_qualification_frameworks qf
+             where qf.id in (
+               select ql.framework_id from academic_qualification_levels ql
+               join academic_programmes programme on programme.qualification_level_id = ql.id
+               where programme.institution_id = $1
+             )
+           union select authority.source_id from academic_authorities authority
+             where authority.id in (
+               select authority_id from academic_accreditations where institution_id = $1
+               union select qf.authority_id from academic_qualification_frameworks qf
+                 where qf.id in (
+                   select ql.framework_id from academic_qualification_levels ql
+                   join academic_programmes programme on programme.qualification_level_id = ql.id
+                   where programme.institution_id = $1
+                 )
+             )
            union select cv.source_id from academic_curriculum_versions cv
              join academic_programmes p on p.id = cv.programme_id where p.institution_id = $1
            union select source_id from academic_courses where institution_id = $1
            union select st.source_id from academic_syllabus_topics st
              join academic_courses course on course.id = st.course_id where course.institution_id = $1
+           union select standard.source_id from academic_standards standard
+             where standard.id in (
+               select standard_id from academic_standard_mappings
+               where review_status = 'accepted' and entity_id in (
+                 select id from academic_institutions where id = $1
+                 union select id from academic_campuses where institution_id = $1
+                 union select id from academic_accreditations where institution_id = $1
+                 union select id from academic_programmes where institution_id = $1
+                 union select id from academic_courses where institution_id = $1
+                 union select st.id from academic_syllabus_topics st
+                   join academic_courses course on course.id = st.course_id where course.institution_id = $1
+               )
+             )
            union select mapping.source_id from academic_standard_mappings mapping
              where mapping.review_status = 'accepted' and mapping.entity_id in (
                select id from academic_institutions where id = $1
