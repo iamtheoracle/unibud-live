@@ -3,7 +3,14 @@ import path from "node:path";
 
 const ROOT = path.join(process.cwd(), "data", "media");
 
+function assertDurableRuntime() {
+  if (process.env.NETLIFY === "true" || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    throw new Error("Durable media storage is not configured for this serverless deployment.");
+  }
+}
+
 export async function writeMediaBytes(id: string, bytes: Buffer) {
+  assertDurableRuntime();
   await mkdir(ROOT, { recursive: true });
   const filePath = path.join(ROOT, id);
   await writeFile(filePath, bytes);
@@ -11,10 +18,12 @@ export async function writeMediaBytes(id: string, bytes: Buffer) {
 }
 
 export async function readMediaBytes(id: string) {
+  assertDurableRuntime();
   return readFile(path.join(ROOT, id));
 }
 
 export async function removeMediaBytes(id: string) {
+  assertDurableRuntime();
   try {
     await unlink(path.join(ROOT, id));
   } catch {
