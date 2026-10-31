@@ -240,3 +240,29 @@ Do not make SoulLync or WAYWARD decorative tiles. Their entry points must route 
 - Concierge cannot commit a purchase, order, booking, payment or deal without explicit user authorization.
 - SoulLync dating data is excluded from employment/service matching; WAYWARD routes to its real surface.
 - All listing and order actions respect blocks, privacy, moderation, jurisdictional eligibility and audit requirements.
+
+
+## Chat: pinned active transactions and automatic unpinning
+
+All buyer/provider conversations for an accepted order, service request or negotiated offer must use the canonical UNIBUD Chat system. Do not create a separate vendor inbox or parallel messaging product. When a transaction is accepted/confirmed, create or reuse a dedicated Chat thread linked to the listing and transaction/order ID. Pin that thread in a compact Active area at the top of Chat for both authorized parties. The pin should display a short context card (vendor/person, item or service, amount if agreed, fulfillment method, current status and next action) so users can identify the transaction immediately.
+
+Keep the transaction thread pinned while it is pending, being prepared, awaiting pickup/delivery, in progress, awaiting completion confirmation, awaiting payment confirmation, cancelled-but-unresolved, or disputed. Messages and structured status events (order accepted, preparation started, ready, dispatched, delivered, payment confirmed, completion confirmed, cancellation/dispute) belong in that same conversation. Send status notifications that deep-link to it.
+
+Automatically remove the thread from the Active/pinned transactions area only when BOTH required completion conditions are satisfied:
+1. Fulfillment is confirmed: the buyer/customer confirms receipt or completion, or an explicitly authorized and auditable alternative confirmation flow applies.
+2. Payment is confirmed: the integrated payment provider reports a successful settled/authorized state appropriate to the payment method, or for an explicitly supported offline/cash method both parties acknowledge payment in the transaction flow.
+
+For a genuinely free/unpaid offer, mark the payment condition as not applicable when the parties accept the terms; do not wait for a payment event. Never treat a vendor's delivered button alone as buyer confirmation, and never treat a buyer's paid message as provider-confirmed digital payment. If either condition is missing, disputed, reversed, refunded or uncertain, keep the transaction visible in Active with an accurate status and next action. Cancellation alone does not silently complete a transaction; unresolved refunds, returns or disputes remain active until resolved.
+
+When both conditions are satisfied, mark the transaction completed and automatically unpin/remove it from the Active area for both parties. This is an organizational change, NOT deletion of the conversation or its records. Preserve the full Chat history, deal/order summary, timestamps, consent/acceptance records, payment references, fulfillment confirmations and dispute/audit trail under the normal retention policy. Make completed transactions available from a compact Past transactions or conversation history filter, not as pinned active threads. Users must still be able to reopen the conversation and contact the other party subject to blocks, privacy and retention rules; reopening a completed thread must not reactivate the old order or imply a new deal.
+
+Support atomic, idempotent state transitions so duplicate provider webhooks, repeated taps or simultaneous confirmations cannot complete/unpin twice or corrupt the transaction. Verify each actor's authorization server-side, retain an append-only event log, and test both accounts see consistent pin/unpin state. A failed, reversed or chargeback payment must reopen/retain an appropriate unresolved state and trigger the dispute/refund workflow rather than silently remaining completed.
+
+### Chat transaction release tests
+
+- An accepted transaction thread appears pinned at the top of Chat for both parties.
+- It stays pinned after delivery is marked by the vendor until fulfillment is confirmed under the configured policy and payment is confirmed (or not applicable for free offers).
+- It unpins automatically for both parties after all completion conditions are satisfied.
+- Unpinning never deletes the conversation, transaction record or evidence; the thread remains available in history/past transactions.
+- Payment reversal, refund, chargeback, cancellation or dispute prevents false completion and follows the unresolved workflow.
+- Ordinary conversations are not pinned as transactions, and completing one transaction does not pin/unpin unrelated conversations.
