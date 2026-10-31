@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 import { Search, SlidersHorizontal, Plus, Users, BriefcaseBusiness, Utensils, Truck, Heart, Compass, ChevronRight, UserRound, Sparkles } from "lucide-react";
 import { Avatar, PersonMeta } from "@/components/unibud/person";
 import { RelationActions } from "@/components/unibud/relation-actions";
+import { ListingCard } from "@/components/unibud/listing-card";
+import { CATEGORIES } from "@/lib/unibud/catalog";
+import type { ListingCategory } from "@/lib/unibud/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { uniById } from "@/lib/unibud/catalog";
@@ -41,9 +44,12 @@ function Connect() {
   const catalog = useCatalog();
   const profile = useQuery({ queryKey: ["profile"], queryFn: () => getMyProfile(), enabled: Boolean(user) });
   const people = catalog.data?.people ?? [];
+  const listings = catalog.data?.listings ?? [];
+  const visibleListings = useMemo(() => listings.filter((listing) => opportunityCategory === "all" || listing.category === opportunityCategory), [listings, opportunityCategory]);
   const [view, setView] = useState<MainView>("people");
   const [tab, setTab] = useState<PeopleTab>("discover");
   const [q, setQ] = useState("");
+  const [opportunityCategory, setOpportunityCategory] = useState<ListingCategory | "all">("all");
   const incoming = useCampusStore((s) => s.incoming);
   const outgoing = useCampusStore((s) => s.outgoing);
   const connections = useCampusStore((s) => s.connections);
@@ -223,6 +229,36 @@ function Connect() {
               </Link>
             ))}
           </div>
+          <section className="mt-6">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold">Available around campus</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">Real listings from the UNIBUD marketplace</p>
+              </div>
+              <Link to="/market" className="text-xs font-medium text-primary">View all</Link>
+            </div>
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+              <button type="button" onClick={() => setOpportunityCategory("all")} className={cn("shrink-0 rounded-full px-3 py-2 text-xs font-medium", opportunityCategory === "all" ? "bg-foreground text-background" : "bg-muted text-muted-foreground")}>All</button>
+              {CATEGORIES.map((category) => (
+                <button key={category.id} type="button" onClick={() => setOpportunityCategory(category.id)} className={cn("shrink-0 rounded-full px-3 py-2 text-xs font-medium", opportunityCategory === category.id ? "bg-foreground text-background" : "bg-muted text-muted-foreground")}>{category.label}</button>
+              ))}
+            </div>
+            {catalog.isPending ? (
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                {[0, 1, 2, 3].map((item) => <div key={item} className="aspect-[4/5] animate-pulse rounded-2xl bg-muted" />)}
+              </div>
+            ) : visibleListings.length ? (
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                {visibleListings.slice(0, 6).map((listing) => <ListingCard key={listing.id} listing={listing} />)}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-2xl border border-dashed px-5 py-9 text-center">
+                <p className="text-sm font-medium">No listings in this category yet</p>
+                <p className="mt-1 text-xs text-muted-foreground">Try another category or publish the first offer.</p>
+                <Link to="/sell" className="mt-3 inline-flex text-sm font-medium text-primary">Create a listing</Link>
+              </div>
+            )}
+          </section>
           <section className="mt-5 rounded-2xl border border-dashed p-4">
             <p className="text-sm font-semibold">Your listings and activity</p>
             <p className="mt-1 text-xs text-muted-foreground">Manage your offers, applications, orders and active deals from one place.</p>
