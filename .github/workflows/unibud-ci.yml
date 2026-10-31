@@ -13,7 +13,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -40,10 +40,16 @@ jobs:
       - name: Agent and Spark tests (pre-UI gate)
         run: npm run test:agents
 
+      - name: Academic registry lint
+        run: npx eslint src/lib/academic-registry scripts/academic-registry-schema.test.mjs
+
       - name: Academic registry contract tests
         run: npm run test:academic-registry
 
       - name: Academic registry isolated database migration tests
         run: npm run test:academic-registry-db
 
-      # Full UI/template tests and production build remain deferred until UI implementation begins.
+      - name: Production application build (without live database migration)
+        run: npm run build:netlify
+
+      # Full application lint baseline and staging smoke tests remain separate release gates.
