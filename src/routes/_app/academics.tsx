@@ -9,7 +9,7 @@ import {
   searchAcademicInstitutions,
 } from "@/lib/academic-registry/server";
 import { WEST_AFRICA_COUNTRY_SCOPE } from "@/lib/academic-registry/ingestion/west-africa-scope";
-import { ISO_ALPHA2_COUNTRY_CODES } from "@/lib/academic-registry/types";
+import { ISO_ALPHA2_COUNTRY_CODES, isIsoAlpha2CountryCode } from "@/lib/academic-registry/types";
 
 export const Route = createFileRoute("/_app/academics")({ component: AcademicRegistry });
 
@@ -48,7 +48,7 @@ function AcademicRegistry() {
         ownershipType: ownershipType === "all" ? undefined : ownershipType,
       },
     }),
-    enabled: ISO_ALPHA2_COUNTRY_CODES.has(countryCode.trim().toUpperCase()),
+    enabled: isIsoAlpha2CountryCode(countryCode.trim()),
   });
 
   const details = useQuery({
