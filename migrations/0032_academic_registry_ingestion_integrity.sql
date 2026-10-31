@@ -78,7 +78,8 @@ create table if not exists academic_entity_match_reviews (
   reviewer_id text,
   reviewed_at timestamptz,
   created_at timestamptz not null default now(),
-  check (left_entity_id <> right_entity_id),
+  check (left_entity_id < right_entity_id),
+  unique (country_code, entity_type, left_entity_id, right_entity_id),
   check (review_status <> 'accepted' or
     (reviewer_id is not null and reviewed_at is not null and evidence_source_id is not null))
 );
