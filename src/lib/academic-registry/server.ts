@@ -553,7 +553,7 @@ export const reviewInstitutionCandidate = createServerFn({ method: "POST" })
            review_status, reviewed_at, reviewer_id
          )
          select $3, updated.source_id, 'institution', updated.id, 'verification_status',
-           jsonb_build_object('decision', $2, 'note', $4, 'status', updated.verification_status),
+           jsonb_build_object('decision', $2::text, 'note', $4::text, 'status', updated.verification_status),
            case when $2 = 'verify' then 'accepted' else 'rejected' end,
            now(), $5
          from updated
