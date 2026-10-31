@@ -141,3 +141,24 @@ create index if not exists academic_standard_mappings_evidence_idx
 alter table academic_institution_aliases
   add constraint academic_institution_aliases_source_fk
   foreign key (source_id) references academic_sources(id) not valid;
+
+alter table academic_countries
+  add column if not exists source_id text references academic_sources(id),
+  add column if not exists verified_at timestamptz;
+
+alter table academic_authorities
+  add column if not exists source_id text references academic_sources(id),
+  add column if not exists verified_at timestamptz;
+
+alter table academic_countries
+  add constraint academic_countries_evidence_gate
+  check (source_status <> 'verified' or (source_id is not null and verified_at is not null)) not valid;
+
+alter table academic_authorities
+  add constraint academic_authorities_evidence_gate
+  check (source_status <> 'verified' or (source_id is not null and verified_at is not null)) not valid;
+
+create index if not exists academic_countries_evidence_idx
+  on academic_countries (source_id, verified_at);
+create index if not exists academic_authorities_evidence_idx
+  on academic_authorities (country_code, source_id, verified_at);
