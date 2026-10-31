@@ -8,6 +8,8 @@ export interface AcademicSourceDefinition {
   officialUrl: string;
   licenceOrTerms?: string;
   expectedRefreshDays?: number;
+  coverageDomains?: string[];
+  reviewCaveats?: string[];
   enabled: boolean;
 }
 
