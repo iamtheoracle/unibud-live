@@ -21,19 +21,34 @@ test("academic registry migrations enforce evidence, source identity, and idempo
     // Compile every public registry read against the isolated schema. This catches
     // drift between the SQL handlers and the durable migration contract.
     const serverSource = await readFile(join(root, "src/lib/academic-registry/server.ts"), "utf8");
-    const searchMatch = serverSource.match(
-      /return sql\\.query<AcademicInstitutionSearchResult>\\(\\s*\\x60([\\s\\S]*?)\\x60,\\s*params,/,
-    );
-    assert.ok(searchMatch, "institution search SQL must remain discoverable for schema verification");
-    const searchSql = searchMatch[1]
+    const searchCall = serverSource.indexOf("return sql.query<AcademicInstitutionSearchResult>(");
+    assert.notEqual(searchCall, -1, "institution search SQL must remain discoverable for schema verification");
+    const searchTickStart = serverSource.indexOf("`", searchCall);
+    const searchTickEnd = serverSource.indexOf("`,", searchTickStart);
+    assert.ok(searchTickStart >= 0 && searchTickEnd > searchTickStart, "institution search SQL must be a template string");
+    const searchSql = serverSource
+      .slice(searchTickStart + 1, searchTickEnd)
       .replace('${clauses.join(" and ")}', "true")
-      .replace(/\\$\\$\\{limitParam\\}/g, "$2")
-      .replace(/\\$\\$\\{offsetParam\\}/g, "$3");
+      .replaceAll("$${limitParam}", "$2")
+      .replaceAll("$${offsetParam}", "$3");
     await db.query(searchSql, ["NG", 20, 0]);
 
-    const detailQueries = [...serverSource.matchAll(
-      /sql\\.query<SerializableAcademicRecord>\\(\\s*\\x60([\\s\\S]*?)\\x60,\\s*\\[data\\.institutionId\\]\\s*\\)/g,
-    )].map((match) => match[1]);
+    const detailQueries = [];
+    let detailCursor = 0;
+    while (true) {
+      const callStart = serverSource.indexOf("sql.query<SerializableAcademicRecord>(", detailCursor);
+      if (callStart === -1) break;
+      const tickStart = serverSource.indexOf("`", callStart);
+      const tickEnd = serverSource.indexOf("`,", tickStart);
+      if (tickStart === -1 || tickEnd === -1) break;
+      const parameterReference = serverSource.indexOf("[data.institutionId]", tickEnd);
+      if (parameterReference === -1 || parameterReference - tickEnd > 80) {
+        detailCursor = tickEnd + 2;
+        continue;
+      }
+      detailQueries.push(serverSource.slice(tickStart + 1, tickEnd));
+      detailCursor = parameterReference + 1;
+    }
     assert.ok(detailQueries.length >= 8, "all institution detail SQL reads must be covered");
     for (const query of detailQueries) {
       await db.query(query, ["inst-1"]);
