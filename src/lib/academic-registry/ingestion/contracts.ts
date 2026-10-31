@@ -10,6 +10,8 @@ export interface AcademicSourceDefinition {
   expectedRefreshDays?: number;
   coverageDomains?: string[];
   reviewCaveats?: string[];
+  automationPermission: "not_reviewed" | "approved" | "prohibited";
+  adapterStatus: "not_implemented" | "configured" | "verified";
   enabled: boolean;
 }
 
@@ -57,4 +59,11 @@ export interface AcademicSourceAdapter {
     sourceVersion?: string;
   }>;
   mapInstitution?(record: RawAcademicSourceRecord): InstitutionCandidate | null;
+}
+
+/** A source is importable only when terms, adapter, and explicit enablement agree. */
+export function canImportAcademicSource(source: AcademicSourceDefinition): boolean {
+  return source.enabled &&
+    source.automationPermission === "approved" &&
+    (source.adapterStatus === "configured" || source.adapterStatus === "verified");
 }
