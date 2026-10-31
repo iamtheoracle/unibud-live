@@ -9,8 +9,28 @@ import {
   searchAcademicInstitutions,
 } from "@/lib/academic-registry/server";
 import { WEST_AFRICA_COUNTRY_SCOPE } from "@/lib/academic-registry/ingestion/west-africa-scope";
+import { ISO_ALPHA2_COUNTRY_CODES } from "@/lib/academic-registry/types";
 
 export const Route = createFileRoute("/_app/academics")({ component: AcademicRegistry });
+
+const countryDisplayNames = new Intl.DisplayNames(["en"], { type: "region" });
+const GLOBAL_COUNTRY_OPTIONS = Array.from(ISO_ALPHA2_COUNTRY_CODES, (countryCode) => ({
+  countryCode,
+  countryName: countryDisplayNames.of(countryCode) ?? countryCode,
+})).sort((a, b) => a.countryName.localeCompare(b.countryName));
+
+function safeExternalUrl(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    const url = new URL(value);
+    if ((url.protocol !== "https:" && url.protocol !== "http:") || url.username || url.password) {
+      return null;
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
 
 function AcademicRegistry() {
   const [countryCode, setCountryCode] = useState("NG");
@@ -28,7 +48,7 @@ function AcademicRegistry() {
         ownershipType: ownershipType === "all" ? undefined : ownershipType,
       },
     }),
-    enabled: /^[a-z]{2}$/i.test(countryCode.trim()),
+    enabled: ISO_ALPHA2_COUNTRY_CODES.has(countryCode.trim().toUpperCase()),
   });
 
   const details = useQuery({
@@ -48,7 +68,7 @@ function AcademicRegistry() {
 
       <section className="mt-6 rounded-3xl bg-card p-4 ring-1 ring-border">
         <label className="block text-xs font-medium text-muted-foreground" htmlFor="registry-country">
-          Browse West Africa by country
+          Browse by country
         </label>
         <select
           id="registry-country"
@@ -59,7 +79,7 @@ function AcademicRegistry() {
           }}
           className="mt-1 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"
         >
-          {WEST_AFRICA_COUNTRY_SCOPE.map((country) => (
+          {GLOBAL_COUNTRY_OPTIONS.map((country) => (
             <option key={country.countryCode} value={country.countryCode}>
               {country.countryName} ({country.countryCode})
             </option>
@@ -69,15 +89,17 @@ function AcademicRegistry() {
           <p className="font-medium text-foreground">
             {selectedCountry?.sourceDiscoveryStatus === "source_identified"
               ? "Official source located · data import still pending"
-              : "Official source discovery still in progress"}
+              : selectedCountry
+                ? "Official source discovery still in progress"
+                : "Country-specific source discovery not yet configured"}
           </p>
           <p className="mt-1">
-            {selectedCountry?.sourceNotes ?? "Choose a country to view its source-discovery status."}
+            {selectedCountry?.sourceNotes ?? "No verified country-specific source coverage is recorded yet. This does not mean the country has no institutions."}
           </p>
           {selectedCountry?.officialSourceUrl ? (
             <a
               className="mt-2 inline-flex items-center gap-1 underline"
-              href={selectedCountry.officialSourceUrl}
+              href={safeExternalUrl(selectedCountry.officialSourceUrl) ?? undefined}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -160,7 +182,7 @@ function AcademicRegistry() {
                     {institution.officialWebsite ? (
                       <a
                         className="inline-flex h-9 items-center gap-1 rounded-full px-3 text-xs underline"
-                        href={institution.officialWebsite}
+                        href={safeExternalUrl(institution.officialWebsite) ?? undefined}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -227,8 +249,8 @@ function AcademicRegistry() {
                           {String(programme.qualificationLevel ?? "Level not recorded")}
                           {programme.awardTitle ? " · " + String(programme.awardTitle) : ""}
                         </p>
-                        {programme.officialSourceUrl ? (
-                          <a className="mt-1 inline-block text-xs underline" href={String(programme.officialSourceUrl)} target="_blank" rel="noopener noreferrer">Programme source</a>
+                        {safeExternalUrl(programme.officialSourceUrl) ? (
+                          <a className="mt-1 inline-block text-xs underline" href={safeExternalUrl(programme.officialSourceUrl)!} target="_blank" rel="noopener noreferrer">Programme source</a>
                         ) : null}
                       </li>
                     ))}
@@ -258,7 +280,7 @@ function AcademicRegistry() {
                       <li key={String(topic.id)}>
                         <span className="font-medium">{String(topic.title)}</span>
                         {topic.description ? <p className="mt-1 text-muted-foreground">{String(topic.description)}</p> : null}
-                        {topic.sourceUrl ? <a className="mt-1 inline-block text-xs underline" href={String(topic.sourceUrl)} target="_blank" rel="noopener noreferrer">Syllabus source</a> : null}
+                        {safeExternalUrl(topic.sourceUrl) ? <a className="mt-1 inline-block text-xs underline" href={safeExternalUrl(topic.sourceUrl)!} target="_blank" rel="noopener noreferrer">Syllabus source</a> : null}
                       </li>
                     ))}
                   </ol>
@@ -275,18 +297,42 @@ function AcademicRegistry() {
                           {item.referenceNumber ? "Ref " + String(item.referenceNumber) + " · " : ""}
                           {item.validFrom ? String(item.validFrom) : "Start date unknown"} – {item.validUntil ? String(item.validUntil) : "No end date recorded"}
                         </p>
-                        {item.officialSourceUrl ? <a className="mt-1 inline-block text-xs underline" href={String(item.officialSourceUrl)} target="_blank" rel="noopener noreferrer">Accreditation source</a> : null}
+                        {safeExternalUrl(item.officialSourceUrl) ? <a className="mt-1 inline-block text-xs underline" href={safeExternalUrl(item.officialSourceUrl)!} target="_blank" rel="noopener noreferrer">Accreditation source</a> : null}
                       </li>
                     ))}
                     {details.data.standards.map((item) => (
                       <li key={String(item.id) + String(item.entityId)} className="rounded-xl bg-secondary p-3">
                         <p className="font-medium">{String(item.title)}</p>
                         <p className="mt-1 text-xs text-muted-foreground">Assessment: {String(item.complianceStatus).replaceAll("_", " ")}</p>
-                        {item.officialSourceUrl ? <a className="mt-1 inline-block text-xs underline" href={String(item.officialSourceUrl)} target="_blank" rel="noopener noreferrer">Standard source</a> : null}
+                        {safeExternalUrl(item.officialSourceUrl) ? <a className="mt-1 inline-block text-xs underline" href={safeExternalUrl(item.officialSourceUrl)!} target="_blank" rel="noopener noreferrer">Standard source</a> : null}
                       </li>
                     ))}
                   </ul>
                 ) : <p className="mt-1 text-sm text-muted-foreground">No verified accreditation or standards mapping recorded yet.</p>}
+              </div>
+              <div>
+                <h3 className="font-medium">Source evidence and retrieval history</h3>
+                {details.data.evidenceSources.length ? (
+                  <ul className="mt-2 space-y-2 text-sm">
+                    {details.data.evidenceSources.map((source) => (
+                      <li key={String(source.id)} className="rounded-xl bg-secondary p-3">
+                        <p className="font-medium">{String(source.publisherName)}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {String(source.sourceType).replaceAll("_", " ")}
+                          {source.retrievedAt ? " · Retrieved " + new Date(String(source.retrievedAt)).toLocaleString() : ""}
+                        </p>
+                        {safeExternalUrl(source.sourceUrl) ? (
+                          <a className="mt-1 inline-block text-xs underline" href={safeExternalUrl(source.sourceUrl)!} target="_blank" rel="noopener noreferrer">
+                            Inspect source evidence
+                          </a>
+                        ) : null}
+                        {source.contentHash ? (
+                          <p className="mt-1 break-all text-[10px] text-muted-foreground">Content hash: {String(source.contentHash)}</p>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                ) : <p className="mt-1 text-sm text-muted-foreground">No inspectable source records are linked to this profile yet.</p>}
               </div>
             </div>
           ) : (
