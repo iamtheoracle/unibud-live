@@ -27,7 +27,7 @@ Dev server: `http://localhost:8080`
 |---|---|
 | `npm run dev` | Local app |
 | `npm run typecheck` | TypeScript |
-| `npm test` | Agent and integration test suite (`test:agents`) |
+| `npm test` | Agent test suite (`test:agents`) |
 | `npm run lint` | ESLint |
 | `npm run build` | Production build + migrate |
 
