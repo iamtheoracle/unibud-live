@@ -120,3 +120,20 @@ create index if not exists academic_accreditations_evidence_idx
   on academic_accreditations (institution_id, source_id, verified_at);
 create index if not exists academic_standards_evidence_idx
   on academic_standards (verification_status, source_id, verified_at);
+
+alter table academic_qualification_frameworks
+  add column if not exists verified_at timestamptz,
+  add column if not exists source_id text references academic_sources(id);
+
+alter table academic_qualification_frameworks
+  add constraint academic_qualification_frameworks_evidence_gate
+  check (verification_status <> 'verified' or (source_id is not null and verified_at is not null)) not valid;
+
+alter table academic_standard_mappings
+  add constraint academic_standard_mappings_evidence_gate
+  check (review_status <> 'accepted' or (source_id is not null and reviewer_id is not null and assessed_at is not null)) not valid;
+
+create index if not exists academic_frameworks_evidence_idx
+  on academic_qualification_frameworks (verification_status, source_id, verified_at);
+create index if not exists academic_standard_mappings_evidence_idx
+  on academic_standard_mappings (review_status, source_id, assessed_at);
