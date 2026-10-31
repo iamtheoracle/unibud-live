@@ -79,8 +79,15 @@ export const reportMedia = createServerFn({ method: "POST" })
   .validator((input: { mediaId?: string; audioId?: string; reason: string }) => input)
   .handler(async ({ context, data }) => {
     const sql = await getSql();
+    const reason = data.reason.trim().slice(0, 1000);
+    if (!reason || (!data.mediaId && !data.audioId)) {
+      throw new Error("A report target and reason are required.");
+    }
+    if (data.mediaId && data.audioId) {
+      throw new Error("Report one media or audio item at a time.");
+    }
     await sql`insert into media_reports (id, media_id, audio_id, reporter_id, reason)
-      values (${crypto.randomUUID()}, ${data.mediaId ?? null}, ${data.audioId ?? null}, ${context.userId}, ${data.reason})`;
+      values (${crypto.randomUUID()}, ${data.mediaId ?? null}, ${data.audioId ?? null}, ${context.userId}, ${reason})`;
     return { ok: true };
   });
 
@@ -114,41 +121,23 @@ export const attachBudFile = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/**
+ * Room messaging is intentionally unavailable until room membership and
+ * moderation tables are enforced on every read/write. Accepting a room ID alone
+ * is not authorization and would expose private room conversations.
+ */
 export const listRoomMessages = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .validator((roomId: string) => roomId)
-  .handler(async ({ data: roomId }) => {
-    const sql = await getSql();
-    const rows = await sql`select * from room_messages where room_id = ${roomId} order by created_at asc`;
-    return rows.map((r) => ({
-      id: String(r.id),
-      sender: String(r.sender_name),
-      body: String(r.body),
-      mediaId: r.media_id ? String(r.media_id) : undefined,
-      shareKind: r.share_kind ? String(r.share_kind) : undefined,
-      shareJson: r.share_json ? String(r.share_json) : undefined,
-      createdAt: String(r.created_at),
-    }));
+  .handler(async () => {
+    throw new Error("Room messaging is temporarily unavailable while access controls are completed.");
   });
 
 export const sendRoomMessage = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { roomId: string; body: string; senderName: string; mediaId?: string; shareKind?: string; shareJson?: string }) => input)
-  .handler(async ({ context, data }) => {
-    const sql = await getSql();
-    const id = crypto.randomUUID();
-    await sql`insert into room_messages (id, room_id, user_id, sender_name, body, media_id, share_kind, share_json)
-      values (${id}, ${data.roomId}, ${context.userId}, ${data.senderName}, ${data.body}, ${data.mediaId ?? null}, ${data.shareKind ?? null}, ${data.shareJson ?? null})`;
-    const rows = await sql`select * from room_messages where room_id = ${data.roomId} order by created_at asc`;
-    return rows.map((r) => ({
-      id: String(r.id),
-      sender: String(r.sender_name),
-      body: String(r.body),
-      mediaId: r.media_id ? String(r.media_id) : undefined,
-      shareKind: r.share_kind ? String(r.share_kind) : undefined,
-      shareJson: r.share_json ? String(r.share_json) : undefined,
-      createdAt: String(r.created_at),
-    }));
+  .handler(async () => {
+    throw new Error("Room messaging is temporarily unavailable while access controls are completed.");
   });
 
 export const persistAudioEvent = createServerFn({ method: "POST" })
