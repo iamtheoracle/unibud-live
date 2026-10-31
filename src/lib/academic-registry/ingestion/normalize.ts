@@ -35,7 +35,7 @@ export function normalizeInstitutionCandidate(
   }
 
   const countryCode = normalizeCountryCode(requiredText(input.countryCode, "Country code"));
-  const name = requiredText(input.name, "Institution name").replace(/\\s+/g, " ");
+  const name = requiredText(input.name, "Institution name").replace(/\s+/g, " ");
   const sourceId = requiredText(input.sourceId, "Registered source ID");
   const externalId = requiredText(input.externalId, "Source-specific external ID");
   const institutionTypeCode = requiredText(input.institutionTypeCode, "Institution type code");
