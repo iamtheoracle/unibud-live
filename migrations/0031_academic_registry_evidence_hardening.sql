@@ -137,3 +137,7 @@ create index if not exists academic_frameworks_evidence_idx
   on academic_qualification_frameworks (verification_status, source_id, verified_at);
 create index if not exists academic_standard_mappings_evidence_idx
   on academic_standard_mappings (review_status, source_id, assessed_at);
+
+alter table academic_institution_aliases
+  add constraint academic_institution_aliases_source_fk
+  foreign key (source_id) references academic_sources(id) not valid;
