@@ -11,7 +11,7 @@ import { useCampusStore } from "@/lib/unibud/campus-store";
 import { useStudioStore } from "@/lib/studio/store";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { cn } from "@/lib/utils";
-import { isVideoPost, likeKey, loopStream, postsForLane, SQUARE_LANES, type SquareLane } from "@/lib/unibud/square-stream";
+import { isVideoPost, likeKey, postsForLane, SQUARE_LANES, type SquareLane } from "@/lib/unibud/square-stream";
 import { addSquareReply, toggleCommentLike as toggleDbCommentLike, togglePostLike, toggleSave } from "@/lib/unibud/server";
 import { toast } from "sonner";
 import type { DiscoveryItem, FeedPost } from "@/lib/unibud/types";
@@ -39,10 +39,6 @@ function Square() {
     if (user && !onboardingDone) void nav({ to: "/welcome" });
   }, [user, isPending, onboardingDone, nav]);
 
-  if (isPending || (user && !onboardingDone)) {
-    return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
-  }
-
   const [lane, setLane] = useState<SquareLane>("on-stream");
   const [peekStart, setPeekStart] = useState<string | undefined>();
   const [shown, setShown] = useState(10);
@@ -68,20 +64,26 @@ function Square() {
     [merged, lane, following, connections, interests, likeCounts, searches],
   );
 
-  const stream = useMemo(() => loopStream(lanePosts, shown), [lanePosts, shown]);
+  const stream = useMemo(() => lanePosts.slice(0, shown), [lanePosts, shown]);
 
   useEffect(() => {
     const el = sentinel.current;
-    if (!el) return;
+    if (!el || shown >= lanePosts.length) return;
     const io = new IntersectionObserver(
       (entries) => {
-        if (entries.some((e) => e.isIntersecting)) setShown((n) => n + 8);
+        if (entries.some((e) => e.isIntersecting)) {
+          setShown((n) => Math.min(n + 8, lanePosts.length));
+        }
       },
       { rootMargin: "400px" },
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [lane, lanePosts.length]);
+  }, [lane, lanePosts.length, shown]);
+
+  if (isPending || (user && !onboardingDone)) {
+    return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" aria-label="Loading your Square" />;
+  }
 
   function openPeek(id: string) {
     setPeekStart(id);
