@@ -13,6 +13,9 @@ test("Nigeria source inventory covers the main regulator categories without pret
 test("unreviewed source adapters remain disabled", () => {
   assert.equal(enabledNigeriaAcademicSources().length, 0);
   assert.ok(NIGERIA_ACADEMIC_SOURCES.every((source) => source.enabled === false));
+  assert.ok(NIGERIA_ACADEMIC_SOURCES.every((source) => source.automationPermission === "not_reviewed"));
+  assert.ok(NIGERIA_ACADEMIC_SOURCES.every((source) => source.adapterStatus === "not_implemented"));
+  assert.ok(NIGERIA_ACADEMIC_SOURCES.every((source) => canImportAcademicSource(source) === false));
   assert.ok(NIGERIA_ACADEMIC_SOURCES.every((source) => (source.coverageDomains?.length ?? 0) > 0));
   assert.ok(NIGERIA_ACADEMIC_SOURCES.every((source) => (source.reviewCaveats?.length ?? 0) > 0));
 });
@@ -37,4 +40,26 @@ test("preserves NCCE local categories and warns about source data quality", () =
   assert.ok(source);
   assert.ok(source.reviewCaveats?.some((note) => note.includes("NCE-awarding")));
   assert.ok(source.reviewCaveats?.some((note) => note.includes("placeholder")));
+});
+
+test("a source can run only after terms approval, adapter configuration, and explicit enablement", () => {
+  const source = NIGERIA_ACADEMIC_SOURCES[0];
+  assert.equal(canImportAcademicSource({
+    ...source,
+    automationPermission: "approved",
+    adapterStatus: "configured",
+    enabled: true,
+  }), true);
+  assert.equal(canImportAcademicSource({
+    ...source,
+    automationPermission: "not_reviewed",
+    adapterStatus: "configured",
+    enabled: true,
+  }), false);
+  assert.equal(canImportAcademicSource({
+    ...source,
+    automationPermission: "approved",
+    adapterStatus: "not_implemented",
+    enabled: true,
+  }), false);
 });
