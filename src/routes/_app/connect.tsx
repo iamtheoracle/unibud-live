@@ -1,11 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Search, SlidersHorizontal, Plus, Users, BriefcaseBusiness, Utensils, Truck, Heart, Compass, ChevronRight, UserRound, Sparkles } from "lucide-react";
 import { Avatar, PersonMeta } from "@/components/unibud/person";
 import { RelationActions } from "@/components/unibud/relation-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PEOPLE, uniById } from "@/lib/unibud/catalog";
+import { uniById } from "@/lib/unibud/catalog";
+import { useCatalog } from "@/lib/unibud/queries";
+import { getMyProfile } from "@/lib/unibud/server";
+import { useAuthReady } from "@/components/unibud/sign-in-gate";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { academicLine, proximityScore, sharedContext } from "@/lib/unibud/identity";
 import { cn } from "@/lib/utils";
@@ -25,14 +29,18 @@ const peopleTabs: { id: PeopleTab; label: string }[] = [
 ];
 
 const opportunityTypes = [
-  { label: "Work", detail: "Remote jobs, freelance and internships", icon: BriefcaseBusiness },
-  { label: "Services", detail: "Skills, domestic help and local services", icon: Users },
-  { label: "Food & goods", detail: "Cafeterias, meals and everyday items", icon: Utensils },
-  { label: "Delivery", detail: "Pickup, drop-off and errands", icon: Truck },
-  { label: "Requests", detail: "Ask the community for what you need", icon: Sparkles },
+  { label: "Work & opportunities", detail: "Campus opportunities, scholarships and announcements", icon: BriefcaseBusiness, to: "/news" as const },
+  { label: "Services", detail: "Offer skills, tutoring and local services", icon: Users, to: "/creator" as const },
+  { label: "Food & goods", detail: "Browse meals, campus sellers and everyday items", icon: Utensils, to: "/market" as const, search: { cat: "food" as const } },
+  { label: "Delivery & transport", detail: "Find transport-related listings and offers", icon: Truck, to: "/market" as const, search: { cat: "transport" as const } },
+  { label: "Community requests", detail: "Ask your campus community for help", icon: Sparkles, to: "/communities" as const },
 ];
 
 function Connect() {
+  const { user } = useAuthReady();
+  const catalog = useCatalog();
+  const profile = useQuery({ queryKey: ["profile"], queryFn: () => getMyProfile(), enabled: Boolean(user) });
+  const people = catalog.data?.people ?? [];
   const [view, setView] = useState<MainView>("people");
   const [tab, setTab] = useState<PeopleTab>("discover");
   const [q, setQ] = useState("");
@@ -49,32 +57,32 @@ function Connect() {
   const department = useCampusStore((s) => s.department);
   const lens = {
     universityId: homeCampusId || "unilag",
-    program: "Computer Engineering",
-    year: "300",
+    program: profile.data?.program || "",
+    year: profile.data?.year || "",
     faculty,
     department,
   };
 
   const filtered = useMemo(
     () =>
-      PEOPLE.filter((p) => {
+      people.filter((p) => {
         const hay = `${p.name} ${p.handle} ${p.program} ${p.year} ${p.universityId} ${p.faculty ?? ""} ${p.department ?? ""}`.toLowerCase();
         return !q.trim() || hay.includes(q.toLowerCase());
       }),
-    [q],
+    [people, q],
   );
 
   const list =
     tab === "requests"
-      ? PEOPLE.filter((p) => incoming.includes(p.handle))
+      ? people.filter((p) => incoming.includes(p.handle))
       : tab === "sent"
-        ? PEOPLE.filter((p) => outgoing.includes(p.handle))
+        ? people.filter((p) => outgoing.includes(p.handle))
         : tab === "connections"
-          ? PEOPLE.filter((p) => connections.includes(p.handle))
+          ? people.filter((p) => connections.includes(p.handle))
           : tab === "following"
-            ? PEOPLE.filter((p) => following.includes(p.handle))
+            ? people.filter((p) => following.includes(p.handle))
             : tab === "followers"
-              ? PEOPLE.filter((p) => followers.includes(p.handle))
+              ? people.filter((p) => followers.includes(p.handle))
               : filtered;
 
   const shown =
@@ -92,10 +100,10 @@ function Connect() {
             People, opportunities and everyday help — all in one place.
           </p>
         </div>
-        <Button size="sm" className="shrink-0 gap-2 rounded-full">
+        <Link to="/sell" className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:opacity-90">
           <Plus className="size-4" />
           Post
-        </Button>
+        </Link>
       </header>
 
       <div className="mt-5 grid grid-cols-2 rounded-2xl bg-muted/70 p-1">
@@ -204,15 +212,15 @@ function Connect() {
             <p className="mt-1 text-sm text-muted-foreground">Find work, offer a service, order something or ask for help.</p>
           </section>
           <div className="mt-4 divide-y rounded-2xl border bg-card">
-            {opportunityTypes.map(({ label, detail, icon: Icon }) => (
-              <button key={label} type="button" className="flex w-full items-center gap-3 p-4 text-left transition hover:bg-muted/50">
+            {opportunityTypes.map(({ label, detail, icon: Icon, to, search }) => (
+              <Link key={label} to={to} search={search} className="flex w-full items-center gap-3 p-4 text-left transition hover:bg-muted/50">
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted"><Icon className="size-5" /></span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-medium">{label}</span>
                   <span className="mt-0.5 block text-xs text-muted-foreground">{detail}</span>
                 </span>
                 <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-              </button>
+              </Link>
             ))}
           </div>
           <section className="mt-5 rounded-2xl border border-dashed p-4">
@@ -234,12 +242,6 @@ function Connect() {
           <Link to="/messages" className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm">
             <span>Chat</span><ChevronRight className="size-4 text-muted-foreground" />
           </Link>
-          <div className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm">
-            <span>SoulLync</span><Heart className="size-4 text-muted-foreground" />
-          </div>
-          <div className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm">
-            <span>WAYWARD</span><Compass className="size-4 text-muted-foreground" />
-          </div>
           <Link to="/riff" className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm">
             <span>Riff</span><ChevronRight className="size-4 text-muted-foreground" />
           </Link>
