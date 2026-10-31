@@ -12,9 +12,9 @@
  * `process.env` entry always wins, so an explicit override still works.
  *
  * That precedence also means the file governs this workspace only. A deployed
- * build runs with the provider's project env, where the deployer sets
- * `VITE_AUTH_ENABLED` itself (today unconditionally `"true"`), so the deployed
- * flag is the platform's, not this file's.
+ * build runs with the provider's project config. Netlify currently sets
+ * `VITE_AUTH_ENABLED=false` in `netlify.toml`; no site-level override is
+ * assumed. Enabling auth requires an explicit, verified deployment change.
  *
  * Vite picks the values up because `loadEnv` prefix-matches entries already in
  * `process.env`, which is why the merge has to happen before Vite starts.
