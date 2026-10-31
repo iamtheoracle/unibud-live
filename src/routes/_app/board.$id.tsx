@@ -29,34 +29,26 @@ function UniBoard() {
   const [inClass, setInClass] = useState(false);
   const qc = useQueryClient();
 
-  if (!course) {
-    return (
-      <main className="px-5 py-10">
-        <p className="text-sm text-muted-foreground">That UniBoard is not in the catalogue.</p>
-        <Link to="/board" className="mt-3 inline-block text-sm font-medium">Back to Board</Link>
-      </main>
-    );
-  }
-
-  const session = BOARD_SESSIONS.find((s) => s.id === course.boardSessionId || s.course === course.code);
+  const session = course ? BOARD_SESSIONS.find((s) => s.id === course.boardSessionId || s.course === course.code) : undefined;
   const present = session ? liveAttendance[session.id] === "present" : false;
   const inRoom = session ? livePresence[session.id] === "in" : false;
-  const pods = EDU_PODCASTS.filter((p) => p.course === course.code);
-  const budMedia = BUD_MEDIA.filter((m) => m.title.includes(course.code));
+  const pods = course ? EDU_PODCASTS.filter((p) => p.course === course.code) : [];
+  const budMedia = course ? BUD_MEDIA.filter((m) => m.title.includes(course.code)) : [];
 
   const anns = useQuery({
-    queryKey: ["anns", course.code],
-    queryFn: () => listAnnouncements({ data: course.code }),
+    queryKey: ["anns", course?.code ?? id],
+    queryFn: () => listAnnouncements({ data: course?.code ?? id }),
+    enabled: Boolean(course),
   });
   const questions = useQuery({
     queryKey: ["q", session?.id],
     queryFn: () => listClassQuestions({ data: session!.id }),
-    enabled: Boolean(session),
+    enabled: Boolean(course && session),
   });
   const roster = useQuery({
     queryKey: ["att", session?.id],
     queryFn: () => listAttendance({ data: session!.id }),
-    enabled: Boolean(lecturer && session),
+    enabled: Boolean(course && lecturer && session),
   });
 
   const sendQ = useMutation({
@@ -67,13 +59,22 @@ function UniBoard() {
     },
   });
   const sendAnn = useMutation({
-    mutationFn: () => postAnnouncement({ data: { courseCode: course.code, title: annTitle, body: annBody } }),
+    mutationFn: () => postAnnouncement({ data: { courseCode: course!.code, title: annTitle, body: annBody } }),
     onSuccess: (d) => {
       setAnnTitle("");
       setAnnBody("");
-      qc.setQueryData(["anns", course.code], d);
+      qc.setQueryData(["anns", course!.code], d);
     },
   });
+
+  if (!course) {
+    return (
+      <main className="px-5 py-10">
+        <p className="text-sm text-muted-foreground">That UniBoard is not in the catalogue.</p>
+        <Link to="/board" className="mt-3 inline-block text-sm font-medium">Back to Board</Link>
+      </main>
+    );
+  }
 
   async function join() {
     if (!session) return;
