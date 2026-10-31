@@ -448,6 +448,11 @@ export const getInstitutionReviewQueue = createServerFn({ method: "GET" })
          and institution_type.source_id is not null
          and institution_type.verified_at is not null
          and source.reliability_status in ('official','reviewed')
+         and exists (
+           select 1 from academic_sources type_source
+           where type_source.id = institution_type.source_id
+             and type_source.reliability_status in ('official','reviewed')
+         )
        order by institution.created_at asc
        limit $1`,
       [data.limit],
@@ -493,6 +498,14 @@ export const reviewInstitutionCandidate = createServerFn({ method: "POST" })
              select 1 from academic_sources source
              where source.id = institution.source_id
                and source.reliability_status in ('official','reviewed')
+           )
+           and exists (
+             select 1 from academic_institution_types institution_type
+             join academic_sources type_source on type_source.id = institution_type.source_id
+             where institution_type.id = institution.institution_type_id
+               and institution_type.verification_status = 'verified'
+               and institution_type.verified_at is not null
+               and type_source.reliability_status in ('official','reviewed')
            )
          returning institution.id, institution.source_id, institution.verification_status
        ),
