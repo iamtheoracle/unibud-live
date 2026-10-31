@@ -36,16 +36,24 @@ function AcademicRegistry() {
   const [countryCode, setCountryCode] = useState("NG");
   const [searchText, setSearchText] = useState("");
   const [ownershipType, setOwnershipType] = useState("all");
+  const [institutionTypeCode, setInstitutionTypeCode] = useState("");
+  const [administrativeRegion, setAdministrativeRegion] = useState("");
+  const [programmeLevelLabel, setProgrammeLevelLabel] = useState("");
+  const [subjectAreaCode, setSubjectAreaCode] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedCountry = WEST_AFRICA_COUNTRY_SCOPE.find((country) => country.countryCode === countryCode);
 
   const registry = useQuery({
-    queryKey: ["academic-registry", countryCode, searchText, ownershipType],
+    queryKey: ["academic-registry", countryCode, searchText, ownershipType, institutionTypeCode, administrativeRegion, programmeLevelLabel, subjectAreaCode],
     queryFn: () => searchAcademicInstitutions({
       data: {
         countryCode,
         query: searchText.trim() || undefined,
         ownershipType: ownershipType === "all" ? undefined : ownershipType,
+        institutionTypeCode: institutionTypeCode.trim() || undefined,
+        administrativeRegion: administrativeRegion.trim() || undefined,
+        programmeLevelLabel: programmeLevelLabel.trim() || undefined,
+        subjectAreaCode: subjectAreaCode.trim() || undefined,
       },
     }),
     enabled: isIsoAlpha2CountryCode(countryCode.trim()),
@@ -117,14 +125,14 @@ function AcademicRegistry() {
             <Input
               id="registry-search"
               value={searchText}
-              onChange={(event) => setSearchText(event.target.value)}
+              onChange={(event) => { setSearchText(event.target.value); setSelectedId(null); }}
               placeholder="Search official academic records"
               className="pl-9"
             />
           </div>
           <select
             value={ownershipType}
-            onChange={(event) => setOwnershipType(event.target.value)}
+            onChange={(event) => { setOwnershipType(event.target.value); setSelectedId(null); }}
             className="h-10 max-w-32 rounded-xl border border-input bg-background px-2 text-xs"
             aria-label="Ownership"
           >
@@ -135,6 +143,32 @@ function AcademicRegistry() {
             <option value="international">International</option>
             <option value="community">Community</option>
           </select>
+        </div>
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <Input
+            value={institutionTypeCode}
+            onChange={(event) => { setInstitutionTypeCode(event.target.value); setSelectedId(null); }}
+            placeholder="Institution type code (e.g. university)"
+            aria-label="Institution type code"
+          />
+          <Input
+            value={administrativeRegion}
+            onChange={(event) => { setAdministrativeRegion(event.target.value); setSelectedId(null); }}
+            placeholder="State, province, or region"
+            aria-label="Administrative region"
+          />
+          <Input
+            value={programmeLevelLabel}
+            onChange={(event) => { setProgrammeLevelLabel(event.target.value); setSelectedId(null); }}
+            placeholder="Qualification level (e.g. bachelor's degree)"
+            aria-label="Qualification level"
+          />
+          <Input
+            value={subjectAreaCode}
+            onChange={(event) => { setSubjectAreaCode(event.target.value); setSelectedId(null); }}
+            placeholder="Subject area code"
+            aria-label="Subject area code"
+          />
         </div>
       </section>
 
