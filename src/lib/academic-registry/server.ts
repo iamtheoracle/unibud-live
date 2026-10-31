@@ -8,9 +8,11 @@ export interface AcademicInstitutionSearchInput {
   countryCode: string;
   query?: string;
   institutionTypeId?: string;
+  institutionTypeCode?: string;
   ownershipType?: string;
   administrativeRegion?: string;
   programmeLevelId?: string;
+  programmeLevelLabel?: string;
   subjectAreaCode?: string;
   limit?: number;
   offset?: number;
@@ -55,9 +57,11 @@ function parseSearchInput(input: AcademicInstitutionSearchInput) {
     countryCode,
     query,
     institutionTypeId: optionalSearchText(input.institutionTypeId, "Institution type filter", 200),
+    institutionTypeCode: optionalSearchText(input.institutionTypeCode, "Institution type code", 120),
     ownershipType,
     administrativeRegion: optionalSearchText(input.administrativeRegion, "Administrative region filter", 120),
     programmeLevelId: optionalSearchText(input.programmeLevelId, "Programme level filter", 200),
+    programmeLevelLabel: optionalSearchText(input.programmeLevelLabel, "Programme level label", 160),
     subjectAreaCode: optionalSearchText(input.subjectAreaCode, "Subject area filter", 80),
     limit,
     offset,
@@ -86,8 +90,8 @@ export const searchAcademicInstitutions = createServerFn({ method: "GET" })
 
     if (data.query) {
       const pattern = "%" + data.query + "%";
-      params.push(pattern, pattern, pattern, pattern, pattern, pattern, pattern);
-      const first = params.length - 6;
+      params.push(pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern);
+      const first = params.length - 8;
       clauses.push(
         `(i.name ilike $${first}
           or coalesce(i.legal_name, '') ilike $${first+1}
@@ -116,10 +120,17 @@ export const searchAcademicInstitutions = createServerFn({ method: "GET" })
               and qf.verification_status = 'verified' and qf.verified_at is not null and qf.source_id is not null
               and ql.level_label ilike $${first+6}
               and exists (select 1 from academic_sources ql_source where ql_source.id = ql.source_id and ql_source.reliability_status in ('official','reviewed'))
-              and exists (select 1 from academic_sources qf_source where qf_source.id = qf.source_id and qf_source.reliability_status in ('official','reviewed'))))`,
+              and exists (select 1 from academic_sources qf_source where qf_source.id = qf.source_id and qf_source.reliability_status in ('official','reviewed')))
+          or it.label ilike ${first+7}
+          or exists (select 1 from academic_programmes subject_programme
+            where subject_programme.institution_id = i.id
+              and subject_programme.verification_status = 'verified'
+              and subject_programme.subject_area_code ilike ${first+8}
+              and exists (select 1 from academic_sources subject_source where subject_source.id = subject_programme.source_id and subject_source.reliability_status in ('official','reviewed'))))`,
       );
     }
     if (data.institutionTypeId) addFilter("i.institution_type_id = ?", data.institutionTypeId);
+    if (data.institutionTypeCode) addFilter("it.code = ?", data.institutionTypeCode);
     if (data.ownershipType) addFilter("i.ownership_type = ?", data.ownershipType);
     if (data.administrativeRegion) {
       addFilter(
