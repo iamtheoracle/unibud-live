@@ -37,6 +37,8 @@ export interface AcademicCountry {
   name: string;
   officialName?: string | null;
   sourceStatus: "unverified" | "partially_verified" | "verified";
+  sourceId?: string | null;
+  verifiedAt?: string | null;
 }
 
 export interface AcademicAuthority {
@@ -47,6 +49,8 @@ export interface AcademicAuthority {
   jurisdiction?: string | null;
   officialWebsite?: string | null;
   sourceStatus: "unverified" | "partially_verified" | "verified";
+  sourceId?: string | null;
+  verifiedAt?: string | null;
 }
 
 export interface AcademicInstitutionType {
@@ -104,7 +108,7 @@ export interface AcademicQualificationFramework {
   shortName?: string | null;
   versionLabel?: string | null;
   officialSourceUrl?: string | null;
-  verificationStatus: VerificationStatus;
+  verificationStatus: "unverified" | "pending_review" | "verified" | "stale";
   sourceId?: string | null;
   verifiedAt?: string | null;
 }
@@ -306,6 +310,56 @@ export interface AcademicImportRun {
   recordsUpdated: number;
   recordsRejected: number;
   errorSummary?: string | null;
+  idempotencyKey?: string | null;
+  adapterVersion?: string | null;
+  sourceSnapshotHash?: string | null;
+  heartbeatAt?: string | null;
+  leaseExpiresAt?: string | null;
+  requestedBy?: string | null;
+}
+
+export interface AcademicExternalIdentifier {
+  id: string;
+  sourceId: string;
+  countryCode: string;
+  entityType: "authority" | "institution_type" | "institution" | "campus" | "accreditation" | "framework" | "level" | "programme" | "curriculum" | "course" | "syllabus_topic" | "standard";
+  entityId: string;
+  externalId: string;
+  sourceRecordUrl: string;
+  sourceContentHash?: string | null;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  lastImportRunId?: string | null;
+}
+
+export interface AcademicImportRecordResult {
+  id: string;
+  importRunId: string;
+  sourceId: string;
+  entityType: string;
+  externalId: string;
+  entityId?: string | null;
+  outcome: "created" | "updated" | "unchanged" | "rejected" | "skipped" | "failed";
+  sourceRecordUrl?: string | null;
+  sourceContentHash?: string | null;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  processedAt: string;
+}
+
+export interface AcademicEntityMatchReview {
+  id: string;
+  countryCode: string;
+  entityType: "institution" | "campus" | "programme" | "course";
+  leftEntityId: string;
+  rightEntityId: string;
+  matchMethod: "official_identifier" | "exact_name" | "normalized_name" | "manual" | "other";
+  confidence?: number | null;
+  evidenceSourceId?: string | null;
+  evidenceNote?: string | null;
+  reviewStatus: "pending_review" | "accepted" | "rejected" | "superseded";
+  reviewerId?: string | null;
+  reviewedAt?: string | null;
 }
 
 /** Normalize ISO country codes without silently guessing a country. */
