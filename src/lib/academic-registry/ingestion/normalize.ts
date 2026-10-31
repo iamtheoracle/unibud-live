@@ -20,16 +20,28 @@ export function slugifyInstitutionName(value: string): string {
  * identifiers. Cross-source matching must use reviewed matching, not a guessed
  * global ID. Candidates always enter review; ingestion cannot self-verify.
  */
+function requiredText(value: unknown, label: string): string {
+  if (typeof value !== "string") throw new Error(label + " must be text.");
+  const normalized = value.trim();
+  if (!normalized) throw new Error(label + " is required.");
+  return normalized;
+}
+
 export function normalizeInstitutionCandidate(
   input: InstitutionCandidate,
 ): NormalizedInstitutionCandidate {
-  const countryCode = normalizeCountryCode(input.countryCode);
-  const name = input.name.trim().replace(/\s+/g, " ");
-  const sourceId = input.sourceId.trim();
-  const externalId = input.externalId.trim();
-  const institutionTypeCode = input.institutionTypeCode.trim();
-  const institutionTypeLabel = input.institutionTypeLabel.trim();
-  const sourceUrl = input.sourceUrl.trim();
+  if (!input || typeof input !== "object") {
+    throw new Error("An institution source record is required.");
+  }
+
+  const countryCode = normalizeCountryCode(requiredText(input.countryCode, "Country code"));
+  const name = requiredText(input.name, "Institution name").replace(/\\s+/g, " ");
+  const sourceId = requiredText(input.sourceId, "Registered source ID");
+  const externalId = requiredText(input.externalId, "Source-specific external ID");
+  const institutionTypeCode = requiredText(input.institutionTypeCode, "Institution type code");
+  const institutionTypeLabel = requiredText(input.institutionTypeLabel, "Institution type label");
+  const sourceUrl = requiredText(input.sourceUrl, "Source URL");
+  const sourceRetrievedAt = requiredText(input.sourceRetrievedAt, "Source retrieval timestamp");
   const warnings: string[] = [];
 
   if (sourceId.length > 160 || externalId.length > 240) {
@@ -38,6 +50,15 @@ export function normalizeInstitutionCandidate(
   if (name.length > 300) throw new Error("Institution name must be 300 characters or fewer.");
   if (institutionTypeCode.length > 120 || institutionTypeLabel.length > 200) {
     throw new Error("Institution type identifiers and labels exceed supported lengths.");
+  }
+  if (input.legalName != null && typeof input.legalName !== "string") {
+    throw new Error("Legal institution name must be text.");
+  }
+  if (input.officialWebsite != null && typeof input.officialWebsite !== "string") {
+    throw new Error("Official website must be text.");
+  }
+  if (input.sourceContentHash != null && typeof input.sourceContentHash !== "string") {
+    throw new Error("Source content hash must be text.");
   }
   if (input.establishedYear != null &&
     (!Number.isInteger(input.establishedYear) || input.establishedYear < 1000 || input.establishedYear > 2200)) {
@@ -52,27 +73,18 @@ export function normalizeInstitutionCandidate(
     throw new Error("Unsupported operational status.");
   }
 
-  if (!sourceId) throw new Error("A registered source ID is required.");
-  if (!externalId) throw new Error("A source-specific external ID is required.");
-  if (!name) throw new Error("Institution name is required.");
-  if (!institutionTypeCode || !institutionTypeLabel) {
-    throw new Error("The source institution category and original label are required.");
-  }
-
   let parsedSourceUrl: URL;
   try {
     parsedSourceUrl = new URL(sourceUrl);
   } catch {
     throw new Error("A valid source URL is required.");
   }
-  if (parsedSourceUrl.protocol !== "https:" && parsedSourceUrl.protocol !== "http:") {
-    throw new Error("Source URL must use HTTP or HTTPS.");
-  }
-  if (parsedSourceUrl.username || parsedSourceUrl.password) {
-    throw new Error("Source URL must not contain embedded credentials.");
+  if ((parsedSourceUrl.protocol !== "https:" && parsedSourceUrl.protocol !== "http:") ||
+    !parsedSourceUrl.hostname || parsedSourceUrl.username || parsedSourceUrl.password) {
+    throw new Error("Source URL must use HTTP or HTTPS and contain no embedded credentials.");
   }
 
-  const retrievedAt = Date.parse(input.sourceRetrievedAt);
+  const retrievedAt = Date.parse(sourceRetrievedAt);
   if (!Number.isFinite(retrievedAt)) {
     throw new Error("A valid source retrieval timestamp is required.");
   }
@@ -86,7 +98,7 @@ export function normalizeInstitutionCandidate(
       throw new Error("Official website must be a valid HTTP or HTTPS URL.");
     }
     if ((parsedWebsite.protocol !== "https:" && parsedWebsite.protocol !== "http:") ||
-      parsedWebsite.username || parsedWebsite.password) {
+      !parsedWebsite.hostname || parsedWebsite.username || parsedWebsite.password) {
       throw new Error("Official website must use HTTP or HTTPS and contain no embedded credentials.");
     }
     officialWebsite = parsedWebsite.toString();
