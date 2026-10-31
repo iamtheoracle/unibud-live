@@ -31,26 +31,32 @@ export interface AcademicInstitutionSearchResult {
   programmesCount: number;
 }
 
+function optionalSearchText(value: unknown, label: string, maxLength: number): string | undefined {
+  if (value == null) return undefined;
+  if (typeof value !== "string") throw new Error(label + " must be text.");
+  const normalized = value.trim();
+  if (!normalized) return undefined;
+  if (normalized.length > maxLength) throw new Error(label + " is too long.");
+  return normalized;
+}
+
 function parseSearchInput(input: AcademicInstitutionSearchInput) {
-  const countryCode = normalizeCountryCode(input.countryCode);
-  const query = input.query?.trim().slice(0, 160) || undefined;
+  if (!input || typeof input !== "object") throw new Error("Academic institution search filters are required.");
+  const countryCode = normalizeCountryCode(typeof input.countryCode === "string" ? input.countryCode : "");
+  const query = optionalSearchText(input.query, "Search query", 160);
   const limit = Number.isInteger(input.limit) ? Math.min(50, Math.max(1, input.limit!)) : 20;
-  const offset = Number.isInteger(input.offset) ? Math.max(0, input.offset!) : 0;
-  const ownershipType = input.ownershipType?.trim();
-  const allowedOwnership = new Set([
-    "public", "private", "faith_based", "community", "international", "mixed", "unknown",
-  ]);
-  if (ownershipType && !allowedOwnership.has(ownershipType)) {
-    throw new Error("Unsupported institution ownership filter.");
-  }
+  const offset = Number.isInteger(input.offset) ? Math.min(100_000, Math.max(0, input.offset!)) : 0;
+  const ownershipType = optionalSearchText(input.ownershipType, "Ownership filter", 32);
+  const allowedOwnership = new Set(["public", "private", "faith_based", "community", "international", "mixed", "unknown"]);
+  if (ownershipType && !allowedOwnership.has(ownershipType)) throw new Error("Unsupported institution ownership filter.");
   return {
     countryCode,
     query,
-    institutionTypeId: input.institutionTypeId?.trim() || undefined,
+    institutionTypeId: optionalSearchText(input.institutionTypeId, "Institution type filter", 200),
     ownershipType,
-    administrativeRegion: input.administrativeRegion?.trim().slice(0, 120) || undefined,
-    programmeLevelId: input.programmeLevelId?.trim() || undefined,
-    subjectAreaCode: input.subjectAreaCode?.trim() || undefined,
+    administrativeRegion: optionalSearchText(input.administrativeRegion, "Administrative region filter", 120),
+    programmeLevelId: optionalSearchText(input.programmeLevelId, "Programme level filter", 200),
+    subjectAreaCode: optionalSearchText(input.subjectAreaCode, "Subject area filter", 80),
     limit,
     offset,
   };
@@ -66,6 +72,7 @@ export const searchAcademicInstitutions = createServerFn({ method: "GET" })
       "i.verification_status = 'verified'",
       "i.source_id is not null",
       "i.verified_at is not null",
+      "exists (select 1 from academic_sources i_source where i_source.id = i.source_id and i_source.reliability_status in ('official','reviewed'))",
       "i.operational_status <> 'closed'",
     ];
     const params: unknown[] = [data.countryCode];
@@ -85,40 +92,51 @@ export const searchAcademicInstitutions = createServerFn({ method: "GET" })
           or coalesce(i.funding_or_governance_label, '') ilike $${first+2}
           or exists (select 1 from academic_institution_aliases ia where ia.institution_id = i.id
             and ia.verification_status = 'verified' and ia.source_id is not null and ia.verified_at is not null
-            and ia.alias ilike $${first+3})
+            and ia.alias ilike $${first+3}
+            and exists (select 1 from academic_sources ia_source where ia_source.id = ia.source_id and ia_source.reliability_status in ('official','reviewed')))
           or exists (select 1 from academic_programmes p where p.institution_id = i.id
             and p.verification_status = 'verified' and p.verified_at is not null and p.source_id is not null
-            and p.name ilike $${first+4})
+           and exists (select 1 from academic_sources p_source where p_source.id = p.source_id and p_source.reliability_status in ('official','reviewed'))
+            and p.name ilike $${first+4}
+            and exists (select 1 from academic_sources p_source where p_source.id = p.source_id and p_source.reliability_status in ('official','reviewed')))
           or exists (select 1 from academic_courses c where c.institution_id = i.id
             and c.verification_status = 'verified' and c.verified_at is not null and c.source_id is not null
-            and c.title ilike $${first+5})
+           and exists (select 1 from academic_sources c_source where c_source.id = c.source_id and c_source.reliability_status in ('official','reviewed'))
+            and c.title ilike $${first+5}
+            and exists (select 1 from academic_sources c_source where c_source.id = c.source_id and c_source.reliability_status in ('official','reviewed')))
           or exists (select 1 from academic_programmes p
             join academic_qualification_levels ql on ql.id = p.qualification_level_id
             join academic_qualification_frameworks qf on qf.id = ql.framework_id
             where p.institution_id = i.id and p.verification_status = 'verified'
               and p.verified_at is not null and p.source_id is not null
+           and exists (select 1 from academic_sources p_source where p_source.id = p.source_id and p_source.reliability_status in ('official','reviewed'))
               and ql.verification_status = 'verified' and ql.verified_at is not null and ql.source_id is not null
               and qf.verification_status = 'verified' and qf.verified_at is not null and qf.source_id is not null
-              and ql.level_label ilike $${first+6}))`,
+              and ql.level_label ilike $${first+6}
+              and exists (select 1 from academic_sources ql_source where ql_source.id = ql.source_id and ql_source.reliability_status in ('official','reviewed'))
+              and exists (select 1 from academic_sources qf_source where qf_source.id = qf.source_id and qf_source.reliability_status in ('official','reviewed'))))`,
       );
     }
     if (data.institutionTypeId) addFilter("i.institution_type_id = ?", data.institutionTypeId);
     if (data.ownershipType) addFilter("i.ownership_type = ?", data.ownershipType);
     if (data.administrativeRegion) {
       addFilter(
-        `exists (select 1 from academic_campuses c where c.institution_id = i.id and c.verification_status = 'verified' and c.source_id is not null and c.verified_at is not null and c.administrative_region ilike ?)`,
+        `exists (select 1 from academic_campuses c where c.institution_id = i.id and c.verification_status = 'verified' and c.source_id is not null and c.verified_at is not null and c.administrative_region ilike ?
+          and exists (select 1 from academic_sources c_source where c_source.id = c.source_id and c_source.reliability_status in ('official','reviewed')))`,
         "%" + data.administrativeRegion + "%",
       );
     }
     if (data.programmeLevelId) {
       addFilter(
-        `exists (select 1 from academic_programmes p where p.institution_id = i.id and p.verification_status = 'verified' and p.verified_at is not null and p.source_id is not null and p.qualification_level_id = ? and exists (select 1 from academic_qualification_levels ql join academic_qualification_frameworks qf on qf.id = ql.framework_id where ql.id = p.qualification_level_id and ql.verification_status = 'verified' and ql.verified_at is not null and ql.source_id is not null and qf.verification_status = 'verified' and qf.verified_at is not null and qf.source_id is not null))`,
+        `exists (select 1 from academic_programmes p where p.institution_id = i.id and p.verification_status = 'verified' and p.verified_at is not null and p.source_id is not null
+           and exists (select 1 from academic_sources p_source where p_source.id = p.source_id and p_source.reliability_status in ('official','reviewed')) and p.qualification_level_id = ? and exists (select 1 from academic_qualification_levels ql join academic_qualification_frameworks qf on qf.id = ql.framework_id where ql.id = p.qualification_level_id and ql.verification_status = 'verified' and ql.verified_at is not null and ql.source_id is not null and qf.verification_status = 'verified' and qf.verified_at is not null and qf.source_id is not null))`,
         data.programmeLevelId,
       );
     }
     if (data.subjectAreaCode) {
       addFilter(
-        `exists (select 1 from academic_programmes p where p.institution_id = i.id and p.verification_status = 'verified' and p.verified_at is not null and p.source_id is not null and p.subject_area_code = ?)`,
+        `exists (select 1 from academic_programmes p where p.institution_id = i.id and p.verification_status = 'verified' and p.verified_at is not null and p.source_id is not null
+           and exists (select 1 from academic_sources p_source where p_source.id = p.source_id and p_source.reliability_status in ('official','reviewed')) and p.subject_area_code = ?)`,
         data.subjectAreaCode,
       );
     }
@@ -144,6 +162,9 @@ export const searchAcademicInstitutions = createServerFn({ method: "GET" })
         (select count(*)::int from academic_programmes p where p.institution_id = i.id and p.verification_status = 'verified' and p.source_id is not null and p.verified_at is not null) as "programmesCount"
       from academic_institutions i
       join academic_institution_types it on it.id = i.institution_type_id and it.verification_status = 'verified' and it.source_id is not null and it.verified_at is not null
+         and exists (select 1 from academic_sources i_source where i_source.id = i.source_id and i_source.reliability_status in ('official','reviewed'))
+         and exists (select 1 from academic_sources it_source where it_source.id = it.source_id and it_source.reliability_status in ('official','reviewed'))
+        and exists (select 1 from academic_sources it_source where it_source.id = it.source_id and it_source.reliability_status in ('official','reviewed'))
       where ${clauses.join(" and ")}
       order by lower(i.name), i.id
       limit $${limitParam} offset $${offsetParam}`,
@@ -176,6 +197,9 @@ export interface AcademicInstitutionDetails {
 /** Public details expose verified catalogue data and reviewed standards only. */
 export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
   .validator((input: { institutionId: string }) => {
+    if (!input || typeof input !== "object" || typeof input.institutionId !== "string") {
+      throw new Error("A valid institution ID is required.");
+    }
     const institutionId = input.institutionId.trim();
     if (!institutionId || institutionId.length > 200) {
       throw new Error("A valid institution ID is required.");
@@ -192,7 +216,9 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
         i.description, it.label as "institutionTypeLabel", i.metadata
        from academic_institutions i
        join academic_institution_types it on it.id = i.institution_type_id
-       where i.id = $1 and i.verification_status = 'verified' and i.source_id is not null and i.verified_at is not null and it.verification_status = 'verified' and it.source_id is not null and it.verified_at is not null`,
+       where i.id = $1 and i.verification_status = 'verified' and i.source_id is not null and i.verified_at is not null and it.verification_status = 'verified' and it.source_id is not null and it.verified_at is not null
+         and exists (select 1 from academic_sources i_source where i_source.id = i.source_id and i_source.reliability_status in ('official','reviewed'))
+         and exists (select 1 from academic_sources it_source where it_source.id = it.source_id and it_source.reliability_status in ('official','reviewed'))`,
       [data.institutionId],
     );
     const institution = institutionRows[0];
@@ -200,13 +226,15 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
 
     const [aliases, campuses, accreditations, programmes, courses, syllabusTopics, standards, evidenceSources] = await Promise.all([
       sql.query<SerializableAcademicRecord>(
-        `select alias, alias_type as "aliasType" from academic_institution_aliases where institution_id = $1 and verification_status = 'verified' and source_id is not null and verified_at is not null order by alias`,
+        `select alias, alias_type as "aliasType" from academic_institution_aliases where institution_id = $1 and verification_status = 'verified' and source_id is not null and verified_at is not null
+           and exists (select 1 from academic_sources source where source.id = academic_institution_aliases.source_id and source.reliability_status in ('official','reviewed')) order by alias`,
         [data.institutionId],
       ),
       sql.query<SerializableAcademicRecord>(
         `select id, name, campus_type as "campusType", address, locality,
           administrative_region as "administrativeRegion", official_website as "officialWebsite"
-         from academic_campuses where institution_id = $1 and operational_status <> 'closed' and verification_status = 'verified' and source_id is not null and verified_at is not null order by name`,
+         from academic_campuses where institution_id = $1 and operational_status <> 'closed' and verification_status = 'verified' and source_id is not null and verified_at is not null
+           and exists (select 1 from academic_sources source where source.id = academic_campuses.source_id and source.reliability_status in ('official','reviewed')) order by name`,
         [data.institutionId],
       ),
       sql.query<SerializableAcademicRecord>(
@@ -214,6 +242,7 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
           valid_from as "validFrom", valid_until as "validUntil", official_source_url as "officialSourceUrl",
           verified_at as "verifiedAt"
          from academic_accreditations where institution_id = $1 and verified_at is not null and source_id is not null and official_source_url is not null
+           and exists (select 1 from academic_sources source where source.id = academic_accreditations.source_id and source.reliability_status in ('official','reviewed'))
          order by valid_until desc nulls last`,
         [data.institutionId],
       ),
@@ -237,6 +266,7 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
            limit 1
          ) cv on true
          where p.institution_id = $1 and p.verification_status = 'verified' and p.verified_at is not null and p.source_id is not null
+           and exists (select 1 from academic_sources p_source where p_source.id = p.source_id and p_source.reliability_status in ('official','reviewed'))
            and p.operational_status <> 'closed'
          order by p.name`,
         [data.institutionId],
@@ -250,8 +280,11 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
          from academic_courses c
          left join academic_curriculum_versions cv on cv.id = c.curriculum_version_id
          where c.institution_id = $1 and c.verification_status = 'verified' and c.verified_at is not null and c.source_id is not null
-           and (c.programme_id is null or exists (select 1 from academic_programmes p where p.id = c.programme_id and p.verification_status = 'verified' and p.verified_at is not null and p.source_id is not null))
-           and (c.curriculum_version_id is null or exists (select 1 from academic_curriculum_versions cv2 where cv2.id = c.curriculum_version_id and cv2.status = 'published' and cv2.verified_at is not null and cv2.source_id is not null))
+           and exists (select 1 from academic_sources c_source where c_source.id = c.source_id and c_source.reliability_status in ('official','reviewed'))
+           and (c.programme_id is null or exists (select 1 from academic_programmes p where p.id = c.programme_id and p.verification_status = 'verified' and p.verified_at is not null and p.source_id is not null
+           and exists (select 1 from academic_sources p_source where p_source.id = p.source_id and p_source.reliability_status in ('official','reviewed'))))
+           and (c.curriculum_version_id is null or exists (select 1 from academic_curriculum_versions cv2 where cv2.id = c.curriculum_version_id and cv2.status = 'published' and cv2.verified_at is not null and cv2.source_id is not null
+             and exists (select 1 from academic_sources cv_source where cv_source.id = cv2.source_id and cv_source.reliability_status in ('official','reviewed'))))
          order by c.programme_id, c.year_or_level nulls last, c.term_label, c.code, c.title`,
         [data.institutionId],
       ),
@@ -263,7 +296,9 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
          from academic_syllabus_topics st
          join academic_courses c on c.id = st.course_id
          where c.institution_id = $1 and c.verification_status = 'verified' and c.verified_at is not null and c.source_id is not null
+           and exists (select 1 from academic_sources c_source where c_source.id = c.source_id and c_source.reliability_status in ('official','reviewed'))
            and st.verification_status = 'verified' and st.verified_at is not null and st.source_id is not null
+           and exists (select 1 from academic_sources st_source where st_source.id = st.source_id and st_source.reliability_status in ('official','reviewed'))
          order by st.course_id, st.sequence_number nulls last, st.title`,
         [data.institutionId],
       ),
@@ -275,7 +310,9 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
          join academic_standards s on s.id = m.standard_id
          where m.review_status = 'accepted' and m.source_id is not null
            and m.reviewer_id is not null and m.assessed_at is not null
+           and exists (select 1 from academic_sources mapping_source where mapping_source.id = m.source_id and mapping_source.reliability_status in ('official','reviewed'))
            and s.verification_status = 'verified' and s.verified_at is not null and s.source_id is not null
+           and exists (select 1 from academic_sources standard_source where standard_source.id = s.source_id and standard_source.reliability_status in ('official','reviewed'))
            and (
              (m.entity_type = 'institution' and m.entity_id = $1)
              or (m.entity_type = 'campus' and m.entity_id in
@@ -314,7 +351,7 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
           source.source_type as "sourceType", source.title, source.source_url as "sourceUrl",
           source.retrieved_at as "retrievedAt", source.content_hash as "contentHash"
          from academic_sources source
-         where source.id in (
+         where source.reliability_status in ('official','reviewed') and source.id in (
            select source_id from academic_institutions where id = $1
            union select source_id from academic_institution_types
              where id = (select institution_type_id from academic_institutions where id = $1)
