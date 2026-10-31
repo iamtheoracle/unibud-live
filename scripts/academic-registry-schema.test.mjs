@@ -210,6 +210,17 @@ test("academic registry migrations enforce evidence, source identity, and idempo
     await db.query(
       "insert into academic_entity_match_reviews (id, country_code, entity_type, left_entity_id, right_entity_id, match_method, evidence_source_id, reviewer_id, reviewed_at, review_status) values ('match-1', 'NG', 'institution', 'inst-1', 'inst-2', 'manual', 'source-nuc', 'reviewer-1', now(), 'accepted')",
     );
+    await assert.rejects(
+      db.query(
+        "insert into academic_entity_match_reviews (id, country_code, entity_type, left_entity_id, right_entity_id, match_method, evidence_source_id, reviewer_id, reviewed_at, review_status) values ('match-reversed', 'NG', 'institution', 'inst-2', 'inst-1', 'manual', 'source-nuc', 'reviewer-1', now(), 'accepted')",
+      ),
+      /academic_entity_match_reviews_check/,
+    );
+    await assert.rejects(
+      db.query(
+        "insert into academic_entity_match_reviews (id, country_code, entity_type, left_entity_id, right_entity_id, match_method, evidence_source_id, reviewer_id, reviewed_at, review_status) values ('match-duplicate', 'NG', 'institution', 'inst-1', 'inst-2', 'manual', 'source-nuc', 'reviewer-1', now(), 'accepted')",
+      ),
+    );
 
     await assert.rejects(
       db.query(
