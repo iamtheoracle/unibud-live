@@ -46,7 +46,8 @@ function Square() {
   const connections = useCampusStore((s) => s.connections);
   const interests = useCampusStore((s) => s.interests);
   const likeCounts = useCampusStore((s) => s.likeCounts);
-  const searches = useCampusStore((s) => s.searches);
+  const searches = useCampusStore((s) => s.recentSearches);
+  const homeCampusId = useCampusStore((s) => s.homeCampusId);
   const setComposeOpen = useCampusStore((s) => s.setComposeOpen);
   const setDropOpen = useCampusStore((s) => s.setDropOpen);
   const setSquareView = useCampusStore((s) => s.setSquareView);
@@ -59,8 +60,14 @@ function Square() {
   }, [catalog.posts, localPosts]);
 
   const lanePosts = useMemo(
-    () => postsForLane(merged, lane, { following, connections, interests, likeCounts, searches }),
-    [merged, lane, following, connections, interests, likeCounts, searches],
+    () =>
+      postsForLane(
+        merged,
+        lane,
+        { following, interests, universityId: homeCampusId, likeCounts, searches },
+        connections,
+      ),
+    [merged, lane, following, connections, interests, homeCampusId, likeCounts, searches],
   );
 
   const stream = useMemo(() => lanePosts.slice(0, shown), [lanePosts, shown]);
