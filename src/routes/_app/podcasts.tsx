@@ -14,17 +14,17 @@ function Podcasts() {
         </span>
       </div>
       <p className="mt-2 max-w-md text-sm text-muted-foreground">
-        Stories, opinions, comedy, culture, music, relationships and conversations from independent creators.
+        Learn something new, hear expert insights, explore science and technology, or enjoy comedy, culture, music, relationships and stories.
       </p>
 
       <section className="mt-6 rounded-3xl bg-card p-5 ring-1 ring-border">
         <p className="text-xs font-semibold uppercase tracking-wide text-bud">Discover</p>
         <h2 className="mt-2 text-xl font-semibold">Find your next favourite show.</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Social podcast discovery is being connected to creator publishing and real audio hosting. No sample episodes are shown as playable content.
+          Discover educational and entertainment podcasts together. Real episode playback will appear when creator publishing and audio hosting are connected. No demo episodes are presented as playable content.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
-          {["Comedy", "Culture", "Music", "Lifestyle", "Relationships", "Stories", "Gaming", "Talk"].map((tag) => (
+          {["Education", "Science", "Technology", "Business", "History", "Personal growth", "Comedy", "Culture", "Music", "Lifestyle", "Relationships", "Stories", "Gaming", "Talk"].map((tag) => (
             <span key={tag} className="rounded-full bg-secondary px-3 py-2 text-xs">{tag}</span>
           ))}
         </div>
