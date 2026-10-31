@@ -17,6 +17,11 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      VITE_AUTH_ENABLED: "false"
+      NPM_CONFIG_LEGACY_PEER_DEPS: "true"
+      NPM_CONFIG_PRODUCTION: "false"
+      NODE_OPTIONS: "--max-old-space-size=4096"
 
     steps:
       - name: Checkout
@@ -37,8 +42,7 @@ jobs:
       - name: Lint agent and integration layer (pre-UI gate)
         run: npx eslint src/lib/agents src/lib/spark src/lib/bud/server.ts src/lib/bud/spark.ts
 
-      # The existing UI/studio/routes lint baseline remains intentionally outside the pre-UI gate.
-      # Full application linting will be restored when UI implementation begins.
+      # Full repository lint is audited at the end; current unrelated baseline failures are tracked in issue #34.
 
       - name: Agent and Spark tests (pre-UI gate)
         run: npm run test:agents
