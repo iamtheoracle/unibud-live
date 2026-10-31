@@ -1,5 +1,5 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Bell, Search } from "lucide-react";
+import { Bell, MessageSquareText, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Wordmark } from "@/components/brand/logo";
 import { AskBudFab } from "@/components/unibud/ask-bud";
@@ -63,6 +63,14 @@ export function AppShell() {
               <Wordmark size="header" className="object-left" />
             </Link>
             <div className="ml-auto flex items-center">
+              <Link
+                to="/riff"
+                aria-label="Riff"
+                title="Riff"
+                className={cn("grid size-11 place-items-center rounded-full hover:bg-secondary", pathname.startsWith("/riff") ? "text-foreground" : "text-muted-foreground")}
+              >
+                <MessageSquareText className="size-5" />
+              </Link>
               <Link
                 to="/search"
                 aria-label="Search"
