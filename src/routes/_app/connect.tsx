@@ -231,7 +231,7 @@ function Connect() {
       <section className="mt-6 border-t pt-4">
         <p className="mb-2 text-xs font-medium text-muted-foreground">MORE IN UNIBUD</p>
         <div className="grid grid-cols-2 gap-2">
-          <Link to="/chat" className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm">
+          <Link to="/messages" className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm">
             <span>Chat</span><ChevronRight className="size-4 text-muted-foreground" />
           </Link>
           <div className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm">
@@ -240,8 +240,17 @@ function Connect() {
           <div className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm">
             <span>WAYWARD</span><Compass className="size-4 text-muted-foreground" />
           </div>
-          <div className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm">
-            <span>Concierge</span><Sparkles className="size-4 text-muted-foreground" />
+          <Link to="/riff" className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm">
+            <span>Riff</span><ChevronRight className="size-4 text-muted-foreground" />
+          </Link>
+          <div className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm" aria-disabled="true" title="Not connected yet">
+            <span>SoulLync · planned</span><Heart className="size-4 text-muted-foreground" />
+          </div>
+          <div className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm" aria-disabled="true" title="Not connected yet">
+            <span>WAYWARD · planned</span><Compass className="size-4 text-muted-foreground" />
+          </div>
+          <div className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm" aria-disabled="true" title="Not connected yet">
+            <span>Concierge · planned</span><Sparkles className="size-4 text-muted-foreground" />
           </div>
         </div>
       </section>
