@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
+import { authMiddleware } from "@/lib/auth/middleware";
+import { assertAcademicRegistryReviewer } from "./review-auth.server.ts";
 import { normalizeCountryCode } from "./types.ts";
 
 export interface AcademicInstitutionSearchInput {
@@ -415,4 +417,104 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
     ]);
 
     return { institution, aliases, campuses, accreditations, programmes, courses, syllabusTopics, standards, evidenceSources };
+  });
+
+
+/** Reviewer-only queue. Public catalogue reads remain separate and read-only. */
+export const getInstitutionReviewQueue = createServerFn({ method: "GET" })
+  .middleware([authMiddleware])
+  .validator((input: { limit?: number }) => {
+    if (!input || typeof input !== "object") throw new Error("Review queue filters are required.");
+    const limit = Number.isInteger(input.limit) ? Math.min(100, Math.max(1, input.limit!)) : 30;
+    return { limit };
+  })
+  .handler(async ({ context, data }) => {
+    assertAcademicRegistryReviewer(context.userId);
+    const sql = await getSql();
+    return sql.query<SerializableAcademicRecord>(
+      `select institution.id, institution.country_code as "countryCode",
+        institution.name, institution.legal_name as "legalName",
+        institution_type.label as "institutionTypeLabel",
+        institution.source_id as "sourceId", source.publisher_name as "sourcePublisher",
+        source.source_url as "sourceUrl", source.retrieved_at as "sourceRetrievedAt",
+        source.content_hash as "sourceContentHash", source.reliability_status as "sourceReliabilityStatus",
+        institution.created_at as "submittedAt"
+       from academic_institutions institution
+       join academic_institution_types institution_type on institution_type.id = institution.institution_type_id
+       join academic_sources source on source.id = institution.source_id
+       where institution.verification_status = 'pending_review'
+         and institution.source_id is not null
+         and institution_type.verification_status = 'verified'
+         and institution_type.source_id is not null
+         and institution_type.verified_at is not null
+         and source.reliability_status in ('official','reviewed')
+       order by institution.created_at asc
+       limit $1`,
+      [data.limit],
+    );
+  });
+
+/**
+ * Approve or reject one pending institution. The reviewer ID is derived from
+ * the verified auth context; the client cannot supply review status or identity.
+ * The entity update and its audit assertion commit as one SQL statement.
+ */
+export const reviewInstitutionCandidate = createServerFn({ method: "POST" })
+  .middleware([authMiddleware])
+  .validator((input: { institutionId: string; decision: "verify" | "reject"; note: string }) => {
+    if (!input || typeof input !== "object" || typeof input.institutionId !== "string") {
+      throw new Error("A valid institution ID is required.");
+    }
+    const institutionId = input.institutionId.trim();
+    const note = typeof input.note === "string" ? input.note.trim() : "";
+    if (!institutionId || institutionId.length > 200) {
+      throw new Error("A valid institution ID is required.");
+    }
+    if (input.decision !== "verify" && input.decision !== "reject") {
+      throw new Error("Review decision must be verify or reject.");
+    }
+    if (note.length < 12 || note.length > 2000) {
+      throw new Error("A review note between 12 and 2,000 characters is required.");
+    }
+    return { institutionId, decision: input.decision, note };
+  })
+  .handler(async ({ context, data }) => {
+    assertAcademicRegistryReviewer(context.userId);
+    const sql = await getSql();
+    const rows = await sql.query<SerializableAcademicRecord>(
+      `with updated as (
+         update academic_institutions institution
+         set verification_status = case when $2 = 'verify' then 'verified' else 'rejected' end,
+             verified_at = case when $2 = 'verify' then now() else null end
+         where institution.id = $1
+           and institution.verification_status = 'pending_review'
+           and institution.source_id is not null
+           and exists (
+             select 1 from academic_sources source
+             where source.id = institution.source_id
+               and source.reliability_status in ('official','reviewed')
+           )
+         returning institution.id, institution.source_id, institution.verification_status
+       ),
+       audit as (
+         insert into academic_source_assertions (
+           id, source_id, entity_type, entity_id, field_name, asserted_value,
+           review_status, reviewed_at, reviewer_id
+         )
+         select $3, updated.source_id, 'institution', updated.id, 'verification_status',
+           jsonb_build_object('decision', $2, 'note', $4, 'status', updated.verification_status),
+           case when $2 = 'verify' then 'accepted' else 'rejected' end,
+           now(), $5
+         from updated
+         returning id
+       )
+       select updated.id, updated.verification_status as "verificationStatus",
+         audit.id as "reviewAssertionId"
+       from updated cross join audit`,
+      [data.institutionId, data.decision, crypto.randomUUID(), data.note, context.userId],
+    );
+    if (!rows[0]) {
+      throw new Error("Institution is not pending review or its source is not approved for publication.");
+    }
+    return rows[0];
   });
