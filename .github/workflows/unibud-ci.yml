@@ -3,7 +3,10 @@ name: UNIBUD Pre-UI Verification Gate
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - "feat/global-academic-registry-*"
+      - "feat/academic-registry-*"
   pull_request:
     branches: [main]
 
