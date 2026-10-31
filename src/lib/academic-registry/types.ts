@@ -58,6 +58,9 @@ export interface AcademicInstitutionType {
   parentTypeId?: string | null;
   isTertiary: boolean;
   metadata: Record<string, unknown>;
+  verificationStatus: VerificationStatus;
+  sourceId?: string | null;
+  verifiedAt?: string | null;
 }
 
 export interface AcademicInstitution {
@@ -74,6 +77,8 @@ export interface AcademicInstitution {
   establishedYear?: number | null;
   operationalStatus: "active" | "inactive" | "merged" | "closed" | "unknown";
   verificationStatus: VerificationStatus;
+  sourceId?: string | null;
+  verifiedAt?: string | null;
   description?: string | null;
   metadata: Record<string, unknown>;
 }
@@ -86,6 +91,9 @@ export interface AcademicCampus {
   locality?: string | null;
   administrativeRegion?: string | null;
   officialWebsite?: string | null;
+  verificationStatus: VerificationStatus;
+  sourceId?: string | null;
+  verifiedAt?: string | null;
 }
 
 export interface AcademicQualificationFramework {
@@ -97,6 +105,8 @@ export interface AcademicQualificationFramework {
   versionLabel?: string | null;
   officialSourceUrl?: string | null;
   verificationStatus: VerificationStatus;
+  sourceId?: string | null;
+  verifiedAt?: string | null;
 }
 
 export interface AcademicQualificationLevel {
@@ -107,6 +117,9 @@ export interface AcademicQualificationLevel {
   sequenceNumber?: number | null;
   description?: string | null;
   officialSourceUrl?: string | null;
+  verificationStatus: VerificationStatus;
+  sourceId?: string | null;
+  verifiedAt?: string | null;
 }
 
 export interface AcademicProgramme {
@@ -124,6 +137,8 @@ export interface AcademicProgramme {
   totalCredits?: number | null;
   admissionRequirements: Record<string, unknown>;
   verificationStatus: VerificationStatus;
+  sourceId?: string | null;
+  verifiedAt?: string | null;
 }
 
 export interface AcademicCurriculumVersion {
@@ -135,6 +150,8 @@ export interface AcademicCurriculumVersion {
   effectiveUntil?: string | null;
   status: "draft" | "pending_review" | "published" | "superseded" | "withdrawn";
   officialSourceUrl?: string | null;
+  sourceId?: string | null;
+  verifiedAt?: string | null;
 }
 
 export interface AcademicCourse {
@@ -152,6 +169,8 @@ export interface AcademicCourse {
   prerequisites: unknown[];
   learningOutcomes: unknown[];
   verificationStatus: VerificationStatus;
+  sourceId?: string | null;
+  verifiedAt?: string | null;
 }
 
 export interface AcademicSyllabusTopic {
@@ -165,6 +184,9 @@ export interface AcademicSyllabusTopic {
   learningOutcomes: unknown[];
   assessmentMethods: unknown[];
   sourceUrl?: string | null;
+  verificationStatus: VerificationStatus;
+  sourceId?: string | null;
+  verifiedAt?: string | null;
 }
 
 export interface AcademicSource {
@@ -196,6 +218,8 @@ export interface AcademicInstitutionAlias {
   alias: string;
   aliasType: "former_name" | "abbreviation" | "local_name" | "alternate_spelling" | "other";
   sourceId?: string | null;
+  verificationStatus: VerificationStatus;
+  verifiedAt?: string | null;
 }
 
 export interface AcademicAccreditation {
@@ -210,6 +234,7 @@ export interface AcademicAccreditation {
   validUntil?: string | null;
   officialSourceUrl?: string | null;
   verifiedAt?: string | null;
+  sourceId?: string | null;
 }
 
 export interface AcademicStandard {
@@ -224,6 +249,8 @@ export interface AcademicStandard {
   effectiveUntil?: string | null;
   officialSourceUrl?: string | null;
   verificationStatus: "unverified" | "pending_review" | "verified" | "stale";
+  sourceId?: string | null;
+  verifiedAt?: string | null;
 }
 
 export interface AcademicStandardMapping {
@@ -236,6 +263,7 @@ export interface AcademicStandardMapping {
   evidenceNote?: string | null;
   assessedAt?: string | null;
   reviewStatus: "pending_review" | "accepted" | "rejected" | "superseded";
+  reviewerId?: string | null;
 }
 
 export interface AcademicSourceAssertion {
