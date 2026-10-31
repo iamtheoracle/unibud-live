@@ -5,8 +5,8 @@ function normalizeName(value: string): string {
   return value
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("en")
-    .replace(/[^a-z0-9]+/g, " ")
+    .toLowerCase()
+    .replace(/[^\\p{L}\\p{N}]+/gu, " ")
     .trim()
     .replace(/\s+/g, " ");
 }
@@ -25,12 +25,14 @@ export function normalizeInstitutionCandidate(
 ): NormalizedInstitutionCandidate {
   const countryCode = normalizeCountryCode(input.countryCode);
   const name = input.name.trim().replace(/\s+/g, " ");
+  const sourceId = input.sourceId.trim();
   const externalId = input.externalId.trim();
   const institutionTypeCode = input.institutionTypeCode.trim();
   const institutionTypeLabel = input.institutionTypeLabel.trim();
   const sourceUrl = input.sourceUrl.trim();
   const warnings: string[] = [];
 
+  if (!sourceId) throw new Error("A registered source ID is required.");
   if (!externalId) throw new Error("A source-specific external ID is required.");
   if (!name) throw new Error("Institution name is required.");
   if (!institutionTypeCode || !institutionTypeLabel) {
@@ -46,6 +48,14 @@ export function normalizeInstitutionCandidate(
   if (parsedSourceUrl.protocol !== "https:" && parsedSourceUrl.protocol !== "http:") {
     throw new Error("Source URL must use HTTP or HTTPS.");
   }
+  if (parsedSourceUrl.username || parsedSourceUrl.password) {
+    throw new Error("Source URL must not contain embedded credentials.");
+  }
+
+  const retrievedAt = Date.parse(input.sourceRetrievedAt);
+  if (!Number.isFinite(retrievedAt)) {
+    throw new Error("A valid source retrieval timestamp is required.");
+  }
 
   if (!input.officialWebsite) warnings.push("Official website not supplied by source.");
   if (!input.sourceContentHash) warnings.push("Source content hash is missing; change detection may be weaker.");
@@ -58,8 +68,14 @@ export function normalizeInstitutionCandidate(
   }
 
   const normalizedName = normalizeName(name);
+  const slug = slugifyInstitutionName(name);
+  if (!normalizedName || !slug) {
+    throw new Error("Institution name must contain at least one letter or number.");
+  }
+
   return {
     ...input,
+    sourceId,
     countryCode,
     externalId,
     institutionTypeCode,
@@ -68,9 +84,10 @@ export function normalizeInstitutionCandidate(
     legalName: input.legalName?.trim() || null,
     officialWebsite: input.officialWebsite?.trim() || null,
     sourceUrl: parsedSourceUrl.toString(),
+    sourceRetrievedAt: new Date(retrievedAt).toISOString(),
     normalizedName,
-    identityKey: countryCode + ":" + input.externalId.trim(),
-    slug: slugifyInstitutionName(name),
+    identityKey: countryCode + ":" + encodeURIComponent(sourceId) + ":" + encodeURIComponent(externalId),
+    slug,
     verificationStatus: "pending_review",
     warnings,
   };
