@@ -26,23 +26,19 @@ test("academic registry migrations enforce evidence, source identity, and idempo
     const searchTickStart = serverSource.indexOf("`", searchCall);
     const searchTickEnd = serverSource.indexOf("`,", searchTickStart);
     assert.ok(searchTickStart >= 0 && searchTickEnd > searchTickStart, "institution search SQL must be a template string");
+    const queryPredicateStart = serverSource.indexOf("`(i.name ilike", serverSource.indexOf("if (data.query) {"));
+    const queryPredicateEnd = serverSource.indexOf("`,", queryPredicateStart);
+    assert.ok(queryPredicateStart >= 0 && queryPredicateEnd > queryPredicateStart);
+    let queryPredicate = serverSource.slice(queryPredicateStart + 1, queryPredicateEnd);
+    for (let index = 0; index <= 8; index += 1) {
+      const sourcePlaceholder = "$${first" + (index ? "+" + index : "") + "}";
+      queryPredicate = queryPredicate.replaceAll(sourcePlaceholder, "$" + (2 + index));
+    }
     const searchSql = serverSource
       .slice(searchTickStart + 1, searchTickEnd)
-      .replace(
-        '${clauses.join(" and ")}',
-        `i.country_code = $1 and (
-          i.name ilike $2 or coalesce(i.legal_name, '') ilike $3
-          or coalesce(i.funding_or_governance_label, '') ilike $4
-          or exists (select 1 from academic_institution_aliases ia where ia.institution_id = i.id and ia.alias ilike $5)
-          or exists (select 1 from academic_programmes p where p.institution_id = i.id and p.name ilike $6)
-          or exists (select 1 from academic_courses course where course.institution_id = i.id and course.title ilike $7)
-          or exists (select 1 from academic_qualification_levels ql where ql.level_label ilike $8)
-          or it.label ilike $9
-          or exists (select 1 from academic_programmes subject_programme where subject_programme.institution_id = i.id and subject_programme.subject_area_code ilike $10)
-        )`,
-      )
-      .replaceAll("${limitParam}", "$11")
-      .replaceAll("${offsetParam}", "$12");
+      .replace('${clauses.join(" and ")}', "i.country_code = $1 and " + queryPredicate)
+      .replaceAll("$${limitParam}", "$11")
+      .replaceAll("$${offsetParam}", "$12");
     try {
       await db.query(searchSql, ["NG", ...Array(9).fill("%registry%"), 20, 0]);
     } catch (error) {
