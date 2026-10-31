@@ -48,18 +48,52 @@ test("a source can run only after terms approval, adapter configuration, and exp
     ...source,
     automationPermission: "approved",
     adapterStatus: "verified",
+    permissionEvidenceUrl: "https://example.gov.ng/terms",
+    permissionReviewedBy: "reviewer-1",
+    permissionReviewedAt: "2026-10-31T00:00:00.000Z",
     enabled: true,
   }), true);
   assert.equal(canImportAcademicSource({
     ...source,
     automationPermission: "not_reviewed",
-    adapterStatus: "configured",
+    adapterStatus: "verified",
+    permissionEvidenceUrl: "https://example.gov.ng/terms",
+    permissionReviewedBy: "reviewer-1",
+    permissionReviewedAt: "2026-10-31T00:00:00.000Z",
     enabled: true,
   }), false);
   assert.equal(canImportAcademicSource({
     ...source,
     automationPermission: "approved",
     adapterStatus: "configured",
+    enabled: true,
+  }), false);
+});
+
+test("source import gate rejects missing, malformed, or unreviewed permission evidence", () => {
+  const source = NIGERIA_ACADEMIC_SOURCES[0];
+  assert.equal(canImportAcademicSource({
+    ...source,
+    automationPermission: "approved",
+    adapterStatus: "verified",
+    enabled: true,
+  }), false);
+  assert.equal(canImportAcademicSource({
+    ...source,
+    automationPermission: "approved",
+    adapterStatus: "verified",
+    permissionEvidenceUrl: "javascript:alert(1)",
+    permissionReviewedBy: "reviewer-1",
+    permissionReviewedAt: "2026-10-31T00:00:00.000Z",
+    enabled: true,
+  }), false);
+  assert.equal(canImportAcademicSource({
+    ...source,
+    automationPermission: "approved",
+    adapterStatus: "verified",
+    permissionEvidenceUrl: "https://example.gov.ng/terms",
+    permissionReviewedBy: "reviewer-1",
+    permissionReviewedAt: "not-a-date",
     enabled: true,
   }), false);
 });
