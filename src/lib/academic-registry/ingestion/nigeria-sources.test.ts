@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { enabledNigeriaAcademicSources, NIGERIA_ACADEMIC_SOURCES } from "./nigeria-sources.ts";
+import { canImportAcademicSource } from "./contracts.ts";
 
 test("Nigeria source inventory covers the main regulator categories without pretending to scrape them", () => {
   assert.ok(NIGERIA_ACADEMIC_SOURCES.some((source) => source.id.includes("nuc")));
