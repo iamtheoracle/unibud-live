@@ -42,6 +42,7 @@ function Square() {
   const [peekStart, setPeekStart] = useState<string | undefined>();
   const [shown, setShown] = useState(10);
   const localPosts = useCampusStore((s) => s.localPosts);
+  const hiddenPosts = useCampusStore((s) => s.hiddenPosts);
   const following = useCampusStore((s) => s.following);
   const connections = useCampusStore((s) => s.connections);
   const interests = useCampusStore((s) => s.interests);
@@ -67,7 +68,7 @@ function Square() {
         { following, interests, universityId: homeCampusId, likeCounts, searches },
         connections,
       ),
-    [merged, lane, following, connections, interests, homeCampusId, likeCounts, searches],
+    [merged, lane, following, connections, interests, homeCampusId, hiddenPosts, likeCounts, searches],
   );
 
   const stream = useMemo(() => lanePosts.slice(0, shown), [lanePosts, shown]);
