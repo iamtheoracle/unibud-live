@@ -257,7 +257,9 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
           cv.academic_session as "academicSession", cv.official_source_url as "curriculumSourceUrl"
          from academic_programmes p
          left join academic_qualification_levels ql on ql.id = p.qualification_level_id and ql.verification_status = 'verified' and ql.verified_at is not null and ql.source_id is not null
+           and exists (select 1 from academic_sources ql_source where ql_source.id = ql.source_id and ql_source.reliability_status in ('official','reviewed'))
          left join academic_qualification_frameworks qf on qf.id = ql.framework_id and qf.verification_status = 'verified' and qf.verified_at is not null and qf.source_id is not null
+           and exists (select 1 from academic_sources qf_source where qf_source.id = qf.source_id and qf_source.reliability_status in ('official','reviewed'))
          left join lateral (
            select id, version_label, academic_session, official_source_url
            from academic_curriculum_versions
