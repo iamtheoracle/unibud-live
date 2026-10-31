@@ -109,7 +109,7 @@ function AcademicRegistry() {
         </div>
 
         <label className="mt-4 block text-xs font-medium text-muted-foreground" htmlFor="registry-search">
-          Institution, former name, or abbreviation
+          Institution, programme, course, former name, or level
         </label>
         <div className="mt-1 flex gap-2">
           <div className="relative min-w-0 flex-1">
@@ -118,7 +118,7 @@ function AcademicRegistry() {
               id="registry-search"
               value={searchText}
               onChange={(event) => setSearchText(event.target.value)}
-              placeholder="Search the official directory"
+              placeholder="Search official academic records"
               className="pl-9"
             />
           </div>
