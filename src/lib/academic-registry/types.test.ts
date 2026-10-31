@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeCountryCode } from "./types.ts";
+import { ISO_ALPHA2_COUNTRY_CODES, normalizeCountryCode } from "./types.ts";
 
 test("normalizes ISO alpha-2 country codes", () => {
   assert.equal(normalizeCountryCode(" ng "), "NG");
@@ -17,4 +17,12 @@ test("rejects country names and malformed codes rather than guessing", () => {
 
 test("rejects blank country codes", () => {
   assert.throws(() => normalizeCountryCode("  "), /two-letter ISO/);
+});
+
+test("contains the complete assigned ISO alpha-2 country and territory code set", () => {
+  assert.equal(ISO_ALPHA2_COUNTRY_CODES.size, 249);
+  assert.equal(ISO_ALPHA2_COUNTRY_CODES.has("NG"), true);
+  assert.equal(ISO_ALPHA2_COUNTRY_CODES.has("GB"), true);
+  assert.equal(ISO_ALPHA2_COUNTRY_CODES.has("IT"), true);
+  assert.equal(ISO_ALPHA2_COUNTRY_CODES.has("NR"), true);
 });
