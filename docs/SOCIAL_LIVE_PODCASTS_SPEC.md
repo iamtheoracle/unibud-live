@@ -1,10 +1,10 @@
 # UNIBUD Social Live & Podcasts
 
-Status: product and engineering specification. Social entertainment only.
+Status: product and engineering specification. Social media for entertainment, learning and general-interest discovery.
 
 ## Product boundary
 
-This is a social-media experience for general audiences and interests. It is not an academic product. Do not show courses, lecturers, class spaces, attendance, assignments, academic recommendations or study analytics in this experience. Academic audio remains separate in the academic context and must not be silently mixed into social podcast discovery.
+This is a social-media experience for general audiences and interests. Podcasts explicitly include both education and entertainment: explainers, science, technology, history, languages, business, career insights, personal growth, interviews and expert conversations sit alongside comedy, culture, music, lifestyle, relationships, gaming and stories. Educational podcasts are welcome in the main podcast discovery experience. Formal course delivery, class spaces, attendance, assignments and academic progress tracking remain separate UNIBUD education features; do not turn the podcast feed into a course-management system.
 
 The social context belongs to Square and includes Live, Podcasts, Stories, Watch, Events and Discovery. Live and Podcasts are contextual destinations, not new permanent primary-navigation tabs.
 
@@ -31,7 +31,8 @@ Random matching must never expose private profile fields, precise location, cont
 
 ## Podcast experiences
 
-- Discover shows and episodes by social interests, creator, language and format.
+- Discover shows and episodes by topic, creator, language, format and intent, including education/learning and entertainment.
+- Education categories include science, technology, history, languages, business, career insights, personal development and explainers.
 - Creator pages, show descriptions, episode artwork, transcripts/captions when available, follow, save, playlists, playback progress and share.
 - Publishing workflow for show metadata, episode media, artwork, visibility and moderation status.
 - Live podcast sessions can link to a live room, but remain distinct from recorded episodes.
@@ -71,5 +72,6 @@ Before enabling real multi-user sessions, implement and verify:
 - Host controls and moderation actions are server-authorized.
 - Real live sessions show real participant counts; no fabricated viewers or chat.
 - Podcast playback only appears for episodes with valid playable media.
-- Academic podcasts and social podcasts are kept in separate contexts and feeds.
+- Educational and entertainment podcasts can appear together in the social podcast experience, with clear topic labels and user-controlled discovery filters.
+- Formal academic course tools remain separate from podcast listening and publishing.
 - No feature is marked live/available until its provider, backend, safety and end-to-end tests pass.
