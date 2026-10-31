@@ -43,4 +43,7 @@ jobs:
       - name: Academic registry contract tests
         run: npm run test:academic-registry
 
+      - name: Academic registry isolated database migration tests
+        run: npm run test:academic-registry-db
+
       # Full UI/template tests and production build remain deferred until UI implementation begins.
