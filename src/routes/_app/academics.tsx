@@ -41,11 +41,12 @@ function AcademicRegistry() {
   const [administrativeRegion, setAdministrativeRegion] = useState("");
   const [programmeLevelLabel, setProgrammeLevelLabel] = useState("");
   const [subjectAreaCode, setSubjectAreaCode] = useState("");
+  const [offset, setOffset] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedCountry = WEST_AFRICA_COUNTRY_SCOPE.find((country) => country.countryCode === countryCode);
 
   const registry = useQuery({
-    queryKey: ["academic-registry", countryCode, searchText, ownershipType, institutionTypeCode, governanceLabel, administrativeRegion, programmeLevelLabel, subjectAreaCode],
+    queryKey: ["academic-registry", countryCode, searchText, ownershipType, institutionTypeCode, governanceLabel, administrativeRegion, programmeLevelLabel, subjectAreaCode, offset],
     queryFn: () => searchAcademicInstitutions({
       data: {
         countryCode,
@@ -56,10 +57,15 @@ function AcademicRegistry() {
         administrativeRegion: administrativeRegion.trim() || undefined,
         programmeLevelLabel: programmeLevelLabel.trim() || undefined,
         subjectAreaCode: subjectAreaCode.trim() || undefined,
+        limit: 21,
+        offset,
       },
     }),
     enabled: isIsoAlpha2CountryCode(countryCode.trim()),
   });
+
+  const visibleInstitutions = registry.data?.slice(0, 20) ?? [];
+  const hasMore = (registry.data?.length ?? 0) > 20;
 
   const details = useQuery({
     queryKey: ["academic-registry-details", selectedId],
@@ -85,6 +91,7 @@ function AcademicRegistry() {
           value={countryCode}
           onChange={(event) => {
             setCountryCode(event.target.value);
+            setOffset(0);
             setSelectedId(null);
           }}
           className="mt-1 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"
@@ -127,14 +134,14 @@ function AcademicRegistry() {
             <Input
               id="registry-search"
               value={searchText}
-              onChange={(event) => { setSearchText(event.target.value); setSelectedId(null); }}
+              onChange={(event) => { setSearchText(event.target.value); setOffset(0); setSelectedId(null); }}
               placeholder="Search official academic records"
               className="pl-9"
             />
           </div>
           <select
             value={ownershipType}
-            onChange={(event) => { setOwnershipType(event.target.value); setSelectedId(null); }}
+            onChange={(event) => { setOwnershipType(event.target.value); setOffset(0); setSelectedId(null); }}
             className="h-10 max-w-32 rounded-xl border border-input bg-background px-2 text-xs"
             aria-label="Ownership"
           >
@@ -151,31 +158,31 @@ function AcademicRegistry() {
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Input
             value={institutionTypeCode}
-            onChange={(event) => { setInstitutionTypeCode(event.target.value); setSelectedId(null); }}
+            onChange={(event) => { setInstitutionTypeCode(event.target.value); setOffset(0); setSelectedId(null); }}
             placeholder="Institution type code (e.g. university)"
             aria-label="Institution type code"
           />
           <Input
             value={governanceLabel}
-            onChange={(event) => { setGovernanceLabel(event.target.value); setSelectedId(null); }}
+            onChange={(event) => { setGovernanceLabel(event.target.value); setOffset(0); setSelectedId(null); }}
             placeholder="Governance label (e.g. federal, state-owned)"
             aria-label="Governance or ownership label"
           />
           <Input
             value={administrativeRegion}
-            onChange={(event) => { setAdministrativeRegion(event.target.value); setSelectedId(null); }}
+            onChange={(event) => { setAdministrativeRegion(event.target.value); setOffset(0); setSelectedId(null); }}
             placeholder="State, province, or region"
             aria-label="Administrative region"
           />
           <Input
             value={programmeLevelLabel}
-            onChange={(event) => { setProgrammeLevelLabel(event.target.value); setSelectedId(null); }}
+            onChange={(event) => { setProgrammeLevelLabel(event.target.value); setOffset(0); setSelectedId(null); }}
             placeholder="Qualification level (e.g. bachelor's degree)"
             aria-label="Qualification level"
           />
           <Input
             value={subjectAreaCode}
-            onChange={(event) => { setSubjectAreaCode(event.target.value); setSelectedId(null); }}
+            onChange={(event) => { setSubjectAreaCode(event.target.value); setOffset(0); setSelectedId(null); }}
             placeholder="Subject area code"
             aria-label="Subject area code"
           />
@@ -200,9 +207,9 @@ function AcademicRegistry() {
       ) : registry.data?.length ? (
         <section className="mt-6 space-y-3" aria-label="Verified institutions">
           <p className="text-xs text-muted-foreground">
-            {registry.data.length} result{registry.data.length === 1 ? "" : "s"} on this page · verified records only
+            {visibleInstitutions.length} result{visibleInstitutions.length === 1 ? "" : "s"} on this page · verified records only · page {Math.floor(offset / 20) + 1}
           </p>
-          {registry.data.map((institution) => (
+          {visibleInstitutions.map((institution) => (
             <article key={institution.id} className="rounded-2xl bg-card p-4 ring-1 ring-border">
               <div className="flex items-start gap-3">
                 <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-secondary">
@@ -238,6 +245,25 @@ function AcademicRegistry() {
               </div>
             </article>
           ))}
+          <div className="flex items-center justify-between gap-3 pt-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={offset === 0}
+              onClick={() => { setOffset(Math.max(0, offset - 20)); setSelectedId(null); }}
+            >
+              Previous
+            </Button>
+            <span className="text-xs text-muted-foreground">Page {Math.floor(offset / 20) + 1}</span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!hasMore}
+              onClick={() => { setOffset(offset + 20); setSelectedId(null); }}
+            >
+              Next
+            </Button>
+          </div>
         </section>
       ) : (
         <section className="mt-6 rounded-2xl border border-dashed border-border p-5">
