@@ -11,6 +11,9 @@ export interface AcademicSourceDefinition {
   coverageDomains?: string[];
   reviewCaveats?: string[];
   automationPermission: "not_reviewed" | "approved" | "prohibited";
+  permissionEvidenceUrl?: string;
+  permissionReviewedBy?: string;
+  permissionReviewedAt?: string;
   adapterStatus: "not_implemented" | "configured" | "verified";
   enabled: boolean;
 }
@@ -63,7 +66,18 @@ export interface AcademicSourceAdapter {
 
 /** A source is importable only when terms, adapter, and explicit enablement agree. */
 export function canImportAcademicSource(source: AcademicSourceDefinition): boolean {
-  return source.enabled &&
-    source.automationPermission === "approved" &&
-    source.adapterStatus === "verified";
+  if (!source.enabled || source.automationPermission !== "approved" || source.adapterStatus !== "verified") {
+    return false;
+  }
+  if (!source.permissionEvidenceUrl || !source.permissionReviewedBy || !source.permissionReviewedAt) {
+    return false;
+  }
+  if (!Number.isFinite(Date.parse(source.permissionReviewedAt))) return false;
+  try {
+    const evidenceUrl = new URL(source.permissionEvidenceUrl);
+    return (evidenceUrl.protocol === "https:" || evidenceUrl.protocol === "http:") &&
+      !evidenceUrl.username && !evidenceUrl.password;
+  } catch {
+    return false;
+  }
 }
