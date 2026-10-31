@@ -21,6 +21,8 @@ export interface RawAcademicSourceRecord {
 }
 
 export interface InstitutionCandidate {
+  /** Stable ID of the registered source; external IDs are only unique within this source. */
+  sourceId: string;
   externalId: string;
   countryCode: string;
   institutionTypeCode: string;
