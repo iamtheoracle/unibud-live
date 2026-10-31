@@ -75,8 +75,12 @@ test("academic registry migrations enforce evidence, source identity, and idempo
       ["source-nuc", "National Universities Commission", "https://www.nuc.edu.ng/"],
     );
     await db.query(
-      "insert into academic_sources (id, country_code, publisher_name, source_type, source_url) values ($1, 'NG', $2, 'regulator', $3)",
+      "insert into academic_sources (id, country_code, publisher_name, source_type, source_url, reliability_status) values ($1, 'NG', $2, 'regulator', $3, 'official')",
       ["source-nbte", "National Board for Technical Education", "https://www.nbte.gov.ng/"],
+    );
+    await db.query(
+      "insert into academic_sources (id, country_code, publisher_name, source_type, source_url) values ($1, 'NG', $2, 'regulator', $3)",
+      ["source-unreviewed", "Unreviewed Source", "https://example.gov.ng/"],
     );
 
     await assert.rejects(
