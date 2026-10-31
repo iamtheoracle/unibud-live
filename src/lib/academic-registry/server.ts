@@ -77,14 +77,29 @@ export const searchAcademicInstitutions = createServerFn({ method: "GET" })
 
     if (data.query) {
       const pattern = "%" + data.query + "%";
-      params.push(pattern, pattern, pattern);
-      const nameParam = params.length - 2;
-      const legalNameParam = params.length - 1;
-      const aliasParam = params.length;
+      params.push(pattern, pattern, pattern, pattern, pattern, pattern, pattern);
+      const first = params.length - 6;
       clauses.push(
-        "(i.name ilike $" + nameParam +
-        " or coalesce(i.legal_name, '') ilike $" + legalNameParam +
-        " or exists (select 1 from academic_institution_aliases ia where ia.institution_id = i.id and ia.verification_status = 'verified' and ia.source_id is not null and ia.verified_at is not null and ia.alias ilike $" + aliasParam + "))",
+        `(i.name ilike $${first}
+          or coalesce(i.legal_name, '') ilike $${first+1}
+          or coalesce(i.funding_or_governance_label, '') ilike $${first+2}
+          or exists (select 1 from academic_institution_aliases ia where ia.institution_id = i.id
+            and ia.verification_status = 'verified' and ia.source_id is not null and ia.verified_at is not null
+            and ia.alias ilike $${first+3})
+          or exists (select 1 from academic_programmes p where p.institution_id = i.id
+            and p.verification_status = 'verified' and p.verified_at is not null and p.source_id is not null
+            and p.name ilike $${first+4})
+          or exists (select 1 from academic_courses c where c.institution_id = i.id
+            and c.verification_status = 'verified' and c.verified_at is not null and c.source_id is not null
+            and c.title ilike $${first+5})
+          or exists (select 1 from academic_programmes p
+            join academic_qualification_levels ql on ql.id = p.qualification_level_id
+            join academic_qualification_frameworks qf on qf.id = ql.framework_id
+            where p.institution_id = i.id and p.verification_status = 'verified'
+              and p.verified_at is not null and p.source_id is not null
+              and ql.verification_status = 'verified' and ql.verified_at is not null and ql.source_id is not null
+              and qf.verification_status = 'verified' and qf.verified_at is not null and qf.source_id is not null
+              and ql.level_label ilike $${first+6}))`,
       );
     }
     if (data.institutionTypeId) addFilter("i.institution_type_id = ?", data.institutionTypeId);
@@ -257,13 +272,38 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
           m.evidence_note as "evidenceNote", s.official_source_url as "officialSourceUrl"
          from academic_standard_mappings m
          join academic_standards s on s.id = m.standard_id
-         where m.review_status = 'accepted' and m.source_id is not null and s.verification_status = 'verified' and s.verified_at is not null and s.source_id is not null
+         where m.review_status = 'accepted' and m.source_id is not null
+           and m.reviewer_id is not null and m.assessed_at is not null
+           and s.verification_status = 'verified' and s.verified_at is not null and s.source_id is not null
            and (
              (m.entity_type = 'institution' and m.entity_id = $1)
+             or (m.entity_type = 'campus' and m.entity_id in
+               (select id from academic_campuses where institution_id = $1 and verification_status = 'verified' and source_id is not null and verified_at is not null))
+             or (m.entity_type = 'accreditation' and m.entity_id in
+               (select id from academic_accreditations where institution_id = $1 and source_id is not null and verified_at is not null))
+             or (m.entity_type = 'framework' and m.entity_id in
+               (select id from academic_qualification_frameworks where country_code =
+                 (select country_code from academic_institutions where id = $1)
+                 and verification_status = 'verified' and source_id is not null and verified_at is not null))
+             or (m.entity_type = 'level' and m.entity_id in
+               (select ql.id from academic_qualification_levels ql
+                 join academic_qualification_frameworks qf on qf.id = ql.framework_id
+                 where qf.country_code = (select country_code from academic_institutions where id = $1)
+                   and ql.verification_status = 'verified' and ql.source_id is not null and ql.verified_at is not null
+                   and qf.verification_status = 'verified' and qf.source_id is not null and qf.verified_at is not null))
              or (m.entity_type = 'programme' and m.entity_id in
-               (select id from academic_programmes where institution_id = $1 and verification_status = 'verified'))
+               (select id from academic_programmes where institution_id = $1 and verification_status = 'verified' and source_id is not null and verified_at is not null))
+             or (m.entity_type = 'curriculum' and m.entity_id in
+               (select cv.id from academic_curriculum_versions cv
+                 join academic_programmes p on p.id = cv.programme_id
+                 where p.institution_id = $1 and cv.status = 'published' and cv.source_id is not null and cv.verified_at is not null))
              or (m.entity_type = 'course' and m.entity_id in
-               (select id from academic_courses where institution_id = $1 and verification_status = 'verified'))
+               (select id from academic_courses where institution_id = $1 and verification_status = 'verified' and source_id is not null and verified_at is not null))
+             or (m.entity_type = 'syllabus_topic' and m.entity_id in
+               (select st.id from academic_syllabus_topics st
+                 join academic_courses c on c.id = st.course_id
+                 where c.institution_id = $1 and st.verification_status = 'verified'
+                   and st.source_id is not null and st.verified_at is not null))
            )
          order by s.title`,
         [data.institutionId],
