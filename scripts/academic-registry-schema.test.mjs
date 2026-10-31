@@ -190,6 +190,12 @@ test("academic registry migrations enforce evidence, source identity, and idempo
     await db.query(
       "insert into academic_external_identifiers (id, source_id, country_code, entity_type, entity_id, external_id, source_record_url) values ('ext-2', 'source-nbte', 'NG', 'institution', 'inst-1', 'same-registry-id', 'https://www.nbte.gov.ng/registry/1')",
     );
+    await assert.rejects(
+      db.query(
+        "insert into academic_external_identifiers (id, source_id, country_code, entity_type, entity_id, external_id, source_record_url, last_import_run_id) values ('ext-source-mismatch', 'source-nbte', 'NG', 'institution', 'inst-1', 'mismatched-run-id', 'https://www.nbte.gov.ng/registry/2', 'run-1')",
+      ),
+      /academic_external_identifiers_run_source_fk/,
+    );
 
     await assert.rejects(
       db.query(
