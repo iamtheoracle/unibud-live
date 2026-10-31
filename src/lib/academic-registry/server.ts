@@ -170,6 +170,7 @@ export interface AcademicInstitutionDetails {
   courses: SerializableAcademicRecord[];
   syllabusTopics: SerializableAcademicRecord[];
   standards: SerializableAcademicRecord[];
+  evidenceSources: SerializableAcademicRecord[];
 }
 
 /** Public details expose verified catalogue data and reviewed standards only. */
@@ -197,7 +198,7 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
     const institution = institutionRows[0];
     if (!institution) return null;
 
-    const [aliases, campuses, accreditations, programmes, courses, syllabusTopics, standards] = await Promise.all([
+    const [aliases, campuses, accreditations, programmes, courses, syllabusTopics, standards, evidenceSources] = await Promise.all([
       sql.query<SerializableAcademicRecord>(
         `select alias, alias_type as "aliasType" from academic_institution_aliases where institution_id = $1 and verification_status = 'verified' and source_id is not null and verified_at is not null order by alias`,
         [data.institutionId],
@@ -308,7 +309,44 @@ export const getAcademicInstitutionDetails = createServerFn({ method: "GET" })
          order by s.title`,
         [data.institutionId],
       ),
+      sql.query<SerializableAcademicRecord>(
+        `select distinct source.id, source.publisher_name as "publisherName",
+          source.source_type as "sourceType", source.title, source.source_url as "sourceUrl",
+          source.retrieved_at as "retrievedAt", source.content_hash as "contentHash"
+         from academic_sources source
+         where source.id in (
+           select source_id from academic_institutions where id = $1
+           union select source_id from academic_institution_types
+             where id = (select institution_type_id from academic_institutions where id = $1)
+           union select source_id from academic_campuses where institution_id = $1
+           union select source_id from academic_institution_aliases where institution_id = $1
+           union select source_id from academic_accreditations where institution_id = $1
+           union select source_id from academic_programmes where institution_id = $1
+           union select ql.source_id from academic_qualification_levels ql
+             join academic_qualification_frameworks qf on qf.id = ql.framework_id
+             where qf.country_code = (select country_code from academic_institutions where id = $1)
+           union select source_id from academic_qualification_frameworks
+             where country_code = (select country_code from academic_institutions where id = $1)
+           union select cv.source_id from academic_curriculum_versions cv
+             join academic_programmes p on p.id = cv.programme_id where p.institution_id = $1
+           union select source_id from academic_courses where institution_id = $1
+           union select st.source_id from academic_syllabus_topics st
+             join academic_courses course on course.id = st.course_id where course.institution_id = $1
+           union select mapping.source_id from academic_standard_mappings mapping
+             where mapping.review_status = 'accepted' and mapping.entity_id in (
+               select id from academic_institutions where id = $1
+               union select id from academic_campuses where institution_id = $1
+               union select id from academic_accreditations where institution_id = $1
+               union select id from academic_programmes where institution_id = $1
+               union select id from academic_courses where institution_id = $1
+               union select st.id from academic_syllabus_topics st
+                 join academic_courses course on course.id = st.course_id where course.institution_id = $1
+             )
+         )
+         order by source.publisher_name, source.source_url`,
+        [data.institutionId],
+      ),
     ]);
 
-    return { institution, aliases, campuses, accreditations, programmes, courses, syllabusTopics, standards };
+    return { institution, aliases, campuses, accreditations, programmes, courses, syllabusTopics, standards, evidenceSources };
   });
