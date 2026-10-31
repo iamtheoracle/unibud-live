@@ -31,7 +31,11 @@ test("academic registry migrations enforce evidence, source identity, and idempo
       .replace('${clauses.join(" and ")}', "true")
       .replaceAll("$${limitParam}", "$2")
       .replaceAll("$${offsetParam}", "$3");
-    await db.query(searchSql, ["NG", 20, 0]);
+    try {
+      await db.query(searchSql, ["NG", 20, 0]);
+    } catch (error) {
+      throw new Error("Institution search SQL failed: " + String(error));
+    }
 
     const detailQueries = [];
     let detailCursor = 0;
@@ -50,8 +54,12 @@ test("academic registry migrations enforce evidence, source identity, and idempo
       detailCursor = parameterReference + 1;
     }
     assert.ok(detailQueries.length >= 8, "all institution detail SQL reads must be covered");
-    for (const query of detailQueries) {
-      await db.query(query, ["inst-1"]);
+    for (const [index, query] of detailQueries.entries()) {
+      try {
+        await db.query(query, ["inst-1"]);
+      } catch (error) {
+        throw new Error("Institution detail SQL query " + (index + 1) + " failed: " + String(error));
+      }
     }
 
     await db.query("insert into academic_countries (code, name) values ('NG', 'Nigeria')");
