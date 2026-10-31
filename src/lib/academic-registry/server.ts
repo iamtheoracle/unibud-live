@@ -151,6 +151,24 @@ export const searchAcademicInstitutions = createServerFn({ method: "GET" })
         data.programmeLevelId,
       );
     }
+    if (data.programmeLevelLabel) {
+      addFilter(
+        `exists (
+          select 1 from academic_programmes p
+          join academic_qualification_levels ql on ql.id = p.qualification_level_id
+          join academic_qualification_frameworks qf on qf.id = ql.framework_id
+          where p.institution_id = i.id
+            and p.verification_status = 'verified' and p.verified_at is not null
+            and ql.verification_status = 'verified' and ql.verified_at is not null
+            and qf.verification_status = 'verified' and qf.verified_at is not null
+            and ql.level_label ilike ?
+            and exists (select 1 from academic_sources p_source where p_source.id = p.source_id and p_source.reliability_status in ('official','reviewed'))
+            and exists (select 1 from academic_sources ql_source where ql_source.id = ql.source_id and ql_source.reliability_status in ('official','reviewed'))
+            and exists (select 1 from academic_sources qf_source where qf_source.id = qf.source_id and qf_source.reliability_status in ('official','reviewed'))
+        )`,
+        "%" + data.programmeLevelLabel + "%",
+      );
+    }
     if (data.subjectAreaCode) {
       addFilter(
         `exists (select 1 from academic_programmes p where p.institution_id = i.id and p.verification_status = 'verified' and p.verified_at is not null and p.source_id is not null
