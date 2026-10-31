@@ -13,6 +13,8 @@ test("Nigeria source inventory covers the main regulator categories without pret
 test("unreviewed source adapters remain disabled", () => {
   assert.equal(enabledNigeriaAcademicSources().length, 0);
   assert.ok(NIGERIA_ACADEMIC_SOURCES.every((source) => source.enabled === false));
+  assert.ok(NIGERIA_ACADEMIC_SOURCES.every((source) => (source.coverageDomains?.length ?? 0) > 0));
+  assert.ok(NIGERIA_ACADEMIC_SOURCES.every((source) => (source.reviewCaveats?.length ?? 0) > 0));
 });
 
 test("each source has an official HTTP(S) URL and a documented review caveat", () => {
@@ -20,4 +22,19 @@ test("each source has an official HTTP(S) URL and a documented review caveat", (
     assert.ok(["http:", "https:"].includes(new URL(source.officialUrl).protocol));
     assert.ok(source.licenceOrTerms && source.licenceOrTerms.length > 10);
   }
+});
+
+test("includes the official NBTE public register but keeps it disabled pending reuse review", () => {
+  const source = NIGERIA_ACADEMIC_SOURCES.find((item) => item.id === "ng-nbte-digital-public-register");
+  assert.ok(source);
+  assert.equal(source.officialUrl, "https://digitalnbte.nbte.gov.ng/Public");
+  assert.equal(source.enabled, false);
+  assert.ok(source.reviewCaveats?.some((note) => note.includes("reuse licence")));
+});
+
+test("preserves NCCE local categories and warns about source data quality", () => {
+  const source = NIGERIA_ACADEMIC_SOURCES.find((item) => item.id === "ng-ncce-accredited-colleges");
+  assert.ok(source);
+  assert.ok(source.reviewCaveats?.some((note) => note.includes("NCE-awarding")));
+  assert.ok(source.reviewCaveats?.some((note) => note.includes("placeholder")));
 });
