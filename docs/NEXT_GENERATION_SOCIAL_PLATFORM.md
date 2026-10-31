@@ -110,6 +110,40 @@ Bud can summarize accessible threads, community discussions and event details; t
 
 Use only context the user is authorized to access and has permitted. Keep approved memory separate from restricted private content. Ask confirmation before publishing, messaging, inviting, joining, deleting or other consequential actions. Show evidence for factual claims and distinguish fact from inference. Never fabricate completed actions or current external information.
 
+## Performance and efficiency contract
+
+Performance is a product feature. UNIBUD must remain responsive on ordinary mobile devices, constrained networks and growing datasets; it must not require flagship hardware or unlimited data.
+
+### User-facing performance budgets
+
+Treat these as release targets, measured on representative mid-range mobile devices and realistic network profiles. Record field measurements and revise budgets only with evidence.
+
+- Initial usable screen: target Largest Contentful Paint (LCP) at or below 2.5 seconds at the 75th percentile.
+- Interaction responsiveness: target Interaction to Next Paint (INP) at or below 200 ms at the 75th percentile.
+- Layout stability: target Cumulative Layout Shift (CLS) at or below 0.1 at the 75th percentile.
+- Core navigation and common actions should acknowledge input immediately, show meaningful loading states, and avoid blocking the main thread.
+- Feed, search and conversation lists must paginate or use cursor-based incremental loading; never fetch an unbounded timeline.
+- Images and video must use responsive sizes, modern formats where supported, lazy loading below the fold, and explicit upload/compression limits.
+- Heavy destinations (video editor, Live, Studio, analytics) must be route/code-split so they do not inflate the initial Square bundle.
+- Cache only data whose privacy and freshness rules permit it. Private data must never enter shared/public caches. Mutations must invalidate or reconcile affected cached views.
+- Avoid duplicate requests, N+1 query patterns, repeated catalog seeding on hot paths, and expensive synchronous work during rendering.
+- Database queries used by feeds, search, memberships and messaging must be explainable with query plans and supported by appropriate indexes. Add indexes from measured access patterns, not guesswork.
+- Use bounded retries with backoff for transient failures; do not retry authorization, validation or other permanent failures.
+- Use idempotency for retryable writes and prevent duplicate posts, messages, RSVPs and notifications after reconnects.
+- Provide graceful low-bandwidth behavior: text-first fallbacks, user-controlled autoplay, deferred media, resumable uploads where supported and clear data-use controls.
+
+### Measurement and release gates
+
+- Track real-user LCP, INP, CLS, route latency, API p50/p95/p99, database query latency, error rate, media processing time and failed uploads.
+- Establish budgets for JavaScript bundle size, feed payload size, API response size and database query count; publish measured baselines before tightening limits.
+- Load-test feed reads, search, chat fan-out, notifications and media metadata with realistic concurrency and skewed popular content.
+- Test slow 3G/4G, high latency, packet loss, offline transitions, low memory and interrupted uploads.
+- Use performance traces and profiling to find bottlenecks before adding infrastructure. Prefer simpler systems until measurements justify complexity.
+- Block release on severe regressions, unbounded queries, repeated main-thread stalls, broken pagination, or cache/privacy leaks.
+- Report measured results and test conditions. Never claim a speed advantage over Instagram or another platform without a fair, reproducible comparison on equivalent devices, networks and workloads.
+
+Reason: a feature that loads slowly, drains data, freezes a phone or fails on a weak connection is not a better feature. Efficiency must be measured in real user conditions, not inferred from code or design.
+
 ## Shared platform services
 
 Build reusable services for:
