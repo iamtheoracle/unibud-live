@@ -32,6 +32,26 @@ export function normalizeInstitutionCandidate(
   const sourceUrl = input.sourceUrl.trim();
   const warnings: string[] = [];
 
+  if (sourceId.length > 160 || externalId.length > 240) {
+    throw new Error("Source and external identifiers must be 160 and 240 characters or fewer.");
+  }
+  if (name.length > 300) throw new Error("Institution name must be 300 characters or fewer.");
+  if (institutionTypeCode.length > 120 || institutionTypeLabel.length > 200) {
+    throw new Error("Institution type identifiers and labels exceed supported lengths.");
+  }
+  if (input.establishedYear != null &&
+    (!Number.isInteger(input.establishedYear) || input.establishedYear < 1000 || input.establishedYear > 2200)) {
+    throw new Error("Established year must be a valid four-digit year.");
+  }
+  if (input.ownershipType &&
+    !["public", "private", "faith_based", "community", "international", "mixed", "unknown"].includes(input.ownershipType)) {
+    throw new Error("Unsupported ownership type.");
+  }
+  if (input.operationalStatus &&
+    !["active", "inactive", "merged", "closed", "unknown"].includes(input.operationalStatus)) {
+    throw new Error("Unsupported operational status.");
+  }
+
   if (!sourceId) throw new Error("A registered source ID is required.");
   if (!externalId) throw new Error("A source-specific external ID is required.");
   if (!name) throw new Error("Institution name is required.");
@@ -57,8 +77,26 @@ export function normalizeInstitutionCandidate(
     throw new Error("A valid source retrieval timestamp is required.");
   }
 
-  if (!input.officialWebsite) warnings.push("Official website not supplied by source.");
+  let officialWebsite: string | null = null;
+  if (input.officialWebsite?.trim()) {
+    let parsedWebsite: URL;
+    try {
+      parsedWebsite = new URL(input.officialWebsite.trim());
+    } catch {
+      throw new Error("Official website must be a valid HTTP or HTTPS URL.");
+    }
+    if ((parsedWebsite.protocol !== "https:" && parsedWebsite.protocol !== "http:") ||
+      parsedWebsite.username || parsedWebsite.password) {
+      throw new Error("Official website must use HTTP or HTTPS and contain no embedded credentials.");
+    }
+    officialWebsite = parsedWebsite.toString();
+  } else {
+    warnings.push("Official website not supplied by source.");
+  }
   if (!input.sourceContentHash) warnings.push("Source content hash is missing; change detection may be weaker.");
+  if (input.sourceContentHash && input.sourceContentHash.length > 256) {
+    throw new Error("Source content hash must be 256 characters or fewer.");
+  }
   if (!input.ownershipType || input.ownershipType === "unknown") {
     warnings.push("Ownership/governance is not verified.");
   }
@@ -82,7 +120,7 @@ export function normalizeInstitutionCandidate(
     institutionTypeLabel,
     name,
     legalName: input.legalName?.trim() || null,
-    officialWebsite: input.officialWebsite?.trim() || null,
+    officialWebsite,
     sourceUrl: parsedSourceUrl.toString(),
     sourceRetrievedAt: new Date(retrievedAt).toISOString(),
     normalizedName,
