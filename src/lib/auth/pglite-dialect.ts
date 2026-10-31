@@ -150,7 +150,7 @@ class PGliteConnection implements DatabaseConnection {
       numAffectedRows: result.affectedRows !== undefined ? BigInt(result.affectedRows) : undefined,
     };
   }
-  async *streamQuery(): AsyncIterableIterator<QueryResult<never>> {
+  streamQuery(): AsyncIterableIterator<QueryResult<never>> {
     throw new Error("PGlite streaming is not used");
   }
 }

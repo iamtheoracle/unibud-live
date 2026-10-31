@@ -19,8 +19,10 @@ export const Route = createFileRoute("/_app/communities")({ component: Communiti
 function Communities() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const nested = pathname !== "/communities" && pathname.startsWith("/communities/");
-  if (nested) return <Outlet />;
+  return nested ? <Outlet /> : <CommunitiesIndex />;
+}
 
+function CommunitiesIndex() {
   const { data } = useCatalog();
   const allRooms = data?.communities ?? [];
   const { user } = useAuthReady();

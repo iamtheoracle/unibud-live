@@ -39,19 +39,16 @@ function Square() {
     if (user && !onboardingDone) void nav({ to: "/welcome" });
   }, [user, isPending, onboardingDone, nav]);
 
-  if (isPending || (user && !onboardingDone)) {
-    return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
-  }
-
   const [lane, setLane] = useState<SquareLane>("on-stream");
   const [peekStart, setPeekStart] = useState<string | undefined>();
   const [shown, setShown] = useState(10);
   const localPosts = useCampusStore((s) => s.localPosts);
   const following = useCampusStore((s) => s.following);
   const connections = useCampusStore((s) => s.connections);
+  const homeCampusId = useCampusStore((s) => s.homeCampusId);
   const interests = useCampusStore((s) => s.interests);
   const likeCounts = useCampusStore((s) => s.likeCounts);
-  const searches = useCampusStore((s) => s.searches);
+  const searches = useCampusStore((s) => s.recentSearches);
   const setComposeOpen = useCampusStore((s) => s.setComposeOpen);
   const setDropOpen = useCampusStore((s) => s.setDropOpen);
   const setSquareView = useCampusStore((s) => s.setSquareView);
@@ -64,13 +61,14 @@ function Square() {
   }, [catalog.posts, localPosts]);
 
   const lanePosts = useMemo(
-    () => postsForLane(merged, lane, { following, connections, interests, likeCounts, searches }),
-    [merged, lane, following, connections, interests, likeCounts, searches],
+    () => postsForLane(merged, lane, { following, interests, universityId: homeCampusId, likeCounts, searches }, connections),
+    [merged, lane, following, connections, interests, homeCampusId, likeCounts, searches],
   );
 
   const stream = useMemo(() => loopStream(lanePosts, shown), [lanePosts, shown]);
 
   useEffect(() => {
+    if (isPending || (user && !onboardingDone)) return;
     const el = sentinel.current;
     if (!el) return;
     const io = new IntersectionObserver(
@@ -81,7 +79,11 @@ function Square() {
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [lane, lanePosts.length]);
+  }, [lane, lanePosts.length, isPending, user, onboardingDone]);
+
+  if (isPending || (user && !onboardingDone)) {
+    return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
+  }
 
   function openPeek(id: string) {
     setPeekStart(id);
@@ -337,7 +339,14 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
           </div>
           {menu ? (
             <div className="mt-2 flex flex-wrap gap-2 text-xs">
-              <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { following.includes(post.authorHandle) ? unfollow(post.authorHandle) : follow(post.authorHandle); setMenu(false); }}>
+              <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => {
+                  if (following.includes(post.authorHandle)) {
+                    unfollow(post.authorHandle);
+                  } else {
+                    follow(post.authorHandle);
+                  }
+                  setMenu(false);
+                }}>
                 {following.includes(post.authorHandle) ? "Unfollow" : "Follow"}
               </button>
               <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { hidePost(key); setMenu(false); }}>
@@ -388,7 +397,7 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
                   e.preventDefault();
                   if (!reply.trim()) return;
                   const body = reply.trim();
-                  addPostReply(key, body, "you");
+                  addPostReply(key, { id: `local-reply-${Date.now()}`, authorHandle: "you", body, createdAt: new Date().toISOString() });
                   if (user) void addSquareReply({ data: { postId: key, body } }).catch(() => {});
                   setReply("");
                 }}
