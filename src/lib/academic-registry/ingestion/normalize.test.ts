@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { normalizeInstitutionCandidate, slugifyInstitutionName } from "./normalize.ts";
 
 const candidate = {
+  sourceId: "nuc-approved-directory",
   externalId: "reg-104",
   countryCode: "ng",
   institutionTypeCode: "polytechnic",
@@ -21,7 +22,7 @@ test("normalizes names and creates a source-scoped identity key", () => {
   assert.equal(result.countryCode, "NG");
   assert.equal(result.normalizedName, "ekiti technical college");
   assert.equal(result.slug, "ekiti-technical-college");
-  assert.equal(result.identityKey, "NG:reg-104");
+  assert.equal(result.identityKey, "NG:nuc-approved-directory:reg-104");
   assert.equal(result.verificationStatus, "pending_review");
   assert.deepEqual(result.warnings, ["Established year is unknown."]);
 });
@@ -46,4 +47,21 @@ test("rejects missing external IDs, institution names, and invalid source URLs",
 
 test("slugification handles punctuation and diacritics", () => {
   assert.equal(slugifyInstitutionName("École Polytechnique (North)"), "ecole-polytechnique-north");
+});
+
+test("the same external identifier from different sources remains distinct", () => {
+  const first = normalizeInstitutionCandidate(candidate);
+  const second = normalizeInstitutionCandidate({ ...candidate, sourceId: "nbte-approved-directory" });
+  assert.notEqual(first.identityKey, second.identityKey);
+});
+
+test("preserves non-Latin institution names in stable slugs", () => {
+  assert.equal(slugifyInstitutionName("جامعة الملك سعود"), "جامعة-الملك-سعود");
+  assert.equal(slugifyInstitutionName("東京工業大学"), "東京工業大学");
+});
+
+test("rejects missing source identity, invalid retrieval time, and credential-bearing URLs", () => {
+  assert.throws(() => normalizeInstitutionCandidate({ ...candidate, sourceId: " " }), /registered source ID/);
+  assert.throws(() => normalizeInstitutionCandidate({ ...candidate, sourceRetrievedAt: "not-a-date" }), /retrieval timestamp/);
+  assert.throws(() => normalizeInstitutionCandidate({ ...candidate, sourceUrl: "https://user:secret@example.gov/" }), /embedded credentials/);
 });
