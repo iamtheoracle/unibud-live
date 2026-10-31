@@ -85,3 +85,18 @@ create table if not exists academic_entity_match_reviews (
 
 create index if not exists academic_entity_match_reviews_queue_idx
   on academic_entity_match_reviews (country_code, review_status, entity_type);
+
+-- Keep the source identity on a record result/identifier aligned with the run
+-- that produced it. Composite foreign keys prevent cross-source audit confusion.
+alter table academic_import_runs
+  add constraint academic_import_runs_id_source_unique unique (id, source_id);
+
+alter table academic_external_identifiers
+  add constraint academic_external_identifiers_run_source_fk
+  foreign key (last_import_run_id, source_id)
+  references academic_import_runs(id, source_id) not valid;
+
+alter table academic_import_record_results
+  add constraint academic_import_record_results_run_source_fk
+  foreign key (import_run_id, source_id)
+  references academic_import_runs(id, source_id) not valid;
