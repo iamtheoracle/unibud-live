@@ -20,9 +20,9 @@ test("rejects blank country codes", () => {
 });
 
 test("contains the complete assigned ISO alpha-2 country and territory code set", () => {
-  assert.equal(ISO_ALPHA2_COUNTRY_CODES.size, 249);
-  assert.equal(ISO_ALPHA2_COUNTRY_CODES.has("NG"), true);
-  assert.equal(ISO_ALPHA2_COUNTRY_CODES.has("GB"), true);
-  assert.equal(ISO_ALPHA2_COUNTRY_CODES.has("IT"), true);
-  assert.equal(ISO_ALPHA2_COUNTRY_CODES.has("NR"), true);
+  assert.equal(ISO_ALPHA2_COUNTRY_CODES.length, 249);
+  assert.equal(ISO_ALPHA2_COUNTRY_CODES.includes("NG"), true);
+  assert.equal(ISO_ALPHA2_COUNTRY_CODES.includes("GB"), true);
+  assert.equal(ISO_ALPHA2_COUNTRY_CODES.includes("IT"), true);
+  assert.equal(ISO_ALPHA2_COUNTRY_CODES.includes("NR"), true);
 });
