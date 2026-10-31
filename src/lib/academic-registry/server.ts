@@ -145,14 +145,18 @@ export const searchAcademicInstitutions = createServerFn({ method: "GET" })
     if (data.programmeLevelId) {
       addFilter(
         `exists (select 1 from academic_programmes p where p.institution_id = i.id and p.verification_status = 'verified' and p.verified_at is not null and p.source_id is not null
-           and exists (select 1 from academic_sources p_source where p_source.id = p.source_id and p_source.reliability_status in ('official','reviewed')) and p.qualification_level_id = ? and exists (select 1 from academic_qualification_levels ql join academic_qualification_frameworks qf on qf.id = ql.framework_id where ql.id = p.qualification_level_id and ql.verification_status = 'verified' and ql.verified_at is not null and ql.source_id is not null and qf.verification_status = 'verified' and qf.verified_at is not null and qf.source_id is not null))`,
+           and exists (select 1 from academic_sources p_source where p_source.id = p.source_id and p_source.reliability_status in ('official','reviewed')) and p.qualification_level_id = ? and exists (select 1 from academic_qualification_levels ql join academic_qualification_frameworks qf on qf.id = ql.framework_id where ql.id = p.qualification_level_id and ql.verification_status = 'verified' and ql.verified_at is not null and ql.source_id is not null and qf.verification_status = 'verified' and qf.verified_at is not null and qf.source_id is not null
+             and exists (select 1 from academic_sources ql_source where ql_source.id = ql.source_id and ql_source.reliability_status in ('official','reviewed'))
+             and exists (select 1 from academic_sources qf_source where qf_source.id = qf.source_id and qf_source.reliability_status in ('official','reviewed')))`,
         data.programmeLevelId,
       );
     }
     if (data.subjectAreaCode) {
       addFilter(
         `exists (select 1 from academic_programmes p where p.institution_id = i.id and p.verification_status = 'verified' and p.verified_at is not null and p.source_id is not null
-           and exists (select 1 from academic_sources p_source where p_source.id = p.source_id and p_source.reliability_status in ('official','reviewed')) and p.subject_area_code = ?)`,
+           and exists (select 1 from academic_sources p_source where p_source.id = p.source_id and p_source.reliability_status in ('official','reviewed')) and p.subject_area_code = ?
+           and p.verified_at is not null
+           and exists (select 1 from academic_sources p_source where p_source.id = p.source_id and p_source.reliability_status in ('official','reviewed')))`,
         data.subjectAreaCode,
       );
     }
@@ -174,8 +178,10 @@ export const searchAcademicInstitutions = createServerFn({ method: "GET" })
         i.official_website as "officialWebsite",
         i.operational_status as "operationalStatus",
         i.verification_status as "verificationStatus",
-        (select count(*)::int from academic_campuses c where c.institution_id = i.id and c.verification_status = 'verified' and c.source_id is not null and c.verified_at is not null) as "campusesCount",
-        (select count(*)::int from academic_programmes p where p.institution_id = i.id and p.verification_status = 'verified' and p.source_id is not null and p.verified_at is not null) as "programmesCount"
+        (select count(*)::int from academic_campuses c where c.institution_id = i.id and c.verification_status = 'verified' and c.source_id is not null and c.verified_at is not null
+          and exists (select 1 from academic_sources c_source where c_source.id = c.source_id and c_source.reliability_status in ('official','reviewed'))) as "campusesCount",
+        (select count(*)::int from academic_programmes p where p.institution_id = i.id and p.verification_status = 'verified' and p.source_id is not null and p.verified_at is not null
+          and exists (select 1 from academic_sources p_source where p_source.id = p.source_id and p_source.reliability_status in ('official','reviewed'))) as "programmesCount"
       from academic_institutions i
       join academic_institution_types it on it.id = i.institution_type_id and it.verification_status = 'verified' and it.source_id is not null and it.verified_at is not null
          and exists (select 1 from academic_sources i_source where i_source.id = i.source_id and i_source.reliability_status in ('official','reviewed'))
