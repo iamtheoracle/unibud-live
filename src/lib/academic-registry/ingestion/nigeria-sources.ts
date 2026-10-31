@@ -30,6 +30,11 @@ export const NIGERIA_ACADEMIC_SOURCES: readonly AcademicSourceDefinition[] = [
     officialUrl: "https://www.nuc.edu.ng/accreditation-tech-report-view/",
     licenceOrTerms: "Review NUC portal terms and document reuse rules before automated collection.",
     expectedRefreshDays: 30,
+    coverageDomains: ["programmes", "programme_accreditation", "quality_assurance"],
+    reviewCaveats: [
+      "Treat each programme approval as a scoped claim and retain its official reference and validity period.",
+      "Confirm document version and reuse rights before extraction.",
+    ],
     enabled: false,
   },
   {
@@ -40,10 +45,11 @@ export const NIGERIA_ACADEMIC_SOURCES: readonly AcademicSourceDefinition[] = [
     officialUrl: "https://www.nbte.gov.ng/nbte/approved%20institutions",
     licenceOrTerms: "Review NBTE site terms and source-specific access restrictions before collection.",
     expectedRefreshDays: 30,
-    coverageDomains: ["programme_accreditation", "quality_assurance"],
+    coverageDomains: ["institutions", "programmes", "accreditation"],
     reviewCaveats: [
+      "Preserve NBTE's institution-type categories and federal/state/private distinctions.",
       "Treat programme accreditation as scoped and time-bound; preserve status, reference, and validity dates.",
-      "Review document reuse terms before extraction.",
+      "Review site terms and document reuse rules before automated extraction.",
     ],
     enabled: false,
   },
@@ -71,6 +77,12 @@ export const NIGERIA_ACADEMIC_SOURCES: readonly AcademicSourceDefinition[] = [
     officialUrl: "https://web.nbte.gov.ng/node/114",
     licenceOrTerms: "Programme directory may be a downloadable document; review copyright, version, and parsing before collection.",
     expectedRefreshDays: 30,
+    coverageDomains: ["programmes", "programme_accreditation"],
+    reviewCaveats: [
+      "Preserve edition, publication date, programme nomenclature, and source page references.",
+      "Do not infer current accreditation from an old directory edition.",
+      "Review copyright and reuse rules before extracting curriculum text.",
+    ],
     enabled: false,
   },
   {
@@ -81,10 +93,11 @@ export const NIGERIA_ACADEMIC_SOURCES: readonly AcademicSourceDefinition[] = [
     officialUrl: "https://www.web.nbte.gov.ng/downloads",
     licenceOrTerms: "Review each curriculum/standard document's terms and version before extraction.",
     expectedRefreshDays: 60,
-    coverageDomains: ["technical_colleges"],
+    coverageDomains: ["curricula", "courses", "standards"],
     reviewCaveats: [
-      "Confirm the current institutional list and any ownership/status fields with the Ministry before publication.",
-      "Review source terms and update cadence before automated collection.",
+      "Preserve each curriculum document's edition, academic session, local qualification labels, and programme scope.",
+      "Do not treat an older published curriculum as the current version without confirming the applicable session.",
+      "Review each document's terms and version before extraction.",
     ],
     enabled: false,
   },
@@ -112,6 +125,11 @@ export const NIGERIA_ACADEMIC_SOURCES: readonly AcademicSourceDefinition[] = [
     officialUrl: "https://education.gov.ng/technology-science-education/",
     licenceOrTerms: "Review Ministry site terms and confirm the list is current before publication.",
     expectedRefreshDays: 60,
+    coverageDomains: ["technical_colleges"],
+    reviewCaveats: [
+      "Confirm the current institutional list and any ownership/status fields with the Ministry before publication.",
+      "Review source terms and update cadence before automated collection.",
+    ],
     enabled: false,
   },
 ];
