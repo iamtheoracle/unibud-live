@@ -20,16 +20,38 @@ export const uploadMedia = createServerFn({ method: "POST" })
   .middleware([authMiddleware])
   .validator((input: { dataUrl: string; fileName: string; mime?: string; kind?: MediaKind; conversationId?: string; roomId?: string }) => input)
   .handler(async ({ context, data }) => {
-    const parsed = parseDataUrl(data.dataUrl);
-    if (parsed.bytes.length > MAX_UPLOAD_BYTES) {
-      return { ok: false as const, error: "That file is over 8 MB." };
+    // Shared destinations are disabled until their membership checks are
+    // connected to the authoritative room/conversation tables.
+    if (data.conversationId || data.roomId) {
+      return { ok: false as const, error: "Shared uploads are not available yet." };
     }
-    const mime = data.mime || parsed.mime;
+    let parsed: ReturnType<typeof parseDataUrl>;
+    try {
+      parsed = parseDataUrl(data.dataUrl);
+    } catch {
+      return { ok: false as const, error: "Invalid upload data." };
+    }
+    if (parsed.bytes.length === 0 || parsed.bytes.length > MAX_UPLOAD_BYTES) {
+      return { ok: false as const, error: "Choose a file between 1 byte and 8 MB." };
+    }
+    const mime = (data.mime || parsed.mime).toLowerCase();
+    const allowedMime = new Set([
+      "image/jpeg", "image/png", "image/webp", "image/gif",
+      "audio/mpeg", "audio/mp4", "audio/wav", "audio/ogg",
+      "video/mp4", "video/webm", "application/pdf",
+    ]);
+    if (mime !== parsed.mime.toLowerCase() || !allowedMime.has(mime)) {
+      return { ok: false as const, error: "This file type is not supported." };
+    }
     const kind = data.kind ?? kindFromMime(mime);
+    if (kind !== kindFromMime(mime)) {
+      return { ok: false as const, error: "File type does not match its content." };
+    }
+    const fileName = data.fileName.replace(/[\\/\\0-\\x1f\\x7f]/g, "_").slice(0, 180) || "upload";
     const id = crypto.randomUUID();
     const sql = await getSql();
     await sql`insert into media_assets (id, owner_id, kind, mime_type, file_name, file_size, storage_path, status, visibility, conversation_id, room_id)
-      values (${id}, ${context.userId}, ${kind}, ${mime}, ${data.fileName}, ${parsed.bytes.length}, ${id}, ${"processing"}, ${data.roomId ? "room" : data.conversationId ? "conversation" : "private"}, ${data.conversationId ?? null}, ${data.roomId ?? null})`;
+      values (${id}, ${context.userId}, ${kind}, ${mime}, ${fileName}, ${parsed.bytes.length}, ${id}, ${"processing"}, ${data.roomId ? "room" : data.conversationId ? "conversation" : "private"}, ${data.conversationId ?? null}, ${data.roomId ?? null})`;
     try {
       await writeMediaBytes(id, parsed.bytes);
       await sql`update media_assets set status = ${"ready"}, updated_at = now() where id = ${id}`;
