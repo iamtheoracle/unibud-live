@@ -10,6 +10,7 @@ export interface AcademicInstitutionSearchInput {
   institutionTypeId?: string;
   institutionTypeCode?: string;
   ownershipType?: string;
+  governanceLabel?: string;
   administrativeRegion?: string;
   programmeLevelId?: string;
   programmeLevelLabel?: string;
@@ -59,6 +60,7 @@ function parseSearchInput(input: AcademicInstitutionSearchInput) {
     institutionTypeId: optionalSearchText(input.institutionTypeId, "Institution type filter", 200),
     institutionTypeCode: optionalSearchText(input.institutionTypeCode, "Institution type code", 120),
     ownershipType,
+    governanceLabel: optionalSearchText(input.governanceLabel, "Governance label filter", 120),
     administrativeRegion: optionalSearchText(input.administrativeRegion, "Administrative region filter", 120),
     programmeLevelId: optionalSearchText(input.programmeLevelId, "Programme level filter", 200),
     programmeLevelLabel: optionalSearchText(input.programmeLevelLabel, "Programme level label", 160),
@@ -132,6 +134,7 @@ export const searchAcademicInstitutions = createServerFn({ method: "GET" })
     if (data.institutionTypeId) addFilter("i.institution_type_id = ?", data.institutionTypeId);
     if (data.institutionTypeCode) addFilter("it.code = ?", data.institutionTypeCode);
     if (data.ownershipType) addFilter("i.ownership_type = ?", data.ownershipType);
+    if (data.governanceLabel) addFilter("i.funding_or_governance_label ilike ?", "%" + data.governanceLabel + "%");
     if (data.administrativeRegion) {
       addFilter(
         `exists (select 1 from academic_campuses c where c.institution_id = i.id and c.verification_status = 'verified' and c.source_id is not null and c.verified_at is not null and c.administrative_region ilike ?
