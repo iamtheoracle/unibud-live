@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { Search, SlidersHorizontal, Plus, Users, BriefcaseBusiness, Utensils, Truck, Heart, Compass, ChevronRight, UserRound, Sparkles } from "lucide-react";
 import { Avatar, PersonMeta } from "@/components/unibud/person";
 import { RelationActions } from "@/components/unibud/relation-actions";
 import { Button } from "@/components/ui/button";
@@ -11,10 +12,29 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/connect")({ component: Connect });
 
-type Tab = "discover" | "requests" | "sent" | "connections" | "following" | "followers";
+type MainView = "people" | "opportunities";
+type PeopleTab = "discover" | "requests" | "sent" | "connections" | "following" | "followers";
+
+const peopleTabs: { id: PeopleTab; label: string }[] = [
+  { id: "discover", label: "Discover" },
+  { id: "requests", label: "Requests" },
+  { id: "sent", label: "Sent" },
+  { id: "connections", label: "Connections" },
+  { id: "following", label: "Following" },
+  { id: "followers", label: "Followers" },
+];
+
+const opportunityTypes = [
+  { label: "Work", detail: "Remote jobs, freelance and internships", icon: BriefcaseBusiness },
+  { label: "Services", detail: "Skills, domestic help and local services", icon: Users },
+  { label: "Food & goods", detail: "Cafeterias, meals and everyday items", icon: Utensils },
+  { label: "Delivery", detail: "Pickup, drop-off and errands", icon: Truck },
+  { label: "Requests", detail: "Ask the community for what you need", icon: Sparkles },
+];
 
 function Connect() {
-  const [tab, setTab] = useState<Tab>("discover");
+  const [view, setView] = useState<MainView>("people");
+  const [tab, setTab] = useState<PeopleTab>("discover");
   const [q, setQ] = useState("");
   const incoming = useCampusStore((s) => s.incoming);
   const outgoing = useCampusStore((s) => s.outgoing);
@@ -57,151 +77,174 @@ function Connect() {
               ? PEOPLE.filter((p) => followers.includes(p.handle))
               : filtered;
 
-  const suggested = [...filtered].sort((a, b) => proximityScore(b, connections, lens) - proximityScore(a, connections, lens));
-  const shown = tab === "discover" ? suggested : list;
+  const shown =
+    tab === "discover"
+      ? [...filtered].sort((a, b) => proximityScore(b, connections, lens) - proximityScore(a, connections, lens))
+      : list;
 
   return (
-    <main className="safe-bottom px-5 pt-6">
-      <p className="kicker">People</p>
-      <h1 className="mt-1 font-display text-4xl">Connect</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Find people you would not normally meet — same interests, other cities, other schools.
-        Connect is mutual. Follow is one-way.
-      </p>
-      <div className="mt-5">
-        <Input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search people, programmes, places, interests"
-          aria-label="Search students"
-        />
-      </div>
-      <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-        {(
-          [
-            ["discover", "Discover"],
-            ["requests", "Requests"],
-            ["sent", "Sent"],
-            ["connections", "Connections"],
-            ["following", "Following"],
-            ["followers", "Followers"],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={cn(
-              "relative h-9 shrink-0 rounded-full px-4 text-sm font-medium",
-              tab === id ? "bg-ink text-paper" : "bg-card text-muted-foreground ring-1 ring-border",
-            )}
-          >
-            {label}
-            {id === "requests" && incoming.length ? (
-              <span className="ml-1 inline-flex min-w-4 justify-center rounded-full bg-bud px-1 text-[10px] text-bud-foreground">
-                {incoming.length}
-              </span>
-            ) : null}
-          </button>
-        ))}
-      </div>
-
-      {tab === "discover" ? (
-        <section className="mt-5 rounded-3xl bg-ink px-6 py-7 text-paper">
-          <p className="kicker text-bud">People you may never have met</p>
-          <h2 className="mt-3 font-display text-3xl text-paper">Same interests beat same postcode.</h2>
-          <p className="mt-3 text-sm text-paper/70">
-            Robotics in Nairobi. Physics in Johannesburg. Language exchange. Builders, players, and
-            people who like the same strange things you like.
+    <main className="safe-bottom mx-auto w-full max-w-3xl px-4 pb-24 pt-5 sm:px-6">
+      <header className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">UNIBUD</p>
+          <h1 className="mt-1 font-display text-3xl tracking-tight">Connect</h1>
+          <p className="mt-1 max-w-md text-sm text-muted-foreground">
+            People, opportunities and everyday help — all in one place.
           </p>
-        </section>
-      ) : null}
-
-      {tab === "discover" ? (
-        <div className="mt-5 grid gap-3">
-          <Lane title="Builders far from you" handles={["aisha_nbo", "chinedu", "adaeze"]} />
-          <Lane title="Sky, games, language" handles={["jonas_wits", "yuki_lang", "ibrahim"]} />
-          <Lane title="Creators" handles={PEOPLE.filter((p) => p.tags?.includes("creator")).map((p) => p.handle)} />
         </div>
-      ) : null}
+        <Button size="sm" className="shrink-0 gap-2 rounded-full">
+          <Plus className="size-4" />
+          Post
+        </Button>
+      </header>
 
-      <ul className="mt-5 space-y-3">
-        {shown.map((p) => {
-          const uni = uniById(p.universityId);
-          const ctx = sharedContext(p, lens);
-          const mutuals = connections.filter((h) => h !== p.handle).slice(0, 2);
-          return (
-            <li key={p.handle} className="rounded-2xl bg-card p-3 ring-1 ring-border">
-              <div className="flex items-center gap-3">
-                <Link to="/u/$handle" params={{ handle: p.handle }}>
-                  <Avatar name={p.name} className="size-12" />
-                </Link>
-                <Link to="/u/$handle" params={{ handle: p.handle }} className="min-w-0 flex-1">
-                  <PersonMeta person={p} compact />
-                  <p className="truncate text-xs text-muted-foreground">
-                    {uni?.shortName} · {academicLine(p)}
-                  </p>
-                  {ctx.items.length ? (
-                    <p className="text-[11px] text-muted-foreground">{ctx.items.join(" · ")}</p>
-                  ) : null}
-                  {mutuals.length ? (
-                    <p className="text-[11px] text-muted-foreground">
-                      Mutual: {mutuals.map((h) => `@${h}`).join(", ")}
-                    </p>
-                  ) : null}
-                </Link>
-              </div>
-              <div className="mt-3">
-                {tab === "requests" ? (
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={() => accept(p.handle)}>
-                      Accept
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => decline(p.handle)}>
-                      Decline
-                    </Button>
-                  </div>
-                ) : tab === "sent" ? (
-                  <Button size="sm" variant="outline" onClick={() => cancelRequest(p.handle)}>
-                    Pending · Cancel
-                  </Button>
-                ) : (
-                  <RelationActions handle={p.handle} />
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-      {shown.length === 0 ? (
-        <p className="py-12 text-center text-sm text-muted-foreground">Nobody in this list yet.</p>
-      ) : null}
-    </main>
-  );
-}
+      <div className="mt-5 grid grid-cols-2 rounded-2xl bg-muted/70 p-1">
+        <button
+          type="button"
+          onClick={() => setView("people")}
+          className={cn("flex h-10 items-center justify-center gap-2 rounded-xl text-sm font-medium transition", view === "people" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground")}
+        >
+          <Users className="size-4" /> People
+        </button>
+        <button
+          type="button"
+          onClick={() => setView("opportunities")}
+          className={cn("flex h-10 items-center justify-center gap-2 rounded-xl text-sm font-medium transition", view === "opportunities" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground")}
+        >
+          <Compass className="size-4" /> Opportunities
+        </button>
+      </div>
 
-function Lane({ title, handles }: { title: string; handles: string[] }) {
-  const people = handles.map((h) => PEOPLE.find((p) => p.handle === h)).filter(Boolean);
-  if (!people.length) return null;
-  return (
-    <section className="rounded-2xl bg-card p-4 ring-1 ring-border">
-      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{title}</p>
-      <ul className="mt-3 space-y-3">
-        {people.map((p) => (
-          <li key={p!.handle} className="flex items-center gap-3">
-            <Link to="/u/$handle" params={{ handle: p!.handle }}>
-              <Avatar name={p!.name} />
-            </Link>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{p!.name}</p>
-              <p className="truncate text-[11px] text-muted-foreground">
-                @{p!.handle} · {p!.bio}
-              </p>
+      {view === "people" ? (
+        <>
+          <div className="mt-4 flex items-center gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search people, skills or campus" aria-label="Search people" className="h-11 rounded-2xl pl-9" />
             </div>
-            <RelationActions handle={p!.handle} />
-          </li>
-        ))}
-      </ul>
-    </section>
+            <Button variant="outline" size="icon" className="size-11 shrink-0 rounded-2xl" aria-label="Search filters">
+              <SlidersHorizontal className="size-4" />
+            </Button>
+          </div>
+
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+            {peopleTabs.map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTab(id)}
+                className={cn("h-8 shrink-0 rounded-full px-3 text-xs font-medium transition", tab === id ? "bg-foreground text-background" : "bg-muted text-muted-foreground")}
+              >
+                {label}
+                {id === "requests" && incoming.length > 0 ? <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">{incoming.length}</span> : null}
+              </button>
+            ))}
+          </div>
+
+          {tab === "discover" ? (
+            <section className="mt-5 rounded-2xl border bg-card p-4">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Sparkles className="size-4 text-primary" /> Find your people
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Discover people across campuses through shared interests, skills and academic paths.
+              </p>
+            </section>
+          ) : null}
+
+          <div className="mt-5 flex items-center justify-between">
+            <h2 className="text-sm font-semibold">{tab === "discover" ? "People you may like" : peopleTabs.find((item) => item.id === tab)?.label}</h2>
+            <span className="text-xs text-muted-foreground">{shown.length} {shown.length === 1 ? "person" : "people"}</span>
+          </div>
+
+          <ul className="mt-3 divide-y rounded-2xl border bg-card">
+            {shown.map((p) => {
+              const uni = uniById(p.universityId);
+              const ctx = sharedContext(p, lens);
+              return (
+                <li key={p.handle} className="p-3">
+                  <div className="flex items-center gap-3">
+                    <Link to="/u/$handle" params={{ handle: p.handle }} className="shrink-0">
+                      <Avatar name={p.name} className="size-11" />
+                    </Link>
+                    <Link to="/u/$handle" params={{ handle: p.handle }} className="min-w-0 flex-1">
+                      <PersonMeta person={p} compact />
+                      <p className="truncate text-xs text-muted-foreground">{uni?.shortName} · {academicLine(p)}</p>
+                      {ctx.items.length > 0 ? <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{ctx.items.join(" · ")}</p> : null}
+                    </Link>
+                    <div className="shrink-0">
+                      {tab === "requests" ? (
+                        <div className="flex gap-1.5">
+                          <Button size="sm" onClick={() => accept(p.handle)}>Accept</Button>
+                          <Button size="sm" variant="outline" onClick={() => decline(p.handle)}>Decline</Button>
+                        </div>
+                      ) : tab === "sent" ? (
+                        <Button size="sm" variant="outline" onClick={() => cancelRequest(p.handle)}>Cancel</Button>
+                      ) : (
+                        <RelationActions handle={p.handle} />
+                      )}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          {shown.length === 0 ? (
+            <div className="rounded-2xl border border-dashed px-5 py-12 text-center">
+              <UserRound className="mx-auto size-7 text-muted-foreground" />
+              <p className="mt-2 text-sm font-medium">Nothing here yet</p>
+              <p className="mt-1 text-xs text-muted-foreground">Your people and requests will appear here.</p>
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <>
+          <section className="mt-5">
+            <h2 className="text-lg font-semibold tracking-tight">What are you looking for?</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Find work, offer a service, order something or ask for help.</p>
+          </section>
+          <div className="mt-4 divide-y rounded-2xl border bg-card">
+            {opportunityTypes.map(({ label, detail, icon: Icon }) => (
+              <button key={label} type="button" className="flex w-full items-center gap-3 p-4 text-left transition hover:bg-muted/50">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted"><Icon className="size-5" /></span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium">{label}</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">{detail}</span>
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+              </button>
+            ))}
+          </div>
+          <section className="mt-5 rounded-2xl border border-dashed p-4">
+            <p className="text-sm font-semibold">Your listings and activity</p>
+            <p className="mt-1 text-xs text-muted-foreground">Manage your offers, applications, orders and active deals from one place.</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-full bg-muted px-3 py-1.5 text-xs text-muted-foreground">My posts</span>
+              <span className="rounded-full bg-muted px-3 py-1.5 text-xs text-muted-foreground">My requests</span>
+              <span className="rounded-full bg-muted px-3 py-1.5 text-xs text-muted-foreground">My deals</span>
+            </div>
+          </section>
+          <p className="mt-4 text-center text-xs text-muted-foreground">Food, goods, local services and remote work belong here too.</p>
+        </>
+      )}
+
+      <section className="mt-6 border-t pt-4">
+        <p className="mb-2 text-xs font-medium text-muted-foreground">MORE IN UNIBUD</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Link to="/chat" className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm">
+            <span>Chat</span><ChevronRight className="size-4 text-muted-foreground" />
+          </Link>
+          <div className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm">
+            <span>SoulLync</span><Heart className="size-4 text-muted-foreground" />
+          </div>
+          <div className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm">
+            <span>WAYWARD</span><Compass className="size-4 text-muted-foreground" />
+          </div>
+          <div className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm">
+            <span>Concierge</span><Sparkles className="size-4 text-muted-foreground" />
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }
