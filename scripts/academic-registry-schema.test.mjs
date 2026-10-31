@@ -28,7 +28,7 @@ test("academic registry migrations enforce evidence, source identity, and idempo
     assert.ok(searchTickStart >= 0 && searchTickEnd > searchTickStart, "institution search SQL must be a template string");
     const searchSql = serverSource
       .slice(searchTickStart + 1, searchTickEnd)
-      .replace('${clauses.join(" and ")}', "true")
+      .replace('${clauses.join(" and ")}', "i.country_code = $1")
       .replaceAll("$${limitParam}", "$2")
       .replaceAll("$${offsetParam}", "$3");
     try {
