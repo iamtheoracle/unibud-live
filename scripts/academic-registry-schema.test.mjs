@@ -94,6 +94,39 @@ test("academic registry migrations enforce evidence, source identity, and idempo
       "insert into academic_institutions (id, country_code, institution_type_id, name, slug, verification_status, source_id, verified_at) values ('inst-1', 'NG', 'type-university', 'Verified Institution', 'verified-institution', 'verified', 'source-nuc', now())",
     );
 
+    await db.query(
+      "insert into academic_institutions (id, country_code, institution_type_id, name, slug, verification_status, source_id) values ('inst-pending', 'NG', 'type-university', 'Pending Institution', 'pending-institution', 'pending_review', 'source-nuc')",
+    );
+
+    // Exercise the exact reviewer decision SQL used by the server function.
+    const reviewMarker = serverSource.indexOf("with updated as (");
+    const reviewTickStart = serverSource.lastIndexOf("`", reviewMarker);
+    const reviewTickEnd = serverSource.indexOf("`,", reviewMarker);
+    assert.ok(reviewMarker >= 0 && reviewTickStart >= 0 && reviewTickEnd > reviewTickStart);
+    const reviewSql = serverSource.slice(reviewTickStart + 1, reviewTickEnd);
+    const reviewed = await db.query(reviewSql, [
+      "inst-pending",
+      "verify",
+      "review-audit-1",
+      "Official registry evidence checked by reviewer.",
+      "reviewer-1",
+    ]);
+    assert.equal(reviewed.rows[0]?.verificationStatus, "verified");
+    const auditRows = await db.query(
+      "select id, review_status, reviewer_id from academic_source_assertions where entity_id = 'inst-pending'",
+    );
+    assert.equal(auditRows.rows.length, 1);
+    assert.equal(auditRows.rows[0].review_status, "accepted");
+    assert.equal(auditRows.rows[0].reviewer_id, "reviewer-1");
+    const secondReview = await db.query(reviewSql, [
+      "inst-pending",
+      "reject",
+      "review-audit-2",
+      "Attempted second review should not change a reviewed record.",
+      "reviewer-2",
+    ]);
+    assert.equal(secondReview.rows.length, 0);
+
     await assert.rejects(
       db.query(
         "insert into academic_campuses (id, institution_id, name, verification_status) values ('campus-bad', 'inst-1', 'Unverified Campus', 'verified')",
