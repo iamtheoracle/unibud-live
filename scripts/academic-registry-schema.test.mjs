@@ -64,7 +64,7 @@ test("academic registry migrations enforce evidence, source identity, and idempo
 
     await db.query("insert into academic_countries (code, name) values ('NG', 'Nigeria')");
     await db.query(
-      "insert into academic_sources (id, country_code, publisher_name, source_type, source_url) values ($1, 'NG', $2, 'regulator', $3)",
+      "insert into academic_sources (id, country_code, publisher_name, source_type, source_url, reliability_status) values ($1, 'NG', $2, 'regulator', $3, 'official')",
       ["source-nuc", "National Universities Commission", "https://www.nuc.edu.ng/"],
     );
     await db.query(
@@ -97,6 +97,9 @@ test("academic registry migrations enforce evidence, source identity, and idempo
     await db.query(
       "insert into academic_institutions (id, country_code, institution_type_id, name, slug, verification_status, source_id) values ('inst-pending', 'NG', 'type-university', 'Pending Institution', 'pending-institution', 'pending_review', 'source-nuc')",
     );
+    await db.query(
+      "insert into academic_institutions (id, country_code, institution_type_id, name, slug, verification_status, source_id) values ('inst-untrusted', 'NG', 'type-university', 'Untrusted Source Institution', 'untrusted-source-institution', 'pending_review', 'source-unreviewed')",
+    );
 
     // Exercise the exact reviewer decision SQL used by the server function.
     const reviewMarker = serverSource.indexOf("with updated as (");
@@ -104,6 +107,15 @@ test("academic registry migrations enforce evidence, source identity, and idempo
     const reviewTickEnd = serverSource.indexOf("`,", reviewMarker);
     assert.ok(reviewMarker >= 0 && reviewTickStart >= 0 && reviewTickEnd > reviewTickStart);
     const reviewSql = serverSource.slice(reviewTickStart + 1, reviewTickEnd);
+    const untrustedReview = await db.query(reviewSql, [
+      "inst-untrusted",
+      "verify",
+      "review-audit-untrusted",
+      "Source reliability has not been approved.",
+      "reviewer-1",
+    ]);
+    assert.equal(untrustedReview.rows.length, 0);
+
     const reviewed = await db.query(reviewSql, [
       "inst-pending",
       "verify",
