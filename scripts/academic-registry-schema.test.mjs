@@ -210,6 +210,12 @@ test("academic registry migrations enforce evidence, source identity, and idempo
     await db.query(
       "insert into academic_import_record_results (id, import_run_id, source_id, entity_type, external_id, outcome, error_message) values ('result-1', 'run-1', 'source-nuc', 'institution', 'broken-record', 'failed', 'Source payload did not validate')",
     );
+    await assert.rejects(
+      db.query(
+        "insert into academic_import_record_results (id, import_run_id, source_id, entity_type, external_id, outcome, error_message) values ('result-source-mismatch', 'run-1', 'source-nbte', 'institution', 'wrong-source', 'failed', 'Source/run mismatch')",
+      ),
+      /academic_import_record_results_run_source_fk/,
+    );
   } finally {
     await db.close();
   }
