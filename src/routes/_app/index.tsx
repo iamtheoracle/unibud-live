@@ -15,7 +15,6 @@ import { isVideoPost, likeKey, postsForLane, SQUARE_LANES, type SquareLane } fro
 import { addSquareReply, toggleCommentLike as toggleDbCommentLike, togglePostLike, toggleSave } from "@/lib/unibud/server";
 import { toast } from "sonner";
 import type { DiscoveryItem, FeedPost } from "@/lib/unibud/types";
-import { isSquareInteractiveTarget } from "@/lib/unibud/square-board";
 
 const EMPTY_REPLIES: import("@/lib/unibud/spill-data").SpillReply[] = [];
 
@@ -108,13 +107,7 @@ function Square() {
           <ReelsStage source={lanePosts.length ? lanePosts : merged} startId={peekStart} />
         </div>
       ) : (
-        <div
-          className="min-h-[60dvh]"
-          onClick={(e) => {
-            if (isSquareInteractiveTarget(e.target)) return;
-            void nav({ to: "/bud" });
-          }}
-        >
+        <div className="min-h-[60dvh]">
           <div className="px-4 pt-3">
             <p className="kicker">The UNIBUD world</p>
             <div className="mt-1 flex items-start justify-between gap-3">
