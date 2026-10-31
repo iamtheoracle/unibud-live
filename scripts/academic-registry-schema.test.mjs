@@ -42,7 +42,7 @@ test("academic registry migrations enforce evidence, source identity, and idempo
     try {
       await db.query(searchSql, ["NG", ...Array(9).fill("%registry%"), 20, 0]);
     } catch (error) {
-      throw new Error("Institution search SQL failed: " + String(error));
+      throw new Error("Institution search SQL failed: " + String(error) + "\n" + searchSql);
     }
 
     const queueFunctionStart = serverSource.indexOf("export const getInstitutionReviewQueue");
