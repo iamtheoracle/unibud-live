@@ -18,6 +18,27 @@ test("academic registry migrations enforce evidence, source identity, and idempo
       await db.exec(await readFile(join(root, "migrations", name), "utf8"));
     }
 
+    // Compile every public registry read against the isolated schema. This catches
+    // drift between the SQL handlers and the durable migration contract.
+    const serverSource = await readFile(join(root, "src/lib/academic-registry/server.ts"), "utf8");
+    const searchMatch = serverSource.match(
+      /return sql\\.query<AcademicInstitutionSearchResult>\\(\\s*\\x60([\\s\\S]*?)\\x60,\\s*params,/,
+    );
+    assert.ok(searchMatch, "institution search SQL must remain discoverable for schema verification");
+    const searchSql = searchMatch[1]
+      .replace('${clauses.join(" and ")}', "true")
+      .replace(/\\$\\$\\{limitParam\\}/g, "$2")
+      .replace(/\\$\\$\\{offsetParam\\}/g, "$3");
+    await db.query(searchSql, ["NG", 20, 0]);
+
+    const detailQueries = [...serverSource.matchAll(
+      /sql\\.query<SerializableAcademicRecord>\\(\\s*\\x60([\\s\\S]*?)\\x60,\\s*\\[data\\.institutionId\\]\\s*\\)/g,
+    )].map((match) => match[1]);
+    assert.ok(detailQueries.length >= 8, "all institution detail SQL reads must be covered");
+    for (const query of detailQueries) {
+      await db.query(query, ["inst-1"]);
+    }
+
     await db.query("insert into academic_countries (code, name) values ('NG', 'Nigeria')");
     await db.query(
       "insert into academic_sources (id, country_code, publisher_name, source_type, source_url) values ($1, 'NG', $2, 'regulator', $3)",
