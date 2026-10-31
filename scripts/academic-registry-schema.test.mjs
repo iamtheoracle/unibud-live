@@ -37,6 +37,13 @@ test("academic registry migrations enforce evidence, source identity, and idempo
       throw new Error("Institution search SQL failed: " + String(error));
     }
 
+    const queueFunctionStart = serverSource.indexOf("export const getInstitutionReviewQueue");
+    const queueCallStart = serverSource.indexOf("sql.query<SerializableAcademicRecord>(", queueFunctionStart);
+    const queueTickStart = serverSource.indexOf("`", queueCallStart);
+    const queueTickEnd = serverSource.indexOf("`,", queueTickStart);
+    assert.ok(queueFunctionStart >= 0 && queueTickStart >= 0 && queueTickEnd > queueTickStart);
+    await db.query(serverSource.slice(queueTickStart + 1, queueTickEnd), [20]);
+
     const detailQueries = [];
     let detailCursor = 0;
     while (true) {
