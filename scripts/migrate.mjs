@@ -24,9 +24,11 @@ const databaseUrl =
   process.env.NETLIFY_DATABASE_URL?.trim() ||
   process.env.NETLIFY_DATABASE_URL_UNPOOLED?.trim();
 if (!databaseUrl) {
-  console.log(
-    "[migrate] no Postgres connection variable set — skipping migrations.",
-  );
+  if (process.env.NETLIFY === "true" || process.env.CONTEXT === "production") {
+    console.error("[migrate] production deployment requires DATABASE_URL or a Netlify database connection.");
+    process.exit(1);
+  }
+  console.log("[migrate] no Postgres connection variable set — skipping local migrations.");
   process.exit(0);
 }
 
