@@ -65,3 +65,9 @@ test("rejects missing source identity, invalid retrieval time, and credential-be
   assert.throws(() => normalizeInstitutionCandidate({ ...candidate, sourceRetrievedAt: "not-a-date" }), /retrieval timestamp/);
   assert.throws(() => normalizeInstitutionCandidate({ ...candidate, sourceUrl: "https://user:secret@example.gov/" }), /embedded credentials/);
 });
+
+test("rejects unsafe official website URLs and invalid source metadata", () => {
+  assert.throws(() => normalizeInstitutionCandidate({ ...candidate, officialWebsite: "javascript:alert(1)" }), /HTTP or HTTPS/);
+  assert.throws(() => normalizeInstitutionCandidate({ ...candidate, establishedYear: 999 }), /valid four-digit year/);
+  assert.throws(() => normalizeInstitutionCandidate({ ...candidate, ownershipType: "unknown-value" as never }), /Unsupported ownership type/);
+});
