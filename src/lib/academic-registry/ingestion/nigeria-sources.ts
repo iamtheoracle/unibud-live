@@ -14,6 +14,12 @@ export const NIGERIA_ACADEMIC_SOURCES: readonly AcademicSourceDefinition[] = [
     officialUrl: "https://enuc.nuc.edu.ng/nus",
     licenceOrTerms: "Review NUC portal terms and access policy before automated collection.",
     expectedRefreshDays: 30,
+    coverageDomains: ["institutions", "programmes", "affiliations", "quality_assurance"],
+    reviewCaveats: [
+      "Confirm each institution and programme record against the portal's own detail page and current regulator status.",
+      "Do not infer that all programmes at a listed institution are approved or accredited.",
+      "Review portal terms, access policy, and any API/export options before automated collection.",
+    ],
     enabled: false,
   },
   {
@@ -34,6 +40,27 @@ export const NIGERIA_ACADEMIC_SOURCES: readonly AcademicSourceDefinition[] = [
     officialUrl: "https://www.nbte.gov.ng/nbte/approved%20institutions",
     licenceOrTerms: "Review NBTE site terms and source-specific access restrictions before collection.",
     expectedRefreshDays: 30,
+    coverageDomains: ["programme_accreditation", "quality_assurance"],
+    reviewCaveats: [
+      "Treat programme accreditation as scoped and time-bound; preserve status, reference, and validity dates.",
+      "Review document reuse terms before extraction.",
+    ],
+    enabled: false,
+  },
+  {
+    id: "ng-nbte-digital-public-register",
+    countryCode: "NG",
+    publisherName: "National Board for Technical Education (NBTE)",
+    sourceType: "regulator",
+    officialUrl: "https://digitalnbte.nbte.gov.ng/Public",
+    licenceOrTerms: "The public register states it is free and requires no sign-in; no explicit reuse licence or API terms have been confirmed. Review terms, robots/access policy, rate limits, and export/API availability before automation.",
+    expectedRefreshDays: 14,
+    coverageDomains: ["institutions", "programmes", "accreditation", "documents", "tvet"],
+    reviewCaveats: [
+      "Preserve NBTE's source-defined institution categories, programme statuses, accreditation labels, and expiry dates.",
+      "The register's public availability is not itself a data-reuse licence.",
+      "Check detail pages and source record timestamps; never convert missing results into a claim that an institution is unapproved.",
+    ],
     enabled: false,
   },
   {
@@ -54,6 +81,11 @@ export const NIGERIA_ACADEMIC_SOURCES: readonly AcademicSourceDefinition[] = [
     officialUrl: "https://www.web.nbte.gov.ng/downloads",
     licenceOrTerms: "Review each curriculum/standard document's terms and version before extraction.",
     expectedRefreshDays: 60,
+    coverageDomains: ["technical_colleges"],
+    reviewCaveats: [
+      "Confirm the current institutional list and any ownership/status fields with the Ministry before publication.",
+      "Review source terms and update cadence before automated collection.",
+    ],
     enabled: false,
   },
   {
@@ -64,6 +96,12 @@ export const NIGERIA_ACADEMIC_SOURCES: readonly AcademicSourceDefinition[] = [
     officialUrl: "https://ncce.gov.ng/AccreditedColleges/Index",
     licenceOrTerms: "Review NCCE site terms and pagination/export options before automated collection.",
     expectedRefreshDays: 30,
+    coverageDomains: ["institutions", "institution_types"],
+    reviewCaveats: [
+      "The directory includes polytechnics offering NCE and other NCE-awarding institutions; preserve NCCE's local category labels rather than flattening them into colleges of education.",
+      "The page contains blank, placeholder, and malformed institution website values; validate each field independently and route conflicts for review.",
+      "The page label 'Accredited Colleges' must not be interpreted as accreditation of every programme or award at each listed institution.",
+    ],
     enabled: false,
   },
   {
