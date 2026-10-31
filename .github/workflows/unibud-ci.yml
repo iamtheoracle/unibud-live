@@ -40,6 +40,9 @@ jobs:
       - name: Agent and Spark tests (pre-UI gate)
         run: npm run test:agents
 
+      - name: Full repository lint
+        run: npm run lint
+
       - name: Academic registry lint
         run: npx eslint src/lib/academic-registry scripts/academic-registry-schema.test.mjs src/routes/_app/academics.tsx
 
