@@ -39,10 +39,6 @@ function Square() {
     if (user && !onboardingDone) void nav({ to: "/welcome" });
   }, [user, isPending, onboardingDone, nav]);
 
-  if (isPending || (user && !onboardingDone)) {
-    return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
-  }
-
   const [lane, setLane] = useState<SquareLane>("on-stream");
   const [peekStart, setPeekStart] = useState<string | undefined>();
   const [shown, setShown] = useState(10);
@@ -72,6 +68,7 @@ function Square() {
   const stream = useMemo(() => loopStream(lanePosts, shown), [lanePosts, shown]);
 
   useEffect(() => {
+    if (isPending || (user && !onboardingDone)) return;
     const el = sentinel.current;
     if (!el) return;
     const io = new IntersectionObserver(
@@ -82,7 +79,11 @@ function Square() {
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [lane, lanePosts.length]);
+  }, [lane, lanePosts.length, isPending, user, onboardingDone]);
+
+  if (isPending || (user && !onboardingDone)) {
+    return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" />;
+  }
 
   function openPeek(id: string) {
     setPeekStart(id);
