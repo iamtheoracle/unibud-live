@@ -9,6 +9,7 @@ export function isAcademicRegistryReviewer(
   configuredIds = process.env.ACADEMIC_REGISTRY_REVIEWER_IDS ?? "",
 ): boolean {
   if (typeof userId !== "string" || !userId.trim()) return false;
+  if (userId === "dev-user" || userId === process.env.DEV_USER_ID) return false;
   const allowlist = new Set(configuredIds.split(",").map((id) => id.trim()).filter(Boolean));
   return allowlist.has(userId);
 }
