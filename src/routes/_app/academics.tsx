@@ -96,10 +96,10 @@ function AcademicRegistry() {
           <p className="mt-1">
             {selectedCountry?.sourceNotes ?? "No verified country-specific source coverage is recorded yet. This does not mean the country has no institutions."}
           </p>
-          {selectedCountry?.officialSourceUrl ? (
+          {safeExternalUrl(selectedCountry?.officialSourceUrl) ? (
             <a
               className="mt-2 inline-flex items-center gap-1 underline"
-              href={safeExternalUrl(selectedCountry.officialSourceUrl) ?? undefined}
+              href={safeExternalUrl(selectedCountry?.officialSourceUrl)!}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -179,10 +179,10 @@ function AcademicRegistry() {
                     <Button size="sm" variant="outline" onClick={() => setSelectedId(institution.id)}>
                       View academic details
                     </Button>
-                    {institution.officialWebsite ? (
+                    {safeExternalUrl(institution.officialWebsite) ? (
                       <a
                         className="inline-flex h-9 items-center gap-1 rounded-full px-3 text-xs underline"
-                        href={safeExternalUrl(institution.officialWebsite) ?? undefined}
+                        href={safeExternalUrl(institution.officialWebsite)!}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
