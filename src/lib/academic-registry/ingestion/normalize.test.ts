@@ -61,7 +61,7 @@ test("preserves non-Latin institution names in stable slugs", () => {
 });
 
 test("rejects missing source identity, invalid retrieval time, and credential-bearing URLs", () => {
-  assert.throws(() => normalizeInstitutionCandidate({ ...candidate, sourceId: " " }), /registered source ID/);
+  assert.throws(() => normalizeInstitutionCandidate({ ...candidate, sourceId: " " }), /Registered source ID/i);
   assert.throws(() => normalizeInstitutionCandidate({ ...candidate, sourceRetrievedAt: "not-a-date" }), /retrieval timestamp/);
   assert.throws(() => normalizeInstitutionCandidate({ ...candidate, sourceUrl: "https://user:secret@example.gov/" }), /embedded credentials/);
 });
