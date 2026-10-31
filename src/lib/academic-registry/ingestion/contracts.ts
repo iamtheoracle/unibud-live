@@ -65,5 +65,5 @@ export interface AcademicSourceAdapter {
 export function canImportAcademicSource(source: AcademicSourceDefinition): boolean {
   return source.enabled &&
     source.automationPermission === "approved" &&
-    (source.adapterStatus === "configured" || source.adapterStatus === "verified");
+    source.adapterStatus === "verified";
 }
