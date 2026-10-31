@@ -89,7 +89,7 @@ test("academic registry migrations enforce evidence, source identity, and idempo
       db.query(
         "insert into academic_external_identifiers (id, source_id, country_code, entity_type, entity_id, external_id, source_record_url) values ('ext-duplicate', 'source-nuc', 'NG', 'institution', 'inst-1', 'same-registry-id', 'https://www.nuc.edu.ng/registry/1')",
       ),
-      /academic_external_identifiers_source_id_entity_type_external_id_key/,
+      /academic_external_identifiers_source_id_entity_type_externa_key/,
     );
     await db.query(
       "insert into academic_external_identifiers (id, source_id, country_code, entity_type, entity_id, external_id, source_record_url) values ('ext-2', 'source-nbte', 'NG', 'institution', 'inst-1', 'same-registry-id', 'https://www.nbte.gov.ng/registry/1')",
