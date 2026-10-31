@@ -20,6 +20,8 @@ export const NIGERIA_ACADEMIC_SOURCES: readonly AcademicSourceDefinition[] = [
       "Do not infer that all programmes at a listed institution are approved or accredited.",
       "Review portal terms, access policy, and any API/export options before automated collection.",
     ],
+    automationPermission: "not_reviewed",
+    adapterStatus: "not_implemented",
     enabled: false,
   },
   {
@@ -35,6 +37,8 @@ export const NIGERIA_ACADEMIC_SOURCES: readonly AcademicSourceDefinition[] = [
       "Treat each programme approval as a scoped claim and retain its official reference and validity period.",
       "Confirm document version and reuse rights before extraction.",
     ],
+    automationPermission: "not_reviewed",
+    adapterStatus: "not_implemented",
     enabled: false,
   },
   {
@@ -51,6 +55,8 @@ export const NIGERIA_ACADEMIC_SOURCES: readonly AcademicSourceDefinition[] = [
       "Treat programme accreditation as scoped and time-bound; preserve status, reference, and validity dates.",
       "Review site terms and document reuse rules before automated extraction.",
     ],
+    automationPermission: "not_reviewed",
+    adapterStatus: "not_implemented",
     enabled: false,
   },
   {
@@ -67,6 +73,8 @@ export const NIGERIA_ACADEMIC_SOURCES: readonly AcademicSourceDefinition[] = [
       "The register's public availability is not itself a data-reuse licence.",
       "Check detail pages and source record timestamps; never convert missing results into a claim that an institution is unapproved.",
     ],
+    automationPermission: "not_reviewed",
+    adapterStatus: "not_implemented",
     enabled: false,
   },
   {
@@ -83,6 +91,8 @@ export const NIGERIA_ACADEMIC_SOURCES: readonly AcademicSourceDefinition[] = [
       "Do not infer current accreditation from an old directory edition.",
       "Review copyright and reuse rules before extracting curriculum text.",
     ],
+    automationPermission: "not_reviewed",
+    adapterStatus: "not_implemented",
     enabled: false,
   },
   {
@@ -99,6 +109,8 @@ export const NIGERIA_ACADEMIC_SOURCES: readonly AcademicSourceDefinition[] = [
       "Do not treat an older published curriculum as the current version without confirming the applicable session.",
       "Review each document's terms and version before extraction.",
     ],
+    automationPermission: "not_reviewed",
+    adapterStatus: "not_implemented",
     enabled: false,
   },
   {
@@ -115,6 +127,8 @@ export const NIGERIA_ACADEMIC_SOURCES: readonly AcademicSourceDefinition[] = [
       "The page contains blank, placeholder, and malformed institution website values; validate each field independently and route conflicts for review.",
       "The page label 'Accredited Colleges' must not be interpreted as accreditation of every programme or award at each listed institution.",
     ],
+    automationPermission: "not_reviewed",
+    adapterStatus: "not_implemented",
     enabled: false,
   },
   {
@@ -130,6 +144,8 @@ export const NIGERIA_ACADEMIC_SOURCES: readonly AcademicSourceDefinition[] = [
       "Confirm the current institutional list and any ownership/status fields with the Ministry before publication.",
       "Review source terms and update cadence before automated collection.",
     ],
+    automationPermission: "not_reviewed",
+    adapterStatus: "not_implemented",
     enabled: false,
   },
 ];
