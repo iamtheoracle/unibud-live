@@ -37,6 +37,7 @@ function AcademicRegistry() {
   const [searchText, setSearchText] = useState("");
   const [ownershipType, setOwnershipType] = useState("all");
   const [institutionTypeCode, setInstitutionTypeCode] = useState("");
+  const [governanceLabel, setGovernanceLabel] = useState("");
   const [administrativeRegion, setAdministrativeRegion] = useState("");
   const [programmeLevelLabel, setProgrammeLevelLabel] = useState("");
   const [subjectAreaCode, setSubjectAreaCode] = useState("");
@@ -44,13 +45,14 @@ function AcademicRegistry() {
   const selectedCountry = WEST_AFRICA_COUNTRY_SCOPE.find((country) => country.countryCode === countryCode);
 
   const registry = useQuery({
-    queryKey: ["academic-registry", countryCode, searchText, ownershipType, institutionTypeCode, administrativeRegion, programmeLevelLabel, subjectAreaCode],
+    queryKey: ["academic-registry", countryCode, searchText, ownershipType, institutionTypeCode, governanceLabel, administrativeRegion, programmeLevelLabel, subjectAreaCode],
     queryFn: () => searchAcademicInstitutions({
       data: {
         countryCode,
         query: searchText.trim() || undefined,
         ownershipType: ownershipType === "all" ? undefined : ownershipType,
         institutionTypeCode: institutionTypeCode.trim() || undefined,
+        governanceLabel: governanceLabel.trim() || undefined,
         administrativeRegion: administrativeRegion.trim() || undefined,
         programmeLevelLabel: programmeLevelLabel.trim() || undefined,
         subjectAreaCode: subjectAreaCode.trim() || undefined,
@@ -142,6 +144,8 @@ function AcademicRegistry() {
             <option value="faith_based">Faith-based</option>
             <option value="international">International</option>
             <option value="community">Community</option>
+            <option value="mixed">Mixed</option>
+            <option value="unknown">Unknown</option>
           </select>
         </div>
         <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -150,6 +154,12 @@ function AcademicRegistry() {
             onChange={(event) => { setInstitutionTypeCode(event.target.value); setSelectedId(null); }}
             placeholder="Institution type code (e.g. university)"
             aria-label="Institution type code"
+          />
+          <Input
+            value={governanceLabel}
+            onChange={(event) => { setGovernanceLabel(event.target.value); setSelectedId(null); }}
+            placeholder="Governance label (e.g. federal, state-owned)"
+            aria-label="Governance or ownership label"
           />
           <Input
             value={administrativeRegion}
