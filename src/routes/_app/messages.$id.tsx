@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Image as ImageIcon, MoreHorizontal, Paperclip, Phone, Send, Video } from "lucide-react";
+import { Image as ImageIcon, Paperclip, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Avatar } from "@/components/unibud/person";
@@ -15,7 +15,6 @@ import { campusRoomById, ROOM_SEED, type CampusRoom } from "@/lib/unibud/chat-ro
 import { canGovernClass } from "@/lib/unibud/roles";
 import { useCampusStore } from "@/lib/unibud/campus-store";
 import { useStudioStore } from "@/lib/studio/store";
-import { VideoCall } from "@/components/chat/video-call";
 import { ShareCard } from "@/components/chat/share-card";
 import { BUD_MEDIA } from "@/lib/media/bud-media";
 import { recordAudioEvent } from "@/lib/music/events";
@@ -286,43 +285,14 @@ function RoomThread({ room }: { room: CampusRoom }) {
   );
 }
 
-function CallButtons({
-  group,
-  disabled,
-  onCall,
-  peer = "them",
-}: {
+function CallButtons(_props: {
   group: boolean;
   disabled?: boolean;
   onCall?: () => void;
   peer?: string;
 }) {
-  const [video, setVideo] = useState(false);
-  return (
-    <>
-      {video ? <VideoCall peer={peer} onEnd={() => setVideo(false)} /> : null}
-      <button
-        type="button"
-        className="grid size-11 place-items-center text-muted-foreground disabled:opacity-40"
-        aria-label={group ? "Group call" : "Call"}
-        disabled={disabled}
-        onClick={() => (onCall ? onCall() : toast.message("Voice needs a connected call service. Video is available now."))}
-      >
-        <Phone className="size-5" />
-      </button>
-      <button
-        type="button"
-        className="grid size-11 place-items-center text-muted-foreground"
-        aria-label="Video call"
-        onClick={() => setVideo(true)}
-      >
-        <Video className="size-5" />
-      </button>
-      <button type="button" className="grid size-11 place-items-center text-muted-foreground" aria-label="More">
-        <MoreHorizontal className="size-5" />
-      </button>
-    </>
-  );
+  // Calls remain hidden until real signaling and media transport are configured.
+  return null;
 }
 
 function Composer({
