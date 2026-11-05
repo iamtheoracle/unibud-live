@@ -346,3 +346,25 @@ auth/db: OFF by default — sign-in, @/lib/db or migrations ONLY on an accounts 
 never:   build an app for a greeting/number/question; invent imagine_* calls;
          ask the user to run commands; delete or abandon /workspace/startup.sh
 ```
+
+## Base44 sandbox runbook
+
+`docker-compose.base44.yml` is the sandbox entry point: one `node:22` service
+runs the repo from the bind mount (`npm ci` then `npm run dev`) and publishes
+container port 8080 on host port 3000, which is what the preview proxy serves.
+
+- `USE_PGLITE=true` keeps the catalog working without an external Postgres;
+  `npm run db:migrate` logs "no Postgres connection variable set" and skips.
+- `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` and `BASE44_PREVIEW_MODE` are passed
+  through bare from the platform environment. Nothing in the app branches on
+  `BASE44_PREVIEW_MODE`, so behavior with it unset is unchanged.
+- Verifying here means running the repo's own gate inside the container:
+  `npm run typecheck`, `npx eslint src/lib/agents src/lib/spark src/lib/bud/server.ts src/lib/bud/spark.ts`,
+  `npm test`, `npm run build`. `vite build` never typechecks, so a green build
+  is not a green CI gate.
+- `.netlify/` (build output) is gitignored and must stay out of the working tree:
+  the dev server watches it and a build triggers page-reload storms.
+- The app is login-gated: `/` (Square) redirects anonymous visitors to `/start`;
+  guest-readable routes such as `/connect` and `/market` are what a signed-out
+  browser can verify. Signed-in screens need a real session.
+

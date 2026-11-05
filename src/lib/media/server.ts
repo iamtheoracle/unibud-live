@@ -128,10 +128,20 @@ export const attachBudFile = createServerFn({ method: "POST" })
  * moderation tables are enforced on every read/write. Accepting a room ID alone
  * is not authorization and would expose private room conversations.
  */
+export type RoomMessage = {
+  id: string;
+  sender: string;
+  body: string;
+  mediaId?: string;
+  shareKind?: string;
+  shareJson?: string;
+  createdAt: string;
+};
+
 export const listRoomMessages = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .validator((roomId: string) => roomId)
-  .handler(async () => {
+  .handler(async (): Promise<RoomMessage[]> => {
     throw new Error("Room messaging is temporarily unavailable while access controls are completed.");
   });
 

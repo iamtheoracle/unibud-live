@@ -45,11 +45,11 @@ function Connect() {
   const profile = useQuery({ queryKey: ["profile"], queryFn: () => getMyProfile(), enabled: Boolean(user) });
   const people = catalog.data?.people ?? [];
   const listings = catalog.data?.listings ?? [];
-  const visibleListings = useMemo(() => listings.filter((listing) => opportunityCategory === "all" || listing.category === opportunityCategory), [listings, opportunityCategory]);
   const [view, setView] = useState<MainView>("people");
   const [tab, setTab] = useState<PeopleTab>("discover");
   const [q, setQ] = useState("");
   const [opportunityCategory, setOpportunityCategory] = useState<ListingCategory | "all">("all");
+  const visibleListings = useMemo(() => listings.filter((listing) => opportunityCategory === "all" || listing.category === opportunityCategory), [listings, opportunityCategory]);
   const incoming = useCampusStore((s) => s.incoming);
   const outgoing = useCampusStore((s) => s.outgoing);
   const connections = useCampusStore((s) => s.connections);

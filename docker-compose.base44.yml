@@ -1,0 +1,28 @@
+services:
+  app:
+    image: node:22
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "3000:8080"
+    environment:
+      # Vite >= 6.1 appends this to its allowedHosts list. The platform sets it
+      # to the sandbox domain wildcard; pass it through bare (not overridden).
+      - __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS
+      # Enable in-process PGlite for local development (no external Postgres needed).
+      - USE_PGLITE=true
+      - BASE44_PREVIEW_MODE
+    command:
+      - sh
+      - -ec
+      - |
+        npm ci --no-audit --no-fund && exec npm run dev
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/').then(r=>{if(!r.ok)throw 1}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+    restart: on-failure

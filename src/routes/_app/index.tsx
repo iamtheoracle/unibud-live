@@ -391,7 +391,12 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
                   e.preventDefault();
                   if (!reply.trim()) return;
                   const body = reply.trim();
-                  addPostReply(key, body, "you");
+                  addPostReply(key, {
+                    id: `r-${Date.now()}`,
+                    authorHandle: "you",
+                    body,
+                    createdAt: new Date().toISOString(),
+                  });
                   if (user) void addSquareReply({ data: { postId: key, body } }).catch(() => {});
                   setReply("");
                 }}

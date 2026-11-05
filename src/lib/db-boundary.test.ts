@@ -6,7 +6,7 @@ test('database requires PostgreSQL or explicit local PGlite opt-in', async () =>
   const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
   for (const key of keys) delete process.env[key];
   try {
-    const db = await import('../db.ts');
+    const db = await import('./db.ts');
     await assert.rejects(db.getSql(), /Database is not configured|PGlite is disabled by default/i);
   } finally {
     for (const key of keys) {
@@ -23,7 +23,10 @@ test('serverless runtime rejects PGlite even when explicitly requested', async (
   process.env.NETLIFY = 'true';
   process.env.USE_PGLITE = 'true';
   try {
-    const db = await import('../db.ts?serverless-test');
+    // The query string is a runtime-only specifier (a fresh module instance for
+    // this env), which TypeScript cannot resolve as a file path.
+    // @ts-expect-error -- query-string module specifier, resolved by the test runner
+    const db = await import('./db.ts?serverless-test');
     await assert.rejects(db.getSql(), /PGlite cannot run on Netlify\/Lambda/i);
   } finally {
     for (const key of keys) {
