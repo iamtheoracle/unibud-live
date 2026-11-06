@@ -10,8 +10,14 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as ForgotRouteImport } from './routes/forgot'
+import { Route as JoinRouteImport } from './routes/join'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as StartRouteImport } from './routes/start'
+import { Route as SuspendedRouteImport } from './routes/suspended'
+import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppBoardRouteImport } from './routes/_app/board'
 import { Route as AppBudRouteImport } from './routes/_app/bud'
@@ -21,6 +27,7 @@ import { Route as AppCreatorRouteImport } from './routes/_app/creator'
 import { Route as AppDiscoveryRouteImport } from './routes/_app/discovery'
 import { Route as AppFeedbackRouteImport } from './routes/_app/feedback'
 import { Route as AppFixerRouteImport } from './routes/_app/fixer'
+import { Route as AppFlowRouteImport } from './routes/_app/flow'
 import { Route as AppHelpRouteImport } from './routes/_app/help'
 import { Route as AppLiveRouteImport } from './routes/_app/live'
 import { Route as AppMarketRouteImport } from './routes/_app/market'
@@ -28,6 +35,7 @@ import { Route as AppMessagesRouteImport } from './routes/_app/messages'
 import { Route as AppMoneyRouteImport } from './routes/_app/money'
 import { Route as AppNewsRouteImport } from './routes/_app/news'
 import { Route as AppNotificationsRouteImport } from './routes/_app/notifications'
+import { Route as AppOrdersRouteImport } from './routes/_app/orders'
 import { Route as AppPodcastsRouteImport } from './routes/_app/podcasts'
 import { Route as AppProfileRouteImport } from './routes/_app/profile'
 import { Route as AppRiffRouteImport } from './routes/_app/riff'
@@ -37,16 +45,22 @@ import { Route as AppSellRouteImport } from './routes/_app/sell'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppSocialRouteImport } from './routes/_app/social'
 import { Route as AppSpillRouteImport } from './routes/_app/spill'
+import { Route as AppSportRouteImport } from './routes/_app/sport'
 import { Route as AppStudiesRouteImport } from './routes/_app/studies'
 import { Route as AppTutorRouteImport } from './routes/_app/tutor'
 import { Route as AppWatchRouteImport } from './routes/_app/watch'
 import { Route as AppWelcomeRouteImport } from './routes/_app/welcome'
+import { Route as ResetTokenRouteImport } from './routes/reset.$token'
 import { Route as AppAudioIdRouteImport } from './routes/_app/audio.$id'
 import { Route as AppBoardIdRouteImport } from './routes/_app/board.$id'
 import { Route as AppBudCommunitiesRouteImport } from './routes/_app/bud.communities'
 import { Route as AppBudFixerRouteImport } from './routes/_app/bud.fixer'
 import { Route as AppCommunitiesCommunityIdRouteImport } from './routes/_app/communities/$communityId'
 import { Route as AppCommunitiesIdRouteImport } from './routes/_app/communities.$id'
+import { Route as AppConnectSoulyncRouteImport } from './routes/_app/connect.soulync'
+import { Route as AppConnectWaywardRouteImport } from './routes/_app/connect.wayward'
+import { Route as AppGuildConciergeRouteImport } from './routes/_app/guild.concierge'
+import { Route as AppGuildQuarterRouteImport } from './routes/_app/guild.quarter'
 import { Route as AppMarketIndexRouteImport } from './routes/_app/market/index'
 import { Route as AppMarketIdRouteImport } from './routes/_app/market.$id'
 import { Route as AppMarketListingIdRouteImport } from './routes/_app/market/$listingId'
@@ -56,9 +70,23 @@ import { Route as AppSpillIdRouteImport } from './routes/_app/spill.$id'
 import { Route as AppUHandleRouteImport } from './routes/_app/u.$handle'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiMediaIdRouteImport } from './routes/api/media.$id'
+import { Route as AppBoardRoomIdRouteImport } from './routes/_app/board.room.$id'
+import { Route as AppConnectPeopleHandleRouteImport } from './routes/_app/connect.people.$handle'
+import { Route as AppConnectServicesIdRouteImport } from './routes/_app/connect.services.$id'
+import { Route as AppConnectWaywardIdRouteImport } from './routes/_app/connect.wayward.$id'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotRoute = ForgotRouteImport.update({
+  id: '/forgot',
+  path: '/forgot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JoinRoute = JoinRouteImport.update({
+  id: '/join',
+  path: '/join',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -66,9 +94,29 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StartRoute = StartRouteImport.update({
   id: '/start',
   path: '/start',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SuspendedRoute = SuspendedRouteImport.update({
+  id: '/suspended',
+  path: '/suspended',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyRoute = VerifyRouteImport.update({
+  id: '/verify',
+  path: '/verify',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -116,6 +164,11 @@ const AppFixerRoute = AppFixerRouteImport.update({
   path: '/fixer',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFlowRoute = AppFlowRouteImport.update({
+  id: '/flow',
+  path: '/flow',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppHelpRoute = AppHelpRouteImport.update({
   id: '/help',
   path: '/help',
@@ -149,6 +202,11 @@ const AppNewsRoute = AppNewsRouteImport.update({
 const AppNotificationsRoute = AppNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOrdersRoute = AppOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPodcastsRoute = AppPodcastsRouteImport.update({
@@ -196,6 +254,11 @@ const AppSpillRoute = AppSpillRouteImport.update({
   path: '/spill',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSportRoute = AppSportRouteImport.update({
+  id: '/sport',
+  path: '/sport',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppStudiesRoute = AppStudiesRouteImport.update({
   id: '/studies',
   path: '/studies',
@@ -215,6 +278,11 @@ const AppWelcomeRoute = AppWelcomeRouteImport.update({
   id: '/welcome',
   path: '/welcome',
   getParentRoute: () => AppRoute,
+} as any)
+const ResetTokenRoute = ResetTokenRouteImport.update({
+  id: '/reset/$token',
+  path: '/reset/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppAudioIdRoute = AppAudioIdRouteImport.update({
   id: '/audio/$id',
@@ -246,6 +314,26 @@ const AppCommunitiesIdRoute = AppCommunitiesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => AppCommunitiesRoute,
+} as any)
+const AppConnectSoulyncRoute = AppConnectSoulyncRouteImport.update({
+  id: '/soulync',
+  path: '/soulync',
+  getParentRoute: () => AppConnectRoute,
+} as any)
+const AppConnectWaywardRoute = AppConnectWaywardRouteImport.update({
+  id: '/wayward',
+  path: '/wayward',
+  getParentRoute: () => AppConnectRoute,
+} as any)
+const AppGuildConciergeRoute = AppGuildConciergeRouteImport.update({
+  id: '/guild/concierge',
+  path: '/guild/concierge',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppGuildQuarterRoute = AppGuildQuarterRouteImport.update({
+  id: '/guild/quarter',
+  path: '/guild/quarter',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppMarketIndexRoute = AppMarketIndexRouteImport.update({
   id: '/',
@@ -292,19 +380,46 @@ const ApiMediaIdRoute = ApiMediaIdRouteImport.update({
   path: '/api/media/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppBoardRoomIdRoute = AppBoardRoomIdRouteImport.update({
+  id: '/room/$id',
+  path: '/room/$id',
+  getParentRoute: () => AppBoardRoute,
+} as any)
+const AppConnectPeopleHandleRoute = AppConnectPeopleHandleRouteImport.update({
+  id: '/people/$handle',
+  path: '/people/$handle',
+  getParentRoute: () => AppConnectRoute,
+} as any)
+const AppConnectServicesIdRoute = AppConnectServicesIdRouteImport.update({
+  id: '/services/$id',
+  path: '/services/$id',
+  getParentRoute: () => AppConnectRoute,
+} as any)
+const AppConnectWaywardIdRoute = AppConnectWaywardIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppConnectWaywardRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/forgot': typeof ForgotRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
+  '/setup': typeof SetupRoute
   '/start': typeof StartRoute
+  '/suspended': typeof SuspendedRoute
+  '/verify': typeof VerifyRoute
   '/board': typeof AppBoardRouteWithChildren
   '/bud': typeof AppBudRouteWithChildren
   '/communities': typeof AppCommunitiesRouteWithChildren
-  '/connect': typeof AppConnectRoute
+  '/connect': typeof AppConnectRouteWithChildren
   '/creator': typeof AppCreatorRoute
   '/discovery': typeof AppDiscoveryRoute
   '/feedback': typeof AppFeedbackRoute
   '/fixer': typeof AppFixerRoute
+  '/flow': typeof AppFlowRoute
   '/help': typeof AppHelpRoute
   '/live': typeof AppLiveRoute
   '/market': typeof AppMarketRouteWithChildren
@@ -312,6 +427,7 @@ export interface FileRoutesByFullPath {
   '/money': typeof AppMoneyRoute
   '/news': typeof AppNewsRoute
   '/notifications': typeof AppNotificationsRoute
+  '/orders': typeof AppOrdersRoute
   '/podcasts': typeof AppPodcastsRoute
   '/profile': typeof AppProfileRoute
   '/riff': typeof AppRiffRouteWithChildren
@@ -321,16 +437,22 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRoute
   '/social': typeof AppSocialRoute
   '/spill': typeof AppSpillRouteWithChildren
+  '/sport': typeof AppSportRoute
   '/studies': typeof AppStudiesRoute
   '/tutor': typeof AppTutorRoute
   '/watch': typeof AppWatchRoute
   '/welcome': typeof AppWelcomeRoute
+  '/reset/$token': typeof ResetTokenRoute
   '/audio/$id': typeof AppAudioIdRoute
   '/board/$id': typeof AppBoardIdRoute
   '/bud/communities': typeof AppBudCommunitiesRoute
   '/bud/fixer': typeof AppBudFixerRoute
   '/communities/$communityId': typeof AppCommunitiesCommunityIdRoute
   '/communities/$id': typeof AppCommunitiesIdRoute
+  '/connect/soulync': typeof AppConnectSoulyncRoute
+  '/connect/wayward': typeof AppConnectWaywardRouteWithChildren
+  '/guild/concierge': typeof AppGuildConciergeRoute
+  '/guild/quarter': typeof AppGuildQuarterRoute
   '/market/$id': typeof AppMarketIdRoute
   '/market/$listingId': typeof AppMarketListingIdRoute
   '/messages/$id': typeof AppMessagesIdRoute
@@ -340,24 +462,36 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/media/$id': typeof ApiMediaIdRoute
   '/market/': typeof AppMarketIndexRoute
+  '/board/room/$id': typeof AppBoardRoomIdRoute
+  '/connect/people/$handle': typeof AppConnectPeopleHandleRoute
+  '/connect/services/$id': typeof AppConnectServicesIdRoute
+  '/connect/wayward/$id': typeof AppConnectWaywardIdRoute
 }
 export interface FileRoutesByTo {
+  '/forgot': typeof ForgotRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
+  '/setup': typeof SetupRoute
   '/start': typeof StartRoute
+  '/suspended': typeof SuspendedRoute
+  '/verify': typeof VerifyRoute
   '/board': typeof AppBoardRouteWithChildren
   '/bud': typeof AppBudRouteWithChildren
   '/communities': typeof AppCommunitiesRouteWithChildren
-  '/connect': typeof AppConnectRoute
+  '/connect': typeof AppConnectRouteWithChildren
   '/creator': typeof AppCreatorRoute
   '/discovery': typeof AppDiscoveryRoute
   '/feedback': typeof AppFeedbackRoute
   '/fixer': typeof AppFixerRoute
+  '/flow': typeof AppFlowRoute
   '/help': typeof AppHelpRoute
   '/live': typeof AppLiveRoute
   '/messages': typeof AppMessagesRouteWithChildren
   '/money': typeof AppMoneyRoute
   '/news': typeof AppNewsRoute
   '/notifications': typeof AppNotificationsRoute
+  '/orders': typeof AppOrdersRoute
   '/podcasts': typeof AppPodcastsRoute
   '/profile': typeof AppProfileRoute
   '/riff': typeof AppRiffRouteWithChildren
@@ -367,10 +501,12 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsRoute
   '/social': typeof AppSocialRoute
   '/spill': typeof AppSpillRouteWithChildren
+  '/sport': typeof AppSportRoute
   '/studies': typeof AppStudiesRoute
   '/tutor': typeof AppTutorRoute
   '/watch': typeof AppWatchRoute
   '/welcome': typeof AppWelcomeRoute
+  '/reset/$token': typeof ResetTokenRoute
   '/': typeof AppIndexRoute
   '/audio/$id': typeof AppAudioIdRoute
   '/board/$id': typeof AppBoardIdRoute
@@ -378,6 +514,10 @@ export interface FileRoutesByTo {
   '/bud/fixer': typeof AppBudFixerRoute
   '/communities/$communityId': typeof AppCommunitiesCommunityIdRoute
   '/communities/$id': typeof AppCommunitiesIdRoute
+  '/connect/soulync': typeof AppConnectSoulyncRoute
+  '/connect/wayward': typeof AppConnectWaywardRouteWithChildren
+  '/guild/concierge': typeof AppGuildConciergeRoute
+  '/guild/quarter': typeof AppGuildQuarterRoute
   '/market/$id': typeof AppMarketIdRoute
   '/market/$listingId': typeof AppMarketListingIdRoute
   '/messages/$id': typeof AppMessagesIdRoute
@@ -387,20 +527,31 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/media/$id': typeof ApiMediaIdRoute
   '/market': typeof AppMarketIndexRoute
+  '/board/room/$id': typeof AppBoardRoomIdRoute
+  '/connect/people/$handle': typeof AppConnectPeopleHandleRoute
+  '/connect/services/$id': typeof AppConnectServicesIdRoute
+  '/connect/wayward/$id': typeof AppConnectWaywardIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/forgot': typeof ForgotRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
+  '/setup': typeof SetupRoute
   '/start': typeof StartRoute
+  '/suspended': typeof SuspendedRoute
+  '/verify': typeof VerifyRoute
   '/_app/board': typeof AppBoardRouteWithChildren
   '/_app/bud': typeof AppBudRouteWithChildren
   '/_app/communities': typeof AppCommunitiesRouteWithChildren
-  '/_app/connect': typeof AppConnectRoute
+  '/_app/connect': typeof AppConnectRouteWithChildren
   '/_app/creator': typeof AppCreatorRoute
   '/_app/discovery': typeof AppDiscoveryRoute
   '/_app/feedback': typeof AppFeedbackRoute
   '/_app/fixer': typeof AppFixerRoute
+  '/_app/flow': typeof AppFlowRoute
   '/_app/help': typeof AppHelpRoute
   '/_app/live': typeof AppLiveRoute
   '/_app/market': typeof AppMarketRouteWithChildren
@@ -408,6 +559,7 @@ export interface FileRoutesById {
   '/_app/money': typeof AppMoneyRoute
   '/_app/news': typeof AppNewsRoute
   '/_app/notifications': typeof AppNotificationsRoute
+  '/_app/orders': typeof AppOrdersRoute
   '/_app/podcasts': typeof AppPodcastsRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/riff': typeof AppRiffRouteWithChildren
@@ -417,10 +569,12 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRoute
   '/_app/social': typeof AppSocialRoute
   '/_app/spill': typeof AppSpillRouteWithChildren
+  '/_app/sport': typeof AppSportRoute
   '/_app/studies': typeof AppStudiesRoute
   '/_app/tutor': typeof AppTutorRoute
   '/_app/watch': typeof AppWatchRoute
   '/_app/welcome': typeof AppWelcomeRoute
+  '/reset/$token': typeof ResetTokenRoute
   '/_app/': typeof AppIndexRoute
   '/_app/audio/$id': typeof AppAudioIdRoute
   '/_app/board/$id': typeof AppBoardIdRoute
@@ -428,6 +582,10 @@ export interface FileRoutesById {
   '/_app/bud/fixer': typeof AppBudFixerRoute
   '/_app/communities/$communityId': typeof AppCommunitiesCommunityIdRoute
   '/_app/communities/$id': typeof AppCommunitiesIdRoute
+  '/_app/connect/soulync': typeof AppConnectSoulyncRoute
+  '/_app/connect/wayward': typeof AppConnectWaywardRouteWithChildren
+  '/_app/guild/concierge': typeof AppGuildConciergeRoute
+  '/_app/guild/quarter': typeof AppGuildQuarterRoute
   '/_app/market/$id': typeof AppMarketIdRoute
   '/_app/market/$listingId': typeof AppMarketListingIdRoute
   '/_app/messages/$id': typeof AppMessagesIdRoute
@@ -437,13 +595,23 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/media/$id': typeof ApiMediaIdRoute
   '/_app/market/': typeof AppMarketIndexRoute
+  '/_app/board/room/$id': typeof AppBoardRoomIdRoute
+  '/_app/connect/people/$handle': typeof AppConnectPeopleHandleRoute
+  '/_app/connect/services/$id': typeof AppConnectServicesIdRoute
+  '/_app/connect/wayward/$id': typeof AppConnectWaywardIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/forgot'
+    | '/join'
     | '/login'
+    | '/onboarding'
+    | '/setup'
     | '/start'
+    | '/suspended'
+    | '/verify'
     | '/board'
     | '/bud'
     | '/communities'
@@ -452,6 +620,7 @@ export interface FileRouteTypes {
     | '/discovery'
     | '/feedback'
     | '/fixer'
+    | '/flow'
     | '/help'
     | '/live'
     | '/market'
@@ -459,6 +628,7 @@ export interface FileRouteTypes {
     | '/money'
     | '/news'
     | '/notifications'
+    | '/orders'
     | '/podcasts'
     | '/profile'
     | '/riff'
@@ -468,16 +638,22 @@ export interface FileRouteTypes {
     | '/settings'
     | '/social'
     | '/spill'
+    | '/sport'
     | '/studies'
     | '/tutor'
     | '/watch'
     | '/welcome'
+    | '/reset/$token'
     | '/audio/$id'
     | '/board/$id'
     | '/bud/communities'
     | '/bud/fixer'
     | '/communities/$communityId'
     | '/communities/$id'
+    | '/connect/soulync'
+    | '/connect/wayward'
+    | '/guild/concierge'
+    | '/guild/quarter'
     | '/market/$id'
     | '/market/$listingId'
     | '/messages/$id'
@@ -487,10 +663,20 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/media/$id'
     | '/market/'
+    | '/board/room/$id'
+    | '/connect/people/$handle'
+    | '/connect/services/$id'
+    | '/connect/wayward/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/forgot'
+    | '/join'
     | '/login'
+    | '/onboarding'
+    | '/setup'
     | '/start'
+    | '/suspended'
+    | '/verify'
     | '/board'
     | '/bud'
     | '/communities'
@@ -499,12 +685,14 @@ export interface FileRouteTypes {
     | '/discovery'
     | '/feedback'
     | '/fixer'
+    | '/flow'
     | '/help'
     | '/live'
     | '/messages'
     | '/money'
     | '/news'
     | '/notifications'
+    | '/orders'
     | '/podcasts'
     | '/profile'
     | '/riff'
@@ -514,10 +702,12 @@ export interface FileRouteTypes {
     | '/settings'
     | '/social'
     | '/spill'
+    | '/sport'
     | '/studies'
     | '/tutor'
     | '/watch'
     | '/welcome'
+    | '/reset/$token'
     | '/'
     | '/audio/$id'
     | '/board/$id'
@@ -525,6 +715,10 @@ export interface FileRouteTypes {
     | '/bud/fixer'
     | '/communities/$communityId'
     | '/communities/$id'
+    | '/connect/soulync'
+    | '/connect/wayward'
+    | '/guild/concierge'
+    | '/guild/quarter'
     | '/market/$id'
     | '/market/$listingId'
     | '/messages/$id'
@@ -534,11 +728,21 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/media/$id'
     | '/market'
+    | '/board/room/$id'
+    | '/connect/people/$handle'
+    | '/connect/services/$id'
+    | '/connect/wayward/$id'
   id:
     | '__root__'
     | '/_app'
+    | '/forgot'
+    | '/join'
     | '/login'
+    | '/onboarding'
+    | '/setup'
     | '/start'
+    | '/suspended'
+    | '/verify'
     | '/_app/board'
     | '/_app/bud'
     | '/_app/communities'
@@ -547,6 +751,7 @@ export interface FileRouteTypes {
     | '/_app/discovery'
     | '/_app/feedback'
     | '/_app/fixer'
+    | '/_app/flow'
     | '/_app/help'
     | '/_app/live'
     | '/_app/market'
@@ -554,6 +759,7 @@ export interface FileRouteTypes {
     | '/_app/money'
     | '/_app/news'
     | '/_app/notifications'
+    | '/_app/orders'
     | '/_app/podcasts'
     | '/_app/profile'
     | '/_app/riff'
@@ -563,10 +769,12 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_app/social'
     | '/_app/spill'
+    | '/_app/sport'
     | '/_app/studies'
     | '/_app/tutor'
     | '/_app/watch'
     | '/_app/welcome'
+    | '/reset/$token'
     | '/_app/'
     | '/_app/audio/$id'
     | '/_app/board/$id'
@@ -574,6 +782,10 @@ export interface FileRouteTypes {
     | '/_app/bud/fixer'
     | '/_app/communities/$communityId'
     | '/_app/communities/$id'
+    | '/_app/connect/soulync'
+    | '/_app/connect/wayward'
+    | '/_app/guild/concierge'
+    | '/_app/guild/quarter'
     | '/_app/market/$id'
     | '/_app/market/$listingId'
     | '/_app/messages/$id'
@@ -583,12 +795,23 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/media/$id'
     | '/_app/market/'
+    | '/_app/board/room/$id'
+    | '/_app/connect/people/$handle'
+    | '/_app/connect/services/$id'
+    | '/_app/connect/wayward/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  ForgotRoute: typeof ForgotRoute
+  JoinRoute: typeof JoinRoute
   LoginRoute: typeof LoginRoute
+  OnboardingRoute: typeof OnboardingRoute
+  SetupRoute: typeof SetupRoute
   StartRoute: typeof StartRoute
+  SuspendedRoute: typeof SuspendedRoute
+  VerifyRoute: typeof VerifyRoute
+  ResetTokenRoute: typeof ResetTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiMediaIdRoute: typeof ApiMediaIdRoute
 }
@@ -602,6 +825,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forgot': {
+      id: '/forgot'
+      path: '/forgot'
+      fullPath: '/forgot'
+      preLoaderRoute: typeof ForgotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/join': {
+      id: '/join'
+      path: '/join'
+      fullPath: '/join'
+      preLoaderRoute: typeof JoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -609,11 +846,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/start': {
       id: '/start'
       path: '/start'
       fullPath: '/start'
       preLoaderRoute: typeof StartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/suspended': {
+      id: '/suspended'
+      path: '/suspended'
+      fullPath: '/suspended'
+      preLoaderRoute: typeof SuspendedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify': {
+      id: '/verify'
+      path: '/verify'
+      fullPath: '/verify'
+      preLoaderRoute: typeof VerifyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/': {
@@ -679,6 +944,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFixerRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/flow': {
+      id: '/_app/flow'
+      path: '/flow'
+      fullPath: '/flow'
+      preLoaderRoute: typeof AppFlowRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/help': {
       id: '/_app/help'
       path: '/help'
@@ -726,6 +998,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications'
       preLoaderRoute: typeof AppNotificationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/orders': {
+      id: '/_app/orders'
+      path: '/orders'
+      fullPath: '/orders'
+      preLoaderRoute: typeof AppOrdersRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/podcasts': {
@@ -791,6 +1070,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSpillRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/sport': {
+      id: '/_app/sport'
+      path: '/sport'
+      fullPath: '/sport'
+      preLoaderRoute: typeof AppSportRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/studies': {
       id: '/_app/studies'
       path: '/studies'
@@ -818,6 +1104,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/welcome'
       preLoaderRoute: typeof AppWelcomeRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/reset/$token': {
+      id: '/reset/$token'
+      path: '/reset/$token'
+      fullPath: '/reset/$token'
+      preLoaderRoute: typeof ResetTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_app/audio/$id': {
       id: '/_app/audio/$id'
@@ -860,6 +1153,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/communities/$id'
       preLoaderRoute: typeof AppCommunitiesIdRouteImport
       parentRoute: typeof AppCommunitiesRoute
+    }
+    '/_app/connect/soulync': {
+      id: '/_app/connect/soulync'
+      path: '/soulync'
+      fullPath: '/connect/soulync'
+      preLoaderRoute: typeof AppConnectSoulyncRouteImport
+      parentRoute: typeof AppConnectRoute
+    }
+    '/_app/connect/wayward': {
+      id: '/_app/connect/wayward'
+      path: '/wayward'
+      fullPath: '/connect/wayward'
+      preLoaderRoute: typeof AppConnectWaywardRouteImport
+      parentRoute: typeof AppConnectRoute
+    }
+    '/_app/guild/concierge': {
+      id: '/_app/guild/concierge'
+      path: '/guild/concierge'
+      fullPath: '/guild/concierge'
+      preLoaderRoute: typeof AppGuildConciergeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/guild/quarter': {
+      id: '/_app/guild/quarter'
+      path: '/guild/quarter'
+      fullPath: '/guild/quarter'
+      preLoaderRoute: typeof AppGuildQuarterRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/market/': {
       id: '/_app/market/'
@@ -924,15 +1245,45 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMediaIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/board/room/$id': {
+      id: '/_app/board/room/$id'
+      path: '/room/$id'
+      fullPath: '/board/room/$id'
+      preLoaderRoute: typeof AppBoardRoomIdRouteImport
+      parentRoute: typeof AppBoardRoute
+    }
+    '/_app/connect/people/$handle': {
+      id: '/_app/connect/people/$handle'
+      path: '/people/$handle'
+      fullPath: '/connect/people/$handle'
+      preLoaderRoute: typeof AppConnectPeopleHandleRouteImport
+      parentRoute: typeof AppConnectRoute
+    }
+    '/_app/connect/services/$id': {
+      id: '/_app/connect/services/$id'
+      path: '/services/$id'
+      fullPath: '/connect/services/$id'
+      preLoaderRoute: typeof AppConnectServicesIdRouteImport
+      parentRoute: typeof AppConnectRoute
+    }
+    '/_app/connect/wayward/$id': {
+      id: '/_app/connect/wayward/$id'
+      path: '/$id'
+      fullPath: '/connect/wayward/$id'
+      preLoaderRoute: typeof AppConnectWaywardIdRouteImport
+      parentRoute: typeof AppConnectWaywardRoute
+    }
   }
 }
 
 interface AppBoardRouteChildren {
   AppBoardIdRoute: typeof AppBoardIdRoute
+  AppBoardRoomIdRoute: typeof AppBoardRoomIdRoute
 }
 
 const AppBoardRouteChildren: AppBoardRouteChildren = {
   AppBoardIdRoute: AppBoardIdRoute,
+  AppBoardRoomIdRoute: AppBoardRoomIdRoute,
 }
 
 const AppBoardRouteWithChildren = AppBoardRoute._addFileChildren(
@@ -964,6 +1315,35 @@ const AppCommunitiesRouteChildren: AppCommunitiesRouteChildren = {
 
 const AppCommunitiesRouteWithChildren = AppCommunitiesRoute._addFileChildren(
   AppCommunitiesRouteChildren,
+)
+
+interface AppConnectWaywardRouteChildren {
+  AppConnectWaywardIdRoute: typeof AppConnectWaywardIdRoute
+}
+
+const AppConnectWaywardRouteChildren: AppConnectWaywardRouteChildren = {
+  AppConnectWaywardIdRoute: AppConnectWaywardIdRoute,
+}
+
+const AppConnectWaywardRouteWithChildren =
+  AppConnectWaywardRoute._addFileChildren(AppConnectWaywardRouteChildren)
+
+interface AppConnectRouteChildren {
+  AppConnectSoulyncRoute: typeof AppConnectSoulyncRoute
+  AppConnectWaywardRoute: typeof AppConnectWaywardRouteWithChildren
+  AppConnectPeopleHandleRoute: typeof AppConnectPeopleHandleRoute
+  AppConnectServicesIdRoute: typeof AppConnectServicesIdRoute
+}
+
+const AppConnectRouteChildren: AppConnectRouteChildren = {
+  AppConnectSoulyncRoute: AppConnectSoulyncRoute,
+  AppConnectWaywardRoute: AppConnectWaywardRouteWithChildren,
+  AppConnectPeopleHandleRoute: AppConnectPeopleHandleRoute,
+  AppConnectServicesIdRoute: AppConnectServicesIdRoute,
+}
+
+const AppConnectRouteWithChildren = AppConnectRoute._addFileChildren(
+  AppConnectRouteChildren,
 )
 
 interface AppMarketRouteChildren {
@@ -1021,11 +1401,12 @@ interface AppRouteChildren {
   AppBoardRoute: typeof AppBoardRouteWithChildren
   AppBudRoute: typeof AppBudRouteWithChildren
   AppCommunitiesRoute: typeof AppCommunitiesRouteWithChildren
-  AppConnectRoute: typeof AppConnectRoute
+  AppConnectRoute: typeof AppConnectRouteWithChildren
   AppCreatorRoute: typeof AppCreatorRoute
   AppDiscoveryRoute: typeof AppDiscoveryRoute
   AppFeedbackRoute: typeof AppFeedbackRoute
   AppFixerRoute: typeof AppFixerRoute
+  AppFlowRoute: typeof AppFlowRoute
   AppHelpRoute: typeof AppHelpRoute
   AppLiveRoute: typeof AppLiveRoute
   AppMarketRoute: typeof AppMarketRouteWithChildren
@@ -1033,6 +1414,7 @@ interface AppRouteChildren {
   AppMoneyRoute: typeof AppMoneyRoute
   AppNewsRoute: typeof AppNewsRoute
   AppNotificationsRoute: typeof AppNotificationsRoute
+  AppOrdersRoute: typeof AppOrdersRoute
   AppPodcastsRoute: typeof AppPodcastsRoute
   AppProfileRoute: typeof AppProfileRoute
   AppRiffRoute: typeof AppRiffRouteWithChildren
@@ -1042,12 +1424,15 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
   AppSocialRoute: typeof AppSocialRoute
   AppSpillRoute: typeof AppSpillRouteWithChildren
+  AppSportRoute: typeof AppSportRoute
   AppStudiesRoute: typeof AppStudiesRoute
   AppTutorRoute: typeof AppTutorRoute
   AppWatchRoute: typeof AppWatchRoute
   AppWelcomeRoute: typeof AppWelcomeRoute
   AppIndexRoute: typeof AppIndexRoute
   AppAudioIdRoute: typeof AppAudioIdRoute
+  AppGuildConciergeRoute: typeof AppGuildConciergeRoute
+  AppGuildQuarterRoute: typeof AppGuildQuarterRoute
   AppUHandleRoute: typeof AppUHandleRoute
 }
 
@@ -1055,11 +1440,12 @@ const AppRouteChildren: AppRouteChildren = {
   AppBoardRoute: AppBoardRouteWithChildren,
   AppBudRoute: AppBudRouteWithChildren,
   AppCommunitiesRoute: AppCommunitiesRouteWithChildren,
-  AppConnectRoute: AppConnectRoute,
+  AppConnectRoute: AppConnectRouteWithChildren,
   AppCreatorRoute: AppCreatorRoute,
   AppDiscoveryRoute: AppDiscoveryRoute,
   AppFeedbackRoute: AppFeedbackRoute,
   AppFixerRoute: AppFixerRoute,
+  AppFlowRoute: AppFlowRoute,
   AppHelpRoute: AppHelpRoute,
   AppLiveRoute: AppLiveRoute,
   AppMarketRoute: AppMarketRouteWithChildren,
@@ -1067,6 +1453,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppMoneyRoute: AppMoneyRoute,
   AppNewsRoute: AppNewsRoute,
   AppNotificationsRoute: AppNotificationsRoute,
+  AppOrdersRoute: AppOrdersRoute,
   AppPodcastsRoute: AppPodcastsRoute,
   AppProfileRoute: AppProfileRoute,
   AppRiffRoute: AppRiffRouteWithChildren,
@@ -1076,12 +1463,15 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppSocialRoute: AppSocialRoute,
   AppSpillRoute: AppSpillRouteWithChildren,
+  AppSportRoute: AppSportRoute,
   AppStudiesRoute: AppStudiesRoute,
   AppTutorRoute: AppTutorRoute,
   AppWatchRoute: AppWatchRoute,
   AppWelcomeRoute: AppWelcomeRoute,
   AppIndexRoute: AppIndexRoute,
   AppAudioIdRoute: AppAudioIdRoute,
+  AppGuildConciergeRoute: AppGuildConciergeRoute,
+  AppGuildQuarterRoute: AppGuildQuarterRoute,
   AppUHandleRoute: AppUHandleRoute,
 }
 
@@ -1089,8 +1479,15 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  ForgotRoute: ForgotRoute,
+  JoinRoute: JoinRoute,
   LoginRoute: LoginRoute,
+  OnboardingRoute: OnboardingRoute,
+  SetupRoute: SetupRoute,
   StartRoute: StartRoute,
+  SuspendedRoute: SuspendedRoute,
+  VerifyRoute: VerifyRoute,
+  ResetTokenRoute: ResetTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiMediaIdRoute: ApiMediaIdRoute,
 }

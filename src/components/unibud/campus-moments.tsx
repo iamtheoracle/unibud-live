@@ -13,44 +13,7 @@ type Cluster = {
   photos: [string, string];
 };
 
-/** DEMO_ONLY — local UI fixtures. Not real users, not live sessions, not shared activity. */
-const CLUSTERS: Cluster[] = [
-  {
-    id: "c-amaka",
-    handles: ["amaka", "kemi"],
-    count: 3,
-    photos: ["/market/camera.jpg", "/covers/campus-night.jpg"],
-    lines: ["Hall week fittings, not the rumour.", "Studio light hit different tonight.", "Portraits after faculty night."],
-  },
-  {
-    id: "c-tunde",
-    handles: ["tunde", "ibrahim"],
-    count: 2,
-    photos: ["/market/keke.jpg", "/covers/campus-night.jpg"],
-    lines: ["Rain, keke, still made 8am.", "Second gate queue before lecture."],
-  },
-  {
-    id: "c-adaeze",
-    handles: ["adaeze", "chinedu"],
-    count: 4,
-    photos: ["/covers/campus-night.jpg", "/market/camera.jpg"],
-    lines: ["Library till close. Notes after.", "Quiet reading corner, no playlist.", "Night class from the floor.", "Past questions club, New Hall."],
-  },
-  {
-    id: "c-fatima",
-    handles: ["fatima", "ngozi"],
-    count: 2,
-    photos: ["/covers/campus-night.jpg", "/market/braids.jpg"],
-    lines: ["From the second gate before lecture.", "Meal plan that actually lasted the week."],
-  },
-  {
-    id: "c-sky",
-    handles: ["jonas_wits", "aisha_nbo"],
-    count: 2,
-    photos: ["/covers/campus-night.jpg", "/market/camera.jpg"],
-    lines: ["Cheap lens. Honest sky.", "The arm grabbed on the third try."],
-  },
-];
+const CLUSTERS: Cluster[] = [];
 
 function Face({ src, name, className }: { src?: string; name: string; className?: string }) {
   if (src) {
@@ -84,7 +47,7 @@ export function CampusMoments({
 
   return (
     <>
-      <div className="flex gap-3 overflow-x-auto px-4 py-2" data-demo="stories">
+      <div className="flex gap-3 overflow-x-auto px-4 py-2">
         <button
           type="button"
           onClick={() => (mine.length ? setMineOpen(true) : onCreate())}
@@ -139,17 +102,21 @@ export function CampusMoments({
         <div className="fixed inset-0 z-50 flex flex-col bg-ink text-paper">
           <div className="flex gap-1 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
             {current.lines.map((_, i) => (
-              <span key={i} className={cn("h-0.5 flex-1 rounded-full", i <= seg ? "bg-paper" : "bg-paper/25")} />
+              <span
+                key={i}
+                className={cn("h-0.5 flex-1 rounded-full", i <= seg ? "bg-paper" : "bg-paper/25")}
+              />
             ))}
           </div>
-          <div className="flex items-center justify-between px-2 pt-2">
-            <p className="px-2 text-sm font-semibold">
+          <div className="flex items-center justify-between px-2">
+            <p className="px-3 text-sm font-medium">
               {personByHandle(current.handles[0])?.name ?? current.handles[0]}
+              <span className="ml-1 text-paper/50">@{current.handles[0]}</span>
             </p>
             <button
               type="button"
               className="grid size-11 place-items-center"
-              aria-label="Close"
+              aria-label="Close moment"
               onClick={() => closeCluster(current.id)}
             >
               <X className="size-5" />

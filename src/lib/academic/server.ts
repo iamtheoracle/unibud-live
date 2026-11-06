@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
-import { authMiddleware } from "@/lib/auth/middleware";
+import { appAccessMiddleware } from "@/lib/account/guard";
 import { courseByCode } from "@/lib/unibud/academic";
 import { notify } from "@/lib/unibud/server";
 
@@ -18,11 +18,11 @@ async function loadEnrollments(userId: string) {
 }
 
 export const listEnrollments = createServerFn({ method: "GET" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .handler(async ({ context }) => loadEnrollments(context.userId));
 
 export const enrollCourse = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((input: { code: string; semester?: string; sessionLabel?: string }) => input)
   .handler(async ({ context, data }) => {
     const cat = courseByCode(data.code);
@@ -38,7 +38,7 @@ export const enrollCourse = createServerFn({ method: "POST" })
   });
 
 export const dropCourse = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((code: string) => code)
   .handler(async ({ context, data: code }) => {
     const sql = await getSql();
@@ -47,7 +47,7 @@ export const dropCourse = createServerFn({ method: "POST" })
   });
 
 export const postAnnouncement = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((input: { courseCode: string; title: string; body: string }) => input)
   .handler(async ({ context, data }) => {
     const sql = await getSql();
@@ -64,7 +64,7 @@ export const postAnnouncement = createServerFn({ method: "POST" })
   });
 
 export const listAnnouncements = createServerFn({ method: "GET" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((courseCode: string) => courseCode)
   .handler(async ({ data: courseCode }) => {
     const sql = await getSql();
@@ -78,7 +78,7 @@ export const listAnnouncements = createServerFn({ method: "GET" })
   });
 
 export const logAttendance = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((input: { sessionId: string; kind: "join" | "leave" }) => input)
   .handler(async ({ context, data }) => {
     const sql = await getSql();
@@ -88,7 +88,7 @@ export const logAttendance = createServerFn({ method: "POST" })
   });
 
 export const listAttendance = createServerFn({ method: "GET" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((sessionId: string) => sessionId)
   .handler(async ({ data: sessionId }) => {
     const sql = await getSql();
@@ -105,7 +105,7 @@ export const listAttendance = createServerFn({ method: "GET" })
   });
 
 export const askInClass = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((input: { sessionId: string; body: string }) => input)
   .handler(async ({ context, data }) => {
     const sql = await getSql();
@@ -116,7 +116,7 @@ export const askInClass = createServerFn({ method: "POST" })
   });
 
 export const listClassQuestions = createServerFn({ method: "GET" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((sessionId: string) => sessionId)
   .handler(async ({ data: sessionId }) => {
     const sql = await getSql();

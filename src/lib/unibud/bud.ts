@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
-import { authMiddleware } from "@/lib/auth/middleware";
+import { appAccessMiddleware } from "@/lib/account/guard";
 import { mapBud } from "./map";
 
 const SYSTEM = `You are Bud, the campus assistant inside UNIBUD — a student operating environment for Nigerian universities (UNILAG, UNN, UI, ABU, OAU, UNIBEN, LASU, FUTA, UNIPORT, Covenant, and others).
@@ -15,7 +15,7 @@ Rules:
 - Prefer short paragraphs and tight lists.`;
 
 export const listBudMessages = createServerFn({ method: "GET" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .handler(async ({ context }) => {
     const sql = await getSql();
     const rows = await sql`select * from bud_messages where user_id = ${context.userId} order by created_at asc limit 40`;
@@ -23,7 +23,7 @@ export const listBudMessages = createServerFn({ method: "GET" })
   });
 
 export const sendBudMessage = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((content: string) => content.trim().slice(0, 2000))
   .handler(async ({ context, data: content }) => {
     if (!content) throw new Error("Write something first");
@@ -40,42 +40,20 @@ export const sendBudMessage = createServerFn({ method: "POST" })
       .reverse()
       .map((r) => ({ role: r.role as "user" | "assistant", content: r.content }));
 
-    const xaiKey = process.env.XAI_API_KEY?.trim();
-    const openaiKey = process.env.OPENAI_API_KEY?.trim();
+    const apiKey = process.env.XAI_API_KEY;
     let reply: string;
-    if (!xaiKey && !openaiKey) {
+    if (!apiKey) {
       reply =
-        "Bud is offline in this environment. Browse Square, Connect, or Chat — then ask again when the model is connected.";
-    } else if (xaiKey) {
+        "Bud is offline in this environment. Browse Market for listings, Money for the demo ledger, or Studies for your semester — then ask again later.";
+    } else {
       const res = await fetch("https://api.x.ai/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${xaiKey}`,
+          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model: "grok-4.5",
-          max_tokens: 500,
-          messages: [{ role: "system", content: SYSTEM }, ...messages],
-        }),
-      });
-      if (!res.ok) {
-        reply = "Bud hit a snag talking to the model. Try again in a moment.";
-      } else {
-        const body = (await res.json()) as {
-          choices?: { message?: { content?: string } }[];
-        };
-        reply = body.choices?.[0]?.message?.content?.trim() || "I went quiet. Ask me again.";
-      }
-    } else {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${openaiKey}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
           max_tokens: 500,
           messages: [{ role: "system", content: SYSTEM }, ...messages],
         }),

@@ -106,6 +106,7 @@ export type DiscoveryItem = {
 export type Conversation = {
   id: string;
   peerHandle: string;
+  peerName?: string;
   listingId?: string | null;
   lastBody: string;
   updatedAt: string;

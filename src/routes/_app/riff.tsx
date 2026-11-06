@@ -10,9 +10,9 @@ import { useCampusStore } from "@/lib/unibud/campus-store";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { cn } from "@/lib/utils";
 import type { SpillPost } from "@/lib/unibud/spill-data";
-import { CHALLENGES } from "@/lib/unibud/discover-data";
 import { setBudDraft } from "@/lib/bud/draft";
 import { RiffMark } from "@/components/brand/identity-marks";
+import { EmptyState } from "@/components/unibud/empty";
 
 export const Route = createFileRoute("/_app/riff")({ component: Riff });
 
@@ -37,17 +37,15 @@ function Riff() {
 
   return (
     <main className="safe-bottom bg-card">
-      <header className="px-5 pt-6">
-        <div className="flex items-center gap-3">
-          <RiffMark size={44} className="riff-mark-header" />
-          <div>
-            <p className="kicker">Conversation</p>
-            <h1 className="mt-0.5 font-display text-4xl">Riff</h1>
-          </div>
+      <header className="flex items-end justify-between gap-4 px-5 pt-6">
+        <div>
+          <p className="kicker">Conversation</p>
+          <h1 className="mt-1 font-display text-4xl">Riff</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Short posts that can become a whole conversation. Not Square. Not Chat. Not a profile tab.
+          </p>
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Short posts that can become a whole conversation. Not Square. Not Chat. Not a profile tab.
-        </p>
+        <RiffMark size={56} className="riff-mark-header shrink-0" />
       </header>
 
       <div className="mt-4 flex gap-2 overflow-x-auto px-5">
@@ -62,20 +60,6 @@ function Riff() {
             )}
           >
             {id}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-4 flex gap-2 overflow-x-auto px-5 pb-2">
-        {CHALLENGES.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            className="w-44 shrink-0 rounded-2xl bg-secondary p-3 text-left"
-            onClick={() => setDraft((d) => d || `${c.title}: ${c.body}`)}
-          >
-            <p className="text-[11px] font-medium text-bud">{c.joins.toLocaleString()} in</p>
-            <p className="mt-1 text-sm font-medium">{c.title}</p>
           </button>
         ))}
       </div>
@@ -112,7 +96,9 @@ function Riff() {
           </div>
         </form>
       ) : (
-        <p className="mt-4 px-5 text-sm text-muted-foreground">Sign in to drop a Riff. You can still read.</p>
+        <p className="mt-4 px-5 text-sm text-muted-foreground">
+          Accounts are not connected, so a Riff cannot be posted for other people.
+        </p>
       )}
 
       {followed.length ? (
@@ -122,9 +108,16 @@ function Riff() {
       ) : null}
 
       <div>
-        {list.map((s) => (
-          <RiffCard key={s.id} spill={s} onQuote={() => setQuoting(s.id)} />
-        ))}
+        {list.length === 0 ? (
+          <div className="px-5 py-8">
+            <EmptyState
+              title="No Riffs"
+              body="Riff is read-only until a conversation service is connected. Sample posts are not shown."
+            />
+          </div>
+        ) : (
+          list.map((s) => <RiffCard key={s.id} spill={s} onQuote={() => setQuoting(s.id)} />)
+        )}
       </div>
     </main>
   );

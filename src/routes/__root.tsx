@@ -26,16 +26,7 @@ const fetchSessionUser = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 export const Route = createRootRoute({
-  beforeLoad: async ({ location }) => {
-    const sessionUser = await fetchSessionUser();
-    const publicPaths = ["/start", "/login", "/bud"];
-    const isPublic = publicPaths.some((p) => location.pathname === p || location.pathname.startsWith(p + "/"));
-    if (!sessionUser && location.pathname === "/") {
-      const { redirect } = await import("@tanstack/react-router");
-      throw redirect({ to: "/start" });
-    }
-    return { sessionUser };
-  },
+  beforeLoad: async () => ({ sessionUser: await fetchSessionUser() }),
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -57,7 +48,7 @@ export const Route = createRootRoute({
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap",
       },
     ],
   }),

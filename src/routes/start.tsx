@@ -1,38 +1,69 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { Wordmark } from "@/components/brand/logo";
-import { Button } from "@/components/ui/button";
+import { getMyAccount } from "@/lib/account/server";
+import { routeForAccount } from "@/lib/account/domain";
+import { useCurrentUserState } from "@/lib/auth/use-current-user";
 
-export const Route = createFileRoute("/start")({
-  component: Welcome,
-});
+export const Route = createFileRoute("/start")({ component: Start });
 
-function Welcome() {
-  return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-background px-6 py-12">
-      <div className="flex w-full max-w-sm flex-col items-center text-center">
-        <Wordmark size="hero" className="mb-8" />
-        <p className="kicker">UNIBUD</p>
-        <h1 className="mt-3 font-display text-3xl font-medium tracking-tight">
-          Where people, ideas and discovery meet.
-        </h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          A quiet assistant named Bud. Sign in to keep your place, or continue as a guest.
-        </p>
+function Start() {
+  const [phase, setPhase] = useState<"splash" | "welcome">("splash");
+  const { user, isPending } = useCurrentUserState();
+  const account = useQuery({
+    queryKey: ["unibud-account", user?.id],
+    queryFn: () => getMyAccount(),
+    enabled: !isPending && Boolean(user),
+  });
 
-        <div className="mt-10 flex w-full flex-col gap-3">
-          <Button asChild className="w-full" size="lg">
-            <Link to="/login">Sign In / Register</Link>
-          </Button>
-          <Button asChild variant="outline" className="w-full" size="lg">
-            <Link to="/bud">
-              Continue as Guest
-            </Link>
-          </Button>
+  useEffect(() => {
+    if (sessionStorage.getItem("unibud-splash")) {
+      setPhase("welcome");
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      sessionStorage.setItem("unibud-splash", "1");
+      setPhase("welcome");
+    }, 1400);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  if (!isPending && user && !account.isPending && account.data) {
+    const dest = routeForAccount(account.data.status);
+    if (dest !== "/join") return <Navigate to={dest} />;
+  }
+
+  if (phase === "splash") {
+    return (
+      <main className="grid min-h-dvh place-items-center bg-background px-6">
+        <div className="text-center">
+          <Wordmark size="hero" />
+          <p className="kicker mt-6">UNIBUD</p>
         </div>
+      </main>
+    );
+  }
 
-        <p className="mt-6 text-[11px] text-muted-foreground">
-          Guest chats are not saved. Sign in anytime to keep your conversations.
-        </p>
+  return (
+    <main className="flex min-h-dvh flex-col bg-background px-6 pt-[max(3rem,env(safe-area-inset-top))] pb-12">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
+        <Wordmark size="sm" />
+        <div className="mt-16">
+          <p className="kicker">Welcome</p>
+          <h1 className="mt-3 font-display text-5xl leading-none">Your campus, with a name on it.</h1>
+          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+            Create a verified account to enter UNIBUD. There is no guest entry, and no social sign-in.
+          </p>
+        </div>
+        <div className="mt-auto flex flex-col gap-3 pt-12">
+          <Link to="/onboarding" className="grid h-12 place-items-center rounded-full bg-ink text-sm font-medium text-paper">
+            Create account
+          </Link>
+          <Link to="/login" className="grid h-12 place-items-center rounded-full text-sm font-medium ring-1 ring-border">
+            Log in
+          </Link>
+        </div>
       </div>
     </main>
   );

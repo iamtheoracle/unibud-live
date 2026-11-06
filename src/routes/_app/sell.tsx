@@ -2,11 +2,10 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 import { CATEGORIES } from "@/lib/unibud/catalog";
-import { createListing } from "@/lib/unibud/server";
+import { createMarketListing } from "@/lib/market/server";
 import { koboFromNairaInput } from "@/lib/unibud/format";
 import type { ListingCategory, ListingKind } from "@/lib/unibud/types";
 import { RequireAuth } from "@/components/require-auth";
-import { VaultGate } from "@/components/unibud/vault-gate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,11 +15,9 @@ export const Route = createFileRoute("/_app/sell")({ component: SellPage });
 
 function SellPage() {
   return (
-    <VaultGate title="Marketplace">
-      <RequireAuth>
-        <SellForm />
-      </RequireAuth>
-    </VaultGate>
+    <RequireAuth>
+      <SellForm />
+    </RequireAuth>
   );
 }
 
@@ -44,7 +41,7 @@ function SellForm() {
     }
     setBusy(true);
     try {
-      const listing = await createListing({
+      const listing = await createMarketListing({
         data: {
           kind,
           category,
@@ -55,6 +52,10 @@ function SellForm() {
           location,
         },
       });
+      if (!listing.ok) {
+        toast.error(listing.error);
+        return;
+      }
       await router.invalidate();
       toast.success("Listed");
       await router.navigate({ to: "/market/$listingId", params: { listingId: listing.id } });
@@ -71,7 +72,7 @@ function SellForm() {
         <p className="text-xs font-medium tracking-widest text-bud uppercase">Sell</p>
         <h1 className="mt-1 font-display text-4xl">List something campus can use</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Be honest. No impersonation. Payments stay on the demo ledger.
+          Be honest. No impersonation. Asking to buy does not take a payment.
         </p>
       </div>
 

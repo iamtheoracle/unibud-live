@@ -1,9 +1,10 @@
-import { createFileRoute, Link, useLoaderData, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useLoaderData } from "@tanstack/react-router";
 import { BadgeCheck, Bookmark, Heart, MessageCircle, MoreHorizontal, Play, Share2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/unibud/person";
 import { CampusMoments } from "@/components/unibud/campus-moments";
 import { ReelsStage } from "@/components/unibud/reels-stage";
+import { DropTrigger } from "@/components/unibud/drop-trigger";
 import { EmptyState } from "@/components/unibud/empty";
 import { communityById, personByHandle } from "@/lib/unibud/catalog";
 import { relativeTime } from "@/lib/unibud/format";
@@ -11,7 +12,7 @@ import { useCampusStore } from "@/lib/unibud/campus-store";
 import { useStudioStore } from "@/lib/studio/store";
 import { useCurrentUserState } from "@/lib/auth/use-current-user";
 import { cn } from "@/lib/utils";
-import { isVideoPost, likeKey, postsForLane, SQUARE_LANES, type SquareLane } from "@/lib/unibud/square-stream";
+import { isVideoPost, likeKey, loopStream, postsForLane, SQUARE_LANES, type SquareLane } from "@/lib/unibud/square-stream";
 import { addSquareReply, toggleCommentLike as toggleDbCommentLike, togglePostLike, toggleSave } from "@/lib/unibud/server";
 import { toast } from "sonner";
 import type { DiscoveryItem, FeedPost } from "@/lib/unibud/types";
@@ -22,75 +23,68 @@ export const Route = createFileRoute("/_app/")({ component: Square });
 
 function Square() {
   const catalog = useLoaderData({ from: "/_app" });
-  const nav = useNavigate();
-  const { user, isPending } = useCurrentUserState();
-  const onboardingDone = useCampusStore((s) => s.onboardingDone);
-
-  useEffect(() => {
-    if (isPending) return;
-    try {
-      if (!sessionStorage.getItem("unibud-guest-browse")) {
-        sessionStorage.setItem("unibud-guest-browse", "1");
-      }
-    } catch {
-      /* ignore */
-    }
-    if (user && !onboardingDone) void nav({ to: "/welcome" });
-  }, [user, isPending, onboardingDone, nav]);
-
   const [lane, setLane] = useState<SquareLane>("on-stream");
   const [peekStart, setPeekStart] = useState<string | undefined>();
   const [shown, setShown] = useState(10);
   const localPosts = useCampusStore((s) => s.localPosts);
-  const hiddenPosts = useCampusStore((s) => s.hiddenPosts);
   const following = useCampusStore((s) => s.following);
   const connections = useCampusStore((s) => s.connections);
   const interests = useCampusStore((s) => s.interests);
   const likeCounts = useCampusStore((s) => s.likeCounts);
   const searches = useCampusStore((s) => s.recentSearches);
   const homeCampusId = useCampusStore((s) => s.homeCampusId);
+  const hiddenPosts = useCampusStore((s) => s.hiddenPosts);
   const setComposeOpen = useCampusStore((s) => s.setComposeOpen);
   const setDropOpen = useCampusStore((s) => s.setDropOpen);
   const setSquareView = useCampusStore((s) => s.setSquareView);
-  const sentinel = useRef<HTMLDivElement | null>(null);
 
-  const merged = useMemo(() => {
-    const base = (catalog.posts ?? []) as FeedPost[];
-    const locals = (localPosts ?? []) as FeedPost[];
-    return [...locals, ...base];
-  }, [catalog.posts, localPosts]);
+  const merged = [
+    ...localPosts.map((p) => ({
+      id: p.id,
+      communityId: p.communityId ?? "",
+      authorHandle: p.authorHandle,
+      body: p.body,
+      createdAt: p.createdAt,
+      image: p.image,
+      video: p.video,
+      kind: p.kind,
+      audioId: p.audioId,
+    })),
+    ...catalog.posts,
+  ].filter((p) => !hiddenPosts.includes(p.id) && !hiddenPosts.includes(likeKey(p.id)));
+  const rankCtx = {
+    following,
+    interests,
+    universityId: homeCampusId || "unilag",
+    likeCounts,
+    searches,
+  };
+  const lanePosts = postsForLane(merged, lane, rankCtx, connections);
+  const stream = useMemo(() => loopStream(lanePosts, shown), [lanePosts, shown]);
+  const sentinel = useRef<HTMLDivElement>(null);
 
-  const lanePosts = useMemo(
-    () =>
-      postsForLane(
-        merged,
-        lane,
-        { following, interests, universityId: homeCampusId, likeCounts, searches },
-        connections,
-      ),
-    [merged, lane, following, connections, interests, homeCampusId, hiddenPosts, likeCounts, searches],
-  );
-
-  const stream = useMemo(() => lanePosts.slice(0, shown), [lanePosts, shown]);
+  useEffect(() => {
+    if (typeof sessionStorage === "undefined") return;
+    const saved = sessionStorage.getItem("unibud-square-mode");
+    if (saved === "peek" || saved === "reels") {
+      sessionStorage.removeItem("unibud-square-mode");
+      setLane("peek");
+      setSquareView("peek");
+    }
+  }, [setSquareView]);
 
   useEffect(() => {
     const el = sentinel.current;
-    if (!el || shown >= lanePosts.length) return;
+    if (!el || lane === "peek") return;
     const io = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          setShown((n) => Math.min(n + 8, lanePosts.length));
-        }
+      ([e]) => {
+        if (e.isIntersecting) setShown((n) => n + 12);
       },
-      { rootMargin: "400px" },
+      { rootMargin: "1200px" },
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [lane, lanePosts.length, shown]);
-
-  if (isPending || (user && !onboardingDone)) {
-    return <div className="m-4 h-48 animate-pulse rounded-3xl bg-secondary" aria-label="Loading your Square" />;
-  }
+  }, [lane, stream.length]);
 
   function openPeek(id: string) {
     setPeekStart(id);
@@ -115,20 +109,12 @@ function Square() {
           <ReelsStage source={lanePosts.length ? lanePosts : merged} startId={peekStart} />
         </div>
       ) : (
-        <div className="min-h-[60dvh]">
+        <>
           <div className="px-4 pt-3">
             <p className="kicker">The UNIBUD world</p>
             <div className="mt-1 flex items-start justify-between gap-3">
               <h1 className="font-display text-5xl font-medium">Square</h1>
-              <button
-                type="button"
-                className="grid size-11 place-items-center text-2xl leading-none text-ink"
-                aria-label="Drop"
-                data-square-interactive
-                onClick={() => setDropOpen(true)}
-              >
-                +
-              </button>
+              <DropTrigger open={false} onClick={() => setDropOpen(true)} />
             </div>
           </div>
           <div className="mt-3">
@@ -152,7 +138,7 @@ function Square() {
             sentinel={sentinel}
             onOpenPeek={openPeek}
           />
-        </div>
+        </>
       )}
     </main>
   );
@@ -168,12 +154,14 @@ function StreamPicker({
   dark?: boolean;
 }) {
   const [busy, setBusy] = useState<SquareLane | null>(null);
+
   function pick(id: SquareLane) {
     if (id === lane) return;
     setBusy(id);
     onChange(id);
     window.setTimeout(() => setBusy(null), 180);
   }
+
   return (
     <nav
       className={cn("square-lanes", !dark && "mt-3")}
@@ -219,13 +207,14 @@ function LaneFeed({
         ? { title: "Buddies is quiet", body: "Connect with people and follow a few voices. Their posts land here." }
         : lane === "quad-drop"
           ? { title: "Nothing on Quad Drop yet", body: "Campus and university activity will gather here as people post." }
-          : { title: "Square is still waking up", body: "Drop something, or come back as the world starts moving." };
+          : { title: "Nothing on Square yet", body: "The campus feed is not connected. A drop you make here stays on this device. It is not published to other people." };
     return (
       <div className="px-4 py-8">
         <EmptyState title={copy.title} body={copy.body} />
       </div>
     );
   }
+
   return (
     <div className="mt-1">
       {stream.map((p, i) => {
@@ -245,7 +234,7 @@ function LaneFeed({
 
 function DiscoveryCard({ item }: { item: DiscoveryItem }) {
   return (
-    <article className="border-b border-border px-5 py-4" data-square-interactive>
+    <article className="border-b border-border px-5 py-4">
       <p className="text-[10px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">{item.kicker}</p>
       <p className="mt-1 text-sm font-semibold">{item.title}</p>
       <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{item.summary}</p>
@@ -305,17 +294,22 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
   const follow = useCampusStore((s) => s.follow);
   const unfollow = useCampusStore((s) => s.unfollow);
   const reportPost = useCampusStore((s) => s.reportPost);
+  const originals = useCampusStore((s) => s.originalAudios ?? []);
+  const commentLikes = useCampusStore((s) => s.commentLikes ?? {});
+  const toggleCommentLike = useCampusStore((s) => s.toggleCommentLike);
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
   const [reply, setReply] = useState("");
+  const [parent, setParent] = useState<string | undefined>();
   const name = person?.name ?? post.authorHandle;
-  const video = isVideoPost(post);
+  const isFollowed = following.includes(post.authorHandle);
+  const audio = originals.find((a) => a.audioId === post.audioId || a.sourceContentId === key);
 
   return (
-    <article data-square-interactive className="border-b border-border px-5 py-4">
+    <article className="border-b border-border px-5 py-4">
       <div className="flex gap-3">
-        <Link to="/u/$handle" params={{ handle: post.authorHandle }} className="shrink-0">
-          <Avatar name={name} className="size-11" />
+        <Link to="/u/$handle" params={{ handle: post.authorHandle }}>
+          <Avatar name={name} />
         </Link>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
@@ -324,85 +318,276 @@ function FeedItem({ post, onOpenPeek }: { post: FeedPost; onOpenPeek: (id: strin
                 <Link to="/u/$handle" params={{ handle: post.authorHandle }} className="hover:underline">
                   {name}
                 </Link>
-                {person?.verified ? <BadgeCheck className="ml-1 inline size-3.5 text-bud" /> : null}
+                {person?.verified ? (
+                  <BadgeCheck className="ml-1 inline size-3.5 text-bud" />
+                ) : null}
                 <span className="ml-1 font-normal text-muted-foreground">@{post.authorHandle}</span>
-                <span className="ml-1 font-normal text-muted-foreground">· {relativeTime(post.createdAt)}</span>
               </p>
-              {community ? (
-                <Link to="/communities/$id" params={{ id: community.id }} className="text-[11px] font-medium text-bud">
-                  {community.name}
-                </Link>
+              <p className="text-xs text-muted-foreground">
+                {community ? (
+                  <Link
+                    to="/communities/$id"
+                    params={{ id: community.id }}
+                    className="font-medium text-bud"
+                  >
+                    {community.name}
+                  </Link>
+                ) : null}
+                {community ? " · " : null}
+                {relativeTime(post.createdAt)}
+              </p>
+            </div>
+            <div className="relative">
+              <button
+                type="button"
+                className="grid size-9 place-items-center text-muted-foreground"
+                aria-label="More"
+                onClick={() => setMenu((v) => !v)}
+              >
+                <MoreHorizontal className="size-4" />
+              </button>
+              {menu ? (
+                <div className="absolute top-9 right-0 z-10 w-44 rounded-xl bg-card p-1 ring-1 ring-border">
+                  <button
+                    type="button"
+                    className="block w-full rounded-lg px-3 py-2 text-left text-xs"
+                    onClick={() => {
+                      if (isFollowed) unfollow(post.authorHandle);
+                      else follow(post.authorHandle);
+                      setMenu(false);
+                    }}
+                  >
+                    {isFollowed ? "Unfollow" : "Follow"} @{post.authorHandle}
+                  </button>
+                  <button
+                    type="button"
+                    className="block w-full rounded-lg px-3 py-2 text-left text-xs"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(postUrl(post.id)).then(
+                        () => toast.success("Link copied."),
+                        () => toast.message(postUrl(post.id)),
+                      );
+                      setMenu(false);
+                    }}
+                  >
+                    Copy link
+                  </button>
+                  <button
+                    type="button"
+                    className="block w-full rounded-lg px-3 py-2 text-left text-xs"
+                    onClick={() => {
+                      hidePost(key);
+                      setMenu(false);
+                      toast.success("Hidden from Feed on this device.");
+                    }}
+                  >
+                    Hide this
+                  </button>
+                  <button
+                    type="button"
+                    className="block w-full rounded-lg px-3 py-2 text-left text-xs text-destructive"
+                    onClick={() => {
+                      reportPost(key);
+                      setMenu(false);
+                      toast.success("Reported. It won’t show here again.");
+                    }}
+                  >
+                    Report
+                  </button>
+                </div>
               ) : null}
             </div>
-            <button type="button" className="grid size-9 place-items-center text-muted-foreground" onClick={() => setMenu((v) => !v)} aria-label="More">
-              <MoreHorizontal className="size-4" />
-            </button>
           </div>
-          {menu ? (
-            <div className="mt-2 flex flex-wrap gap-2 text-xs">
-              <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { following.includes(post.authorHandle) ? unfollow(post.authorHandle) : follow(post.authorHandle); setMenu(false); }}>
-                {following.includes(post.authorHandle) ? "Unfollow" : "Follow"}
-              </button>
-              <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { hidePost(key); setMenu(false); }}>
-                Hide
-              </button>
-              <button type="button" className="rounded-full bg-secondary px-3 py-1" onClick={() => { reportPost(key); toast.message("Report noted."); setMenu(false); }}>
-                Report
-              </button>
-            </div>
-          ) : null}
           <p className="mt-2 text-sm leading-relaxed">{post.body}</p>
-          {post.image ? (
-            video ? (
-              <button type="button" className="relative mt-3 block w-full overflow-hidden rounded-2xl" onClick={() => onOpenPeek(post.id)}>
-                <img src={post.image} alt="" className="max-h-80 w-full object-cover" />
-                <span className="absolute inset-0 grid place-items-center bg-ink/20"><Play className="size-10 text-paper" /></span>
-              </button>
-            ) : (
-              <img src={post.image} alt="" className="mt-3 max-h-80 w-full rounded-2xl object-cover" />
-            )
+          {audio ? (
+            <Link
+              to="/audio/$id"
+              params={{ id: audio.audioId }}
+              className="mt-2 block text-xs text-muted-foreground"
+            >
+              ♪ {audio.sourceType === "LICENSED_MUSIC" ? "Music" : "Original audio"} · {audio.title}
+              {audio.creatorHandle ? ` · @${audio.creatorHandle}` : ""}
+            </Link>
           ) : null}
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-muted-foreground">
-            <button type="button" onClick={() => { toggleLike(key); if (user) void togglePostLike({ data: key }).catch(() => {}); }} className={cn("inline-flex h-9 items-center gap-1.5 text-sm", liked && "text-bud")}>
+          {isVideoPost(post) ? (
+            <ReelMedia post={post} onOpen={() => onOpenPeek(key)} />
+          ) : post.image ? (
+            <img src={post.image} alt="" className="mt-3 h-52 w-full rounded-2xl object-cover" />
+          ) : null}
+          <div className="mt-3 flex items-center gap-4 text-muted-foreground">
+            <button
+              type="button"
+              onClick={() => {
+                toggleLike(key);
+                if (user) void togglePostLike({ data: key }).catch(() => {});
+              }}
+              className={cn("inline-flex h-9 items-center gap-1.5 text-sm", liked && "text-bud")}
+            >
               <Heart className={cn("size-4", liked && "fill-bud")} />
               {count || ""}
             </button>
-            <button type="button" onClick={() => setOpen((v) => !v)} className="inline-flex h-9 items-center gap-1.5 text-sm">
+            <button
+              type="button"
+              onClick={() => setOpen((v) => !v)}
+              className="inline-flex h-9 items-center gap-1.5 text-sm"
+            >
               <MessageCircle className="size-4" />
               {replies.length || ""}
             </button>
-            <button type="button" onClick={() => void sharePost(post)} className="inline-flex h-9 items-center gap-1.5 text-sm" aria-label="Share">
+            <button
+              type="button"
+              className="inline-flex h-9 items-center gap-1.5 text-sm"
+              onClick={() => void sharePost(post)}
+              aria-label="Share"
+            >
               <Share2 className="size-4" />
             </button>
-            <button type="button" onClick={() => { toggleSavePost(key); if (user) void toggleSave({ data: { kind: "post", itemId: key, title: post.body.slice(0, 80), href: postUrl(post.id) } }).catch(() => {}); }} className={cn("inline-flex h-9 items-center gap-1.5 text-sm", saved && "text-ink")} aria-label="Save">
+            <button
+              type="button"
+              className={cn("inline-flex h-9 items-center gap-1.5 text-sm", saved && "text-ink")}
+              onClick={() => {
+                toggleSavePost(key);
+                if (user) {
+                  void toggleSave({
+                    data: { kind: "post", itemId: key, title: post.body.slice(0, 80), href: "/" },
+                  }).catch(() => {});
+                }
+                toast.success(saved ? "Removed from Saved." : "Saved.");
+              }}
+              aria-label={saved ? "Unsave" : "Save"}
+            >
               <Bookmark className={cn("size-4", saved && "fill-ink")} />
             </button>
           </div>
           {open ? (
             <div className="mt-3 space-y-2">
-              {replies.map((r) => (
-                <p key={r.id} className="text-sm text-muted-foreground">
-                  <span className="font-medium text-ink">@{r.authorHandle}</span> {r.body}
-                </p>
-              ))}
+              {replies.map((r) => {
+                const parentBody = r.parentId ? replies.find((x) => x.id === r.parentId)?.body : null;
+                return (
+                  <div key={r.id} className="rounded-xl bg-secondary px-3 py-2 text-xs">
+                    {parentBody ? (
+                      <p className="mb-1 text-[11px] text-muted-foreground">Replying: {parentBody}</p>
+                    ) : null}
+                    <p>
+                      <Link
+                        to="/u/$handle"
+                        params={{ handle: r.authorHandle }}
+                        className="font-medium"
+                      >
+                        @{r.authorHandle}
+                      </Link>{" "}
+                      {r.body}
+                    </p>
+                    <div className="mt-1 flex gap-3">
+                      <button type="button" className="font-medium" onClick={() => setParent(r.id)}>
+                        Reply
+                      </button>
+                      <button
+                        type="button"
+                        className={cn("font-medium", commentLikes[r.id] && "text-bud")}
+                        onClick={() => {
+                          toggleCommentLike(r.id);
+                          if (user) void toggleDbCommentLike({ data: r.id }).catch(() => {});
+                        }}
+                      >
+                        {commentLikes[r.id] ? "Liked" : "Like"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
               <form
-                className="flex gap-2"
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (!reply.trim()) return;
-                  const body = reply.trim();
-                  addPostReply(key, body, "you");
-                  if (user) void addSquareReply({ data: { postId: key, body } }).catch(() => {});
+                  addPostReply(key, {
+                    id: `pr-${Date.now()}`,
+                    authorHandle: "you",
+                    body: reply.trim(),
+                    parentId: parent,
+                    createdAt: new Date().toISOString(),
+                  });
+                  if (user) {
+                    void addSquareReply({
+                      data: { postId: key, body: reply.trim(), parentId: parent },
+                    }).catch(() => {});
+                  }
                   setReply("");
+                  setParent(undefined);
                 }}
               >
-                <input className="h-9 min-w-0 flex-1 rounded-full bg-secondary px-3 text-sm outline-none" placeholder="Reply…" value={reply} onChange={(e) => setReply(e.target.value)} />
-                <button type="submit" className="rounded-full bg-ink px-4 text-sm text-paper">Send</button>
+                {parent ? (
+                  <p className="mb-1 text-[11px] text-muted-foreground">
+                    Replying to a reply ·{" "}
+                    <button type="button" onClick={() => setParent(undefined)}>
+                      cancel
+                    </button>
+                  </p>
+                ) : null}
+                <input
+                  value={reply}
+                  onChange={(e) => setReply(e.target.value)}
+                  placeholder="Reply to this post"
+                  className="h-10 w-full rounded-full bg-secondary px-4 text-sm outline-none"
+                />
               </form>
             </div>
           ) : null}
         </div>
       </div>
     </article>
+  );
+}
+
+function ReelMedia({ post, onOpen }: { post: FeedPost; onOpen: () => void }) {
+  const wrap = useRef<HTMLButtonElement>(null);
+  const video = useRef<HTMLVideoElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = wrap.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([e]) => setInView(e.isIntersecting && e.intersectionRatio > 0.5),
+      { threshold: [0, 0.5, 1] },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const v = video.current;
+    if (!v || !post.video) return;
+    if (inView) void v.play().catch(() => {});
+    else v.pause();
+  }, [inView, post.video]);
+
+  return (
+    <button
+      ref={wrap}
+      type="button"
+      className="relative mt-3 block w-full overflow-hidden rounded-2xl"
+      onClick={onOpen}
+      aria-label="Open in Peek"
+    >
+      {post.video ? (
+        <video
+          ref={video}
+          src={post.video}
+          poster={post.image}
+          className="aspect-[3/4] max-h-[28rem] w-full object-cover"
+          muted
+          playsInline
+          loop
+        />
+      ) : (
+        <img src={post.image} alt="" className="aspect-[3/4] max-h-[28rem] w-full object-cover" />
+      )}
+      <span className="absolute inset-0 grid place-items-center bg-ink/10">
+        <span className="grid size-12 place-items-center rounded-full bg-ink/70 text-paper">
+          <Play className="size-5 fill-paper" />
+        </span>
+      </span>
+    </button>
   );
 }

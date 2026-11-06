@@ -2,15 +2,15 @@
 /**
  * Deploy-time database migrator (node-postgres, `pg`).
  *
- * Runs during `npm run build` on the deployment platform, applying pending files
- * in ../migrations to the configured Postgres connection. Each file is applied in one transaction and
+ * Runs during `npm run build` — on every Vercel deploy — applying pending files
+ * in ../migrations to DATABASE_URL. Each file is applied in one transaction and
  * recorded in a `_migrations` table, so it runs once and is safe to re-run.
  *
  * The read is non-recursive, so the opt-in auth schema under migrations/auth/
  * is not applied to an app that never asked for sign-in.
  *
- * No Postgres connection variable (local / preview builds) -> skip; the app's
- * runtime handles its own local database behavior separately.
+ * No DATABASE_URL (local / preview builds) -> skip; the PGLite fallback applies
+ * the same files at startup instead (see src/lib/db.ts).
  */
 import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -18,17 +18,11 @@ import { dirname, join } from "node:path";
 import pg from "pg";
 import { pendingMigrations } from "./migration-plan.mjs";
 
-const databaseUrl =
-  process.env.DATABASE_URL?.trim() ||
-  process.env.NETLIFY_DB_URL?.trim() ||
-  process.env.NETLIFY_DATABASE_URL?.trim() ||
-  process.env.NETLIFY_DATABASE_URL_UNPOOLED?.trim();
+const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
-  if (process.env.NETLIFY === "true" || process.env.CONTEXT === "production") {
-    console.error("[migrate] production deployment requires DATABASE_URL or a Netlify database connection.");
-    process.exit(1);
-  }
-  console.log("[migrate] no Postgres connection variable set — skipping local migrations.");
+  console.log(
+    "[migrate] DATABASE_URL not set — skipping (the PGLite fallback migrates itself).",
+  );
   process.exit(0);
 }
 

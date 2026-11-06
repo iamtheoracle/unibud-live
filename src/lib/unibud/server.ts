@@ -1,10 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
-import { authMiddleware } from "@/lib/auth/middleware";
-import { ensureCatalogSeed } from "./seed";
+import { appAccessMiddleware } from "@/lib/account/guard";
+import { nameConnectionAsker } from "@/lib/connect/domain";
+import {
+  fixtureCommunityIds,
+  fixtureHandles,
+  fixtureListingIds,
+  fixturePostIds,
+} from "./fixture-filter";
 import {
   mapCommunity,
-  mapDiscovery,
   mapListing,
   mapNote,
   mapPerson,
@@ -15,58 +20,54 @@ import {
 } from "./map";
 import type { ListingCategory, ListingKind, StudentProfile } from "./types";
 import { canTeach, type CampusRole } from "./roles";
-import { COMMUNITIES, DISCOVERY, LISTINGS, PEOPLE, POSTS, UNIVERSITIES } from "./catalog";
 
-/** Production fallback when DB is unavailable — never surface fixture people/posts/communities. */
-function emptyCatalog() {
-  return {
-    universities: UNIVERSITIES,
-    people: [] as typeof PEOPLE,
-    listings: [] as typeof LISTINGS,
-    communities: [] as typeof COMMUNITIES,
-    posts: [] as typeof POSTS,
-    discovery: [] as typeof DISCOVERY,
-    replies: [] as ReturnType<typeof mapPostReply>[],
-  };
-}
+const emptyCatalog = {
+  universities: [],
+  people: [],
+  listings: [],
+  communities: [],
+  posts: [],
+  discovery: [],
+  replies: [],
+};
 
-export const getCampusCatalog = createServerFn({ method: "GET" }).handler(
-  async () => {
+export const getCampusCatalog = createServerFn({ method: "GET" })
+  .middleware([appAccessMiddleware])
+  .handler(async () => {
+  try {
+    const sql = await getSql();
+    const universities = (await sql`select * from universities order by name`).map(mapUni);
+    const people = (await sql`select * from directory_people order by name`)
+      .map(mapPerson)
+      .filter((person) => !fixtureHandles.has(person.handle));
+    const listings = (await sql`select * from listings order by created_at desc`)
+      .map(mapListing)
+      .filter((listing) => !fixtureListingIds.has(listing.id));
+    const communities = (await sql`select * from communities order by members desc`)
+      .map(mapCommunity)
+      .filter((community) => !fixtureCommunityIds.has(community.id));
+    const posts = (await sql`select * from posts order by created_at desc limit 80`)
+      .map(mapPost)
+      .filter((post) => !fixturePostIds.has(post.id));
+    let replies: ReturnType<typeof mapPostReply>[] = [];
     try {
-      await ensureCatalogSeed();
-      const sql = await getSql();
-      const universities = (await sql`select * from universities order by name`).map(mapUni);
-      const people = (await sql`select * from directory_people order by name`).map(mapPerson);
-      const listings = (
-        await sql`select * from listings order by created_at desc`
-      ).map(mapListing);
-      const communities = (await sql`select * from communities order by members desc`).map(
-        mapCommunity,
-      );
-      const posts = (
-        await sql`select * from posts order by created_at desc limit 80`
-      ).map(mapPost);
-      const discovery = (await sql`select * from discovery_items`).map(mapDiscovery);
-      let replies: ReturnType<typeof mapPostReply>[] = [];
-      try {
-        replies = (await sql`select * from post_replies order by created_at asc limit 800`).map((r) =>
-          mapPostReply(r as Parameters<typeof mapPostReply>[0]),
-        );
-      } catch {
-        replies = [];
-      }
-      return { universities, people, listings, communities, posts, discovery, replies };
-    } catch (error) {
-      console.error("[catalog] database unavailable, using local catalog", error);
-      return emptyCatalog();
+      replies = (await sql`select * from post_replies order by created_at asc limit 800`)
+        .map((row) => mapPostReply(row as Parameters<typeof mapPostReply>[0]))
+        .filter((reply) => !fixturePostIds.has(reply.postId));
+    } catch {
+      replies = [];
     }
-  },
-);
+    return { universities, people, listings, communities, posts, discovery: [], replies };
+  } catch {
+    return emptyCatalog;
+  }
+});
 
 export const getListing = createServerFn({ method: "GET" })
+  .middleware([appAccessMiddleware])
   .validator((id: string) => id)
   .handler(async ({ data: id }) => {
-    await ensureCatalogSeed();
+    if (fixtureListingIds.has(id)) return null;
     const sql = await getSql();
     const rows = await sql`select * from listings where id = ${id} limit 1`;
     const listing = rows[0] ? mapListing(rows[0]) : null;
@@ -75,39 +76,47 @@ export const getListing = createServerFn({ method: "GET" })
     const seller = sellerRows[0] ? mapPerson(sellerRows[0]) : null;
     const related = (
       await sql`select * from listings where category = ${listing.category} and id <> ${id} order by saved_count desc limit 4`
-    ).map(mapListing);
+    )
+      .map(mapListing)
+      .filter((item) => !fixtureListingIds.has(item.id));
     return { listing, seller, related };
   });
 
 export const searchCampus = createServerFn({ method: "GET" })
+  .middleware([appAccessMiddleware])
   .validator((q: string) => q.trim().toLowerCase())
   .handler(async ({ data: q }) => {
-    await ensureCatalogSeed();
     if (!q) return { listings: [], people: [], communities: [] };
     const sql = await getSql();
     const like = `%${q}%`;
     const listings = (
       await sql`select * from listings where lower(title) like ${like} or lower(description) like ${like} or lower(category) like ${like} limit 12`
-    ).map(mapListing);
+    )
+      .map(mapListing)
+      .filter((listing) => !fixtureListingIds.has(listing.id));
     const people = (
       await sql`select * from directory_people where lower(name) like ${like} or lower(handle) like ${like} limit 8`
-    ).map(mapPerson);
+    )
+      .map(mapPerson)
+      .filter((person) => !fixtureHandles.has(person.handle));
     const communities = (
       await sql`select * from communities where lower(name) like ${like} or lower(description) like ${like} limit 8`
-    ).map(mapCommunity);
+    )
+      .map(mapCommunity)
+      .filter((community) => !fixtureCommunityIds.has(community.id));
     return { listings, people, communities };
   });
 
 export const listByCategory = createServerFn({ method: "GET" })
+  .middleware([appAccessMiddleware])
   .validator((category: ListingCategory | "all") => category)
   .handler(async ({ data: category }) => {
-    await ensureCatalogSeed();
     const sql = await getSql();
     const rows =
       category === "all"
         ? await sql`select * from listings order by created_at desc`
         : await sql`select * from listings where category = ${category} order by created_at desc`;
-    return rows.map(mapListing);
+    return rows.map(mapListing).filter((listing) => !fixtureListingIds.has(listing.id));
   });
 
 async function handleFromName(name: string, userId: string) {
@@ -119,9 +128,8 @@ async function handleFromName(name: string, userId: string) {
 }
 
 export const getMyProfile = createServerFn({ method: "GET" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .handler(async ({ context }) => {
-    await ensureCatalogSeed();
     const sql = await getSql();
     const rows = await sql`select * from student_profiles where user_id = ${context.userId} limit 1`;
     if (rows[0]) return mapProfile(rows[0]);
@@ -129,7 +137,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
   });
 
 export const upsertMyProfile = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((input: Partial<StudentProfile> & { displayName?: string }) => input)
   .handler(async ({ context, data }) => {
     const sql = await getSql();
@@ -145,15 +153,7 @@ export const upsertMyProfile = createServerFn({ method: "POST" })
     const program = data.program ?? existingProfile?.program ?? "";
     const year = data.year ?? existingProfile?.year ?? "";
     const bio = data.bio ?? existingProfile?.bio ?? "";
-    // Privilege roles cannot be self-assigned. Lecturer/moderator require platform grant.
-    const requested = data.campusRole;
-    const existingRole = existingProfile?.campusRole ?? "student";
-    let campusRole = existingRole;
-    if (requested === "student" || requested === "governor") {
-      campusRole = requested;
-    } else if (requested === "lecturer" || requested === "moderator") {
-      campusRole = existingRole === "lecturer" || existingRole === "moderator" ? existingRole : "student";
-    }
+    const campusRole = data.campusRole ?? existingProfile?.campusRole ?? "student";
     const onboardingDone = data.onboardingDone ?? existingProfile?.onboardingDone ?? false;
     if (existing[0]) {
       await sql`update student_profiles set display_name = ${displayName}, handle = ${handle},
@@ -169,7 +169,7 @@ export const upsertMyProfile = createServerFn({ method: "POST" })
   });
 
 export const toggleSave = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((input: { kind: string; itemId: string; title: string; href: string }) => input)
   .handler(async ({ context, data }) => {
     const sql = await getSql();
@@ -183,7 +183,7 @@ export const toggleSave = createServerFn({ method: "POST" })
   });
 
 export const listSaves = createServerFn({ method: "GET" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .handler(async ({ context }) => {
     const sql = await getSql();
     return sql<{
@@ -207,7 +207,7 @@ export async function notify(
 }
 
 export const createListing = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator(
     (input: {
       kind: ListingKind;
@@ -241,16 +241,48 @@ export const createListing = createServerFn({ method: "POST" })
   });
 
 export const listNotes = createServerFn({ method: "GET" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .handler(async ({ context }) => {
     const sql = await getSql();
     const rows = await sql`select * from notifications where user_id = ${context.userId} order by created_at desc limit 40`;
-    return rows.map(mapNote);
+    const askers = await sql<{ name: string; handle: string; created_at: string }>`
+      select
+        coalesce(nullif(ap.display_name, ''), nullif(trim(coalesce(aa.first_name, '') || ' ' || coalesce(aa.last_name, '')), ''), aa.username, 'Member') as name,
+        coalesce(nullif(ap.handle, ''), aa.username, '') as handle,
+        r.created_at
+      from connect_requests r
+      left join connect_profiles ap on ap.user_id = r.from_id
+      left join unibud_accounts aa on aa.user_id = r.from_id
+      where r.to_id = ${context.userId}
+      order by r.created_at desc
+      limit 50`;
+    return rows.map((row) => {
+      const note = mapNote({ ...row, created_at: String(row.created_at) });
+      const named = nameConnectionAsker(
+        note,
+        askers.map((asker) => ({ name: asker.name, handle: asker.handle, at: String(asker.created_at) })),
+        note.createdAt,
+      );
+      return { ...note, ...named };
+    });
+  });
+
+export const markNotificationRead = createServerFn({ method: "POST" })
+  .middleware([appAccessMiddleware])
+  .validator((input: { id?: string }) => input)
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    if (data.id) {
+      await sql`update notifications set read = true where id = ${data.id} and user_id = ${context.userId}`;
+    } else {
+      await sql`update notifications set read = true where user_id = ${context.userId} and read = false`;
+    }
+    return { ok: true as const };
   });
 
 /** Server gate for Tutor Mode. Class Governor does not pass. */
 export const requireLecturer = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .handler(async ({ context }) => {
     const sql = await getSql();
     const rows = await sql<{ campus_role?: string }>`
@@ -261,7 +293,7 @@ export const requireLecturer = createServerFn({ method: "POST" })
   });
 
 export const getMySquareState = createServerFn({ method: "GET" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .handler(async ({ context }) => {
     const sql = await getSql();
     let liked: string[] = [];
@@ -284,7 +316,7 @@ export const getMySquareState = createServerFn({ method: "GET" })
   });
 
 export const togglePostLike = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((postId: string) => postId)
   .handler(async ({ context, data: postId }) => {
     const sql = await getSql();
@@ -298,7 +330,7 @@ export const togglePostLike = createServerFn({ method: "POST" })
   });
 
 export const addSquareReply = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((input: { postId: string; body: string; parentId?: string }) => input)
   .handler(async ({ context, data }) => {
     const body = data.body.trim();
@@ -313,7 +345,7 @@ export const addSquareReply = createServerFn({ method: "POST" })
   });
 
 export const toggleCommentLike = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((replyId: string) => replyId)
   .handler(async ({ context, data: replyId }) => {
     const sql = await getSql();
@@ -325,3 +357,4 @@ export const toggleCommentLike = createServerFn({ method: "POST" })
     await sql`insert into comment_likes (user_id, reply_id) values (${context.userId}, ${replyId})`;
     return { liked: true };
   });
+

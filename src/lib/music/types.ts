@@ -1,7 +1,5 @@
 /** UNIBUD Music: streaming catalogue contracts. Not a user-upload dump for commercial tracks. */
 
-export type CatalogueStatus = "unprovisioned" | "preview" | "licensed" | "unavailable";
-
 export type MusicLayer =
   | "catalogue" // licensed commercial, provider-backed
   | "owned" // UNIBUD-owned / user-generated original
@@ -94,6 +92,8 @@ export type BrowsePage = {
   artists: Artist[];
   albums: Album[];
 };
+
+export type CatalogueStatus = "unprovisioned" | "ready" | "degraded";
 
 export type MusicProvider = {
   id: string;

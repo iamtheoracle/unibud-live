@@ -1,161 +1,84 @@
-import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Plus, Search } from "lucide-react";
+import { createFileRoute, Link, Outlet, useRouter, useRouterState } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useCatalog } from "@/lib/unibud/queries";
-import { myCommunities } from "@/lib/social/server";
-import { createQuad } from "@/lib/unibud/quad";
-import { useQuery } from "@tanstack/react-query";
-import { useAuthReady } from "@/components/unibud/sign-in-gate";
-import { canGovernClass } from "@/lib/unibud/roles";
-import { useCampusStore } from "@/lib/unibud/campus-store";
-import { communityKindLabel } from "@/lib/unibud/community-meta";
-import { toast } from "sonner";
+import { EmptyState } from "@/components/unibud/empty";
+import { createBoardRoom, joinBoardRoom, listBoardHome } from "@/lib/board/server";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/communities")({ component: Communities });
 
 function Communities() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const nested = pathname !== "/communities" && pathname.startsWith("/communities/");
-  if (nested) return <Outlet />;
+  if (pathname !== "/communities" && pathname !== "/communities/") return <Outlet />;
+  return <Quad />;
+}
 
-  const { data } = useCatalog();
-  const allRooms = data?.communities ?? [];
-  const { user } = useAuthReady();
-  const role = useCampusStore((s) => s.role ?? "student");
-  const [tab, setTab] = useState<"discover" | "mine">("discover");
-  const [kind, setKind] = useState<"all" | "Class" | "Study" | "University" | "Faculty" | "Interest">("all");
-  const [q, setQ] = useState("");
-  const [creating, setCreating] = useState(false);
-  const [name, setName] = useState("");
-  const [createKind, setCreateKind] = useState<"Study" | "Interest" | "Class">("Study");
-  const mine = useQuery({
-    queryKey: ["my-communities"],
-    queryFn: () => myCommunities(),
-    enabled: Boolean(user),
-  });
-  const communities = allRooms.filter(
-    (c) =>
-      !q.trim() ||
-      c.name.toLowerCase().includes(q.toLowerCase()) ||
-      c.description.toLowerCase().includes(q.toLowerCase()),
-  );
-  const shown = (tab === "mine" ? communities.filter((c) => mine.data?.includes(c.id)) : communities).filter(
-    (c) => kind === "all" || c.kind === kind || (kind === "Interest" && ["Interest", "Music", "Sports", "Career"].includes(c.kind)),
-  );
+function Quad() {
+  const router = useRouter();
+  const qc = useQueryClient();
+  const [kind, setKind] = useState<"community" | "group">("community");
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [error, setError] = useState("");
+  const home = useQuery({ queryKey: ["quad-home"], queryFn: () => listBoardHome({ data: { scope: "social" } }) });
 
   return (
     <main className="safe-bottom px-5 pt-6">
-      <p className="kicker">Find your rooms</p>
-      <div className="mt-1 flex items-end justify-between gap-3">
-        <h1 className="font-display text-4xl">Quad</h1>
-        <Button size="sm" variant="outline" className="shrink-0" onClick={() => setCreating((v) => !v)}>
-          <Plus className="size-4" />
-          New
-        </Button>
+      <p className="kicker">Social</p>
+      <h1 className="mt-1 font-display text-4xl">Quad</h1>
+      <p className="mt-2 text-sm text-muted-foreground">Communities and groups people start. Academic rooms stay on Board. A message in a room reaches the other members.</p>
+      <div className="mt-4 flex gap-2">
+        <Link to="/connect/soulync" className="inline-flex h-10 items-center rounded-full px-4 text-sm ring-1 ring-border">SouLync</Link>
+        <Link to="/connect/wayward" className="inline-flex h-10 items-center rounded-full px-4 text-sm ring-1 ring-border">Wayward</Link>
+        <Link to="/market" className="inline-flex h-10 items-center rounded-full px-4 text-sm ring-1 ring-border">Market</Link>
       </div>
-      <p className="mt-2 text-sm text-muted-foreground">
-        App-like communities — not a class list, not Square. Groups live inside a Quad.
-      </p>
-
-      {creating ? (
-        <form
-          className="mt-4 space-y-3 rounded-2xl bg-card p-4 ring-1 ring-border"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!name.trim()) return;
-            if (createKind === "Class" && !canGovernClass(role)) {
-              toast.error("Only class governors can open a Class room.");
+      <form
+        className="mt-5 space-y-2 rounded-2xl bg-card p-4 ring-1 ring-border"
+        onSubmit={(event) => {
+          event.preventDefault();
+          setError("");
+          void createBoardRoom({ data: { kind, title, subtitle: body } }).then(async (result) => {
+            if (!result.ok) {
+              setError(result.error);
               return;
             }
-            if (!user) {
-              toast.error("Sign in to create a Quad.");
-              return;
-            }
-            void createQuad({
-              data: { name: name.trim(), kind: createKind, description: "", privacy: "public" },
-            })
-              .then(() => {
-                toast.success("Quad created.");
-                setCreating(false);
-                setName("");
-                void mine.refetch();
-              })
-              .catch((err: Error) => toast.error(err.message || "Could not create Quad."));
-          }}
-        >
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name this Quad or group" />
-          <div className="flex flex-wrap gap-2">
-            {(["Study", "Interest", "Class"] as const).map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => setCreateKind(k)}
-                className={cn("h-9 rounded-full px-3 text-sm", createKind === k ? "bg-ink text-paper" : "bg-secondary")}
-              >
-                {k}
-              </button>
-            ))}
-          </div>
-          <Button type="submit" size="sm" disabled={!name.trim()}>
-            Continue
-          </Button>
-        </form>
-      ) : null}
-
-      <div className="mt-5 flex gap-2">
-        {(["discover", "mine"] as const).map((id) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={cn("h-9 rounded-full px-4 text-sm capitalize", tab === id ? "bg-ink text-paper" : "bg-card ring-1 ring-border")}
-          >
-            {id}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-3 flex gap-2 overflow-x-auto">
-        {(["all", "Class", "Study", "University", "Faculty", "Interest"] as const).map((id) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setKind(id)}
-            className={cn("h-9 shrink-0 rounded-full px-3 text-xs", kind === id ? "bg-ink text-paper" : "bg-secondary")}
-          >
-            {id === "all" ? "All" : communityKindLabel(id)}
-          </button>
-        ))}
-      </div>
-
-      <div className="relative mt-4">
-        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search Quads" className="pl-10" />
-      </div>
-
+            setTitle("");
+            setBody("");
+            await qc.invalidateQueries({ queryKey: ["quad-home"] });
+            await router.navigate({ to: "/board/room/$id", params: { id: result.id } });
+          });
+        }}
+      >
+        <div className="flex gap-2">
+          {(["community", "group"] as const).map((item) => (
+            <button key={item} type="button" onClick={() => setKind(item)} className={cn("h-10 rounded-full px-4 text-sm capitalize", kind === item ? "bg-ink text-paper" : "ring-1 ring-border")}>{item}</button>
+          ))}
+        </div>
+        <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Name" aria-label="Name" className="h-11 w-full rounded-xl bg-background px-3 text-sm ring-1 ring-border" />
+        <textarea value={body} onChange={(event) => setBody(event.target.value)} placeholder="What this is for" aria-label="Detail" className="min-h-16 w-full rounded-xl bg-background p-3 text-sm ring-1 ring-border" />
+        {error ? <p className="text-sm text-muted-foreground">{error}</p> : null}
+        <button type="submit" className="h-11 rounded-full bg-ink px-4 text-sm text-paper">Start</button>
+      </form>
       <ul className="mt-5 space-y-3">
-        {shown.length === 0 ? (
-          <li className="rounded-2xl bg-card p-6 text-center ring-1 ring-border">
-            <p className="font-medium">No Quads here yet</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Real communities appear when they exist in the database. Nothing is fabricated to fill the list.
-            </p>
+        {(home.data?.rooms ?? []).map((room) => (
+          <li key={room.id} className="rounded-2xl bg-card p-4 ring-1 ring-border">
+            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{room.kind}</p>
+            <p className="mt-1 font-medium">{room.title}</p>
+            <p className="text-xs text-muted-foreground">{room.members} {room.members === 1 ? "member" : "members"}</p>
+            {room.last_body ? <p className="mt-2 truncate text-sm">{room.last_sender}: {room.last_body}</p> : null}
+            <div className="mt-3">
+              {room.joined ? (
+                <Link to="/board/room/$id" params={{ id: room.id }} className="inline-flex h-10 items-center rounded-full bg-ink px-4 text-sm text-paper">Open</Link>
+              ) : (
+                <button type="button" className="h-10 rounded-full px-4 text-sm ring-1 ring-border" onClick={() => { void joinBoardRoom({ data: { id: room.id } }).then(() => qc.invalidateQueries({ queryKey: ["quad-home"] })); }}>Join</button>
+              )}
+            </div>
           </li>
-        ) : (
-          shown.map((c) => (
-            <li key={c.id}>
-              <Link to="/communities/$id" params={{ id: c.id }} className="block rounded-2xl bg-card p-4 ring-1 ring-border">
-                <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">{communityKindLabel(c.kind)}</p>
-                <h2 className="mt-1 font-medium">{c.name}</h2>
-                <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{c.description}</p>
-              </Link>
-            </li>
-          ))
-        )}
+        ))}
       </ul>
+      {!home.isPending && !home.data?.rooms.length ? (
+        <div className="mt-5"><EmptyState title="No communities yet" body="Start the first one. Nothing social is copied from Board." /></div>
+      ) : null}
     </main>
   );
 }

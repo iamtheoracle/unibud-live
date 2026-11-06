@@ -15,15 +15,15 @@ const SPARK_ACTIONS = [
   {
     id: "commerce",
     label: "Commerce",
-    description: "Wallet, payments, and marketplace",
-    to: "/money" as const,
+    description: "The Quarter. Nothing here moves real money.",
+    to: "/guild/quarter" as const,
     icon: Wallet,
   },
   {
     id: "services",
     label: "Services",
-    description: "Find or offer services around you",
-    to: "/creator" as const,
+    description: "Concierge. A request typed here is not sent.",
+    to: "/guild/concierge" as const,
     icon: BriefcaseBusiness,
   },
 ] as const;

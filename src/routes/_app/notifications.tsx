@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, BookOpen, Calendar, Clapperboard, Heart, MessageCircle, Newspaper, UserPlus } from "lucide-react";
 import { useState } from "react";
+import { EmptyState } from "@/components/unibud/empty";
 import { relativeTime } from "@/lib/unibud/format";
+import { listNotes, markNotificationRead } from "@/lib/unibud/server";
 import { useCampusStore, type HumanNote } from "@/lib/unibud/campus-store";
 import { cn } from "@/lib/utils";
 
@@ -21,8 +24,29 @@ function Notifications() {
   const notes = useCampusStore((s) => s.notes);
   const markAllRead = useCampusStore((s) => s.markAllRead);
   const markRead = useCampusStore((s) => s.markRead);
+  const qc = useQueryClient();
+  const server = useQuery({ queryKey: ["notifications"], queryFn: () => listNotes() });
+  const markServer = useMutation({
+    mutationFn: (id?: string) => markNotificationRead({ data: { id } }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
   const [tab, setTab] = useState<"all" | HumanNote["kind"]>("all");
-  const shown = tab === "all" ? notes : notes.filter((n) => n.kind === tab);
+  const local = (tab === "all" ? notes : notes.filter((n) => n.kind === tab)).map((note) => ({ ...note, source: "local" as const }));
+  const remote = (server.data ?? [])
+    .filter((note) => tab === "all" || note.kind === tab)
+    .map((note) => ({
+      id: note.id,
+      kind: (note.kind === "social" ? "social" : note.kind) as HumanNote["kind"],
+      title: note.title,
+      body: note.body,
+      href: note.href,
+      read: note.read,
+      createdAt: String(note.createdAt),
+      source: "server" as const,
+    }));
+  const shown = [...remote, ...local];
   const fresh = shown.filter((n) => !n.read);
   const earlier = shown.filter((n) => n.read);
 
@@ -30,9 +54,18 @@ function Notifications() {
     <main className="safe-bottom px-5 pt-6">
       <p className="kicker text-center">Your updates</p>
       <h1 className="mt-1 text-center font-display text-4xl">Notifications</h1>
-      <button type="button" onClick={markAllRead} className="mx-auto mt-3 block text-sm font-medium text-bud">
-        Mark all as read
-      </button>
+      {shown.length ? (
+        <button
+          type="button"
+          onClick={() => {
+            markAllRead();
+            markServer.mutate(undefined);
+          }}
+          className="mx-auto mt-3 block text-sm font-medium text-bud"
+        >
+          Mark all as read
+        </button>
+      ) : null}
       <div className="mt-5 flex gap-2 overflow-x-auto">
         {(
           [
@@ -58,16 +91,29 @@ function Notifications() {
           </button>
         ))}
       </div>
-      {fresh.length ? <h2 className="mt-6 text-sm font-medium">New</h2> : null}
+      {server.isPending ? <div className="mt-6 h-24 animate-pulse rounded-3xl bg-secondary" /> : null}
+      {server.isError ? (
+        <div className="mt-6">
+          <EmptyState title="Notifications could not be loaded" body="Nothing was invented in their place." />
+        </div>
+      ) : null}
+      {!server.isPending && !server.isError && shown.length === 0 ? (
+        <div className="mt-6">
+          <EmptyState
+            title="No notifications"
+            body="Connection requests, follows, and service updates will appear here. Nothing is unread until that happens."
+          />
+        </div>
+      ) : null}
       <ul>
         {fresh.map((n) => (
-          <NoteRow key={n.id} note={n} onOpen={() => markRead(n.id)} />
+          <NoteRow key={`${n.source}-${n.id}`} note={n} onOpen={() => (n.source === "server" ? markServer.mutate(n.id) : markRead(n.id))} />
         ))}
       </ul>
       {earlier.length ? <h2 className="mt-6 text-sm font-medium">Earlier</h2> : null}
       <ul>
         {earlier.map((n) => (
-          <NoteRow key={n.id} note={n} onOpen={() => markRead(n.id)} />
+          <NoteRow key={`${n.source}-${n.id}`} note={n} onOpen={() => (n.source === "server" ? markServer.mutate(n.id) : markRead(n.id))} />
         ))}
       </ul>
     </main>

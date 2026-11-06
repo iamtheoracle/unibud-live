@@ -1,11 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Image as ImageIcon, MoreHorizontal, Paperclip, Phone, Send, Video } from "lucide-react";
+import { Image as ImageIcon, MoreHorizontal, Paperclip, Phone, Video } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Avatar } from "@/components/unibud/person";
 import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
-import { personByHandle } from "@/lib/unibud/catalog";
 import { getConversation, sendMessage } from "@/lib/social/server";
 import { persistAudioEvent, listRoomMessages, sendRoomMessage, uploadMedia } from "@/lib/media/server";
 import { fileToDataUrl } from "@/lib/media/client";
@@ -25,8 +24,6 @@ export const Route = createFileRoute("/_app/messages/$id")({ component: Thread }
 
 function Thread() {
   const { id } = Route.useParams();
-  const room = campusRoomById(id);
-  if (room) return <RoomThread room={room} />;
   return <DirectThread id={id} />;
 }
 
@@ -38,6 +35,7 @@ function DirectThread({ id }: { id: string }) {
     queryKey: ["convo", id],
     queryFn: () => getConversation({ data: id }),
     enabled: Boolean(user),
+    refetchInterval: 4000,
   });
   const mut = useMutation({
     mutationFn: (extra?: { body?: string; mediaId?: string; shareKind?: string; shareJson?: string }) =>
@@ -50,10 +48,13 @@ function DirectThread({ id }: { id: string }) {
           shareJson: extra?.shareJson,
         },
       }),
-    onSuccess: () => {
+    onSuccess: (data) => {
       setBody("");
-      void qc.invalidateQueries({ queryKey: ["convo", id] });
+      if (data) qc.setQueryData(["convo", id], data);
       void qc.invalidateQueries({ queryKey: ["convos"] });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "The message was not delivered.");
     },
   });
 
@@ -65,19 +66,27 @@ function DirectThread({ id }: { id: string }) {
       </main>
     );
   }
-  const person = personByHandle(q.data?.conversation.peerHandle ?? "");
+  if (!q.isPending && !q.data) {
+    return (
+      <main className="px-5 py-8">
+        <p className="text-sm text-muted-foreground">This conversation is not on your account.</p>
+        <Link to="/messages" className="mt-3 inline-block text-sm font-medium">Back to Chat</Link>
+      </main>
+    );
+  }
+  const title = q.data?.conversation.peerName || q.data?.conversation.peerHandle || "Member";
 
   return (
-    <main className="flex min-h-[calc(100dvh-3.5rem)] flex-col bg-card">
-      <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-        <Avatar name={person?.name ?? "Student"} className="size-11" />
+    <main className="thread-screen bg-card">
+      <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3">
+        <Avatar name={title} className="size-11" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold">{person?.name ?? q.data?.conversation.peerHandle}</p>
-          <p className="text-xs text-success">Active now · Direct</p>
+          <p className="truncate text-sm font-semibold">{title}</p>
+          <p className="text-xs text-muted-foreground">@{q.data?.conversation.peerHandle} · Direct</p>
         </div>
-        <CallButtons group={false} peer={person?.name ?? "them"} />
+        <CallButtons group={false} peer={title} />
       </div>
-      <div className="flex-1 space-y-3 overflow-y-auto px-4 py-5">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-5">
         <p className="text-center text-xs text-muted-foreground">Today</p>
         {(q.data?.messages ?? []).map((m) => (
           <div
@@ -102,12 +111,19 @@ function DirectThread({ id }: { id: string }) {
           </div>
         ))}
       </div>
+      {mut.isError ? (
+        <p className="shrink-0 px-4 pt-2 text-sm text-muted-foreground">
+          {mut.error instanceof Error ? mut.error.message : "That message was not sent."}
+        </p>
+      ) : null}
       <Composer
         body={body}
         setBody={setBody}
-        placeholder={`Message ${person?.name.split(" ")[0] ?? ""}…`}
+        placeholder={`Message ${title.split(" ")[0]}…`}
         onSend={() => {
-          if (body.trim()) mut.mutate();
+          const text = body.trim();
+          if (!text) return;
+          mut.mutate({ body: text });
         }}
         pending={mut.isPending}
         conversationId={id}
@@ -192,8 +208,8 @@ function RoomThread({ room }: { room: CampusRoom }) {
     (room.kind === "class" && canGovernClass(role));
 
   return (
-    <main className="flex min-h-[calc(100dvh-3.5rem)] flex-col bg-card">
-      <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+    <main className="thread-screen bg-card">
+      <div className="flex shrink-0 items-center gap-3 border-b border-border px-4 py-3">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold">{room.title}</p>
           <p className="text-xs text-muted-foreground">
@@ -221,7 +237,7 @@ function RoomThread({ room }: { room: CampusRoom }) {
           }
         />
       </div>
-      <div className="flex-1 space-y-3 overflow-y-auto px-4 py-5">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-5">
         {(ROOM_SEED[room.id] ?? []).map((m, i) => (
           <div
             key={`seed-${i}`}
@@ -375,7 +391,7 @@ function Composer({
   }
 
   return (
-    <div className="sheet-safe border-t border-border px-3 pt-3">
+    <div className="sheet-safe shrink-0 border-t border-border bg-card px-3 pt-3">
       {menu ? (
         <div className="mb-2 flex flex-wrap gap-2 text-xs font-medium">
           <button type="button" className="rounded-full bg-secondary px-3 py-2" onClick={() => photoRef.current?.click()}>
@@ -464,10 +480,10 @@ function Composer({
         <button
           type="submit"
           disabled={pending || busy || !body.trim()}
-          className="grid size-11 place-items-center text-ink disabled:text-muted-foreground"
+          className="grid h-11 shrink-0 place-items-center rounded-full bg-ink px-4 text-sm font-medium text-paper disabled:bg-secondary disabled:text-muted-foreground"
           aria-label="Send"
         >
-          <Send className="size-5" />
+          Send
         </button>
       </form>
       <input

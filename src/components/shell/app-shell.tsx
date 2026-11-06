@@ -1,10 +1,8 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Bell, MessageSquareText, Search } from "lucide-react";
+import { Bell, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Wordmark } from "@/components/brand/logo";
 import { AskBudFab } from "@/components/unibud/ask-bud";
-import { SparkGate } from "@/components/shell/spark-gate";
-import { BudWave } from "@/components/shell/bud-wave";
 import { DropSheet } from "@/components/unibud/drop-sheet";
 import { StudioRoot } from "@/components/studio/studio-root";
 import { cn } from "@/lib/utils";
@@ -23,7 +21,8 @@ export function AppShell() {
   const setDropOpen = useCampusStore((s) => s.setDropOpen);
   const squareView = useCampusStore((s) => s.squareView);
   const setSquareView = useCampusStore((s) => s.setSquareView);
-  const hideTabs = pathname.startsWith("/bud") || pathname.startsWith("/welcome");
+  const spark = pathname.startsWith("/connect/soulync");
+  const hideTabs = pathname.startsWith("/bud") || pathname.startsWith("/welcome") || pathname.startsWith("/start") || spark;
   const [away, setAway] = useState(false);
   const lastY = useRef(0);
 
@@ -48,92 +47,76 @@ export function AppShell() {
 
   const hidden = hideTabs ? false : away || squareView === "peek";
   const showPrimary = !hideTabs && squareView !== "peek";
+  const blocked = drawer.open || drawer.dragging;
 
   return (
     <div className="min-h-dvh bg-background text-foreground">
-      {hideTabs ? null : (
-        <header
-          className={cn(
-            "fixed inset-x-0 top-0 z-30 bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur-sm transition-transform duration-200",
-            hidden ? "-translate-y-full" : "translate-y-0",
-          )}
-        >
-          <div className="relative mx-auto flex h-12 max-w-3xl items-center px-3">
-            <Link to="/" aria-label="UNIBUD" className="flex items-center">
-              <Wordmark size="header" className="object-left" />
-            </Link>
-            <div className="ml-auto flex items-center">
-              <Link
-                to="/riff"
-                aria-label="Riff"
-                title="Riff"
-                className={cn("grid size-11 place-items-center rounded-full hover:bg-secondary", pathname.startsWith("/riff") ? "text-foreground" : "text-muted-foreground")}
-              >
-                <MessageSquareText className="size-5" />
+      <div inert={blocked ? true : undefined} aria-hidden={blocked || undefined}>
+        {hideTabs ? null : (
+          <header
+            className={cn(
+              "fixed inset-x-0 top-0 z-30 bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur-sm transition-transform duration-200",
+              hidden ? "-translate-y-full" : "translate-y-0",
+            )}
+          >
+            <div className="relative mx-auto flex h-12 max-w-3xl items-center px-3">
+              <Link to="/" aria-label="UNIBUD" className="flex items-center">
+                <Wordmark size="header" className="object-left" />
               </Link>
-              <Link
-                to="/search"
-                aria-label="Search"
-                title="Search"
-                className="grid size-11 place-items-center rounded-full text-foreground hover:bg-secondary"
-              >
-                <Search className="size-5" />
-              </Link>
-              <Link
-                to="/notifications"
-                aria-label="Notifications"
-                title="Notifications"
-                className="relative grid size-11 place-items-center rounded-full text-foreground hover:bg-secondary"
-              >
-                <Bell className="size-5" />
-                {unread > 0 ? (
-                  <span className="absolute top-1.5 right-1.5 grid min-w-4 place-items-center rounded-full bg-bud px-1 text-[10px] font-semibold text-bud-foreground">
-                    {unread}
-                  </span>
-                ) : null}
-              </Link>
+              <div className="ml-auto flex items-center">
+                <Link
+                  to="/search"
+                  aria-label="Search"
+                  title="Search"
+                  className="grid size-11 place-items-center rounded-full text-foreground hover:bg-secondary"
+                >
+                  <Search className="size-5" />
+                </Link>
+                <Link
+                  to="/notifications"
+                  aria-label="Notifications"
+                  title="Notifications"
+                  className="relative grid size-11 place-items-center rounded-full text-foreground hover:bg-secondary"
+                >
+                  <Bell className="size-5" />
+                  {unread > 0 ? (
+                    <span className="absolute top-1.5 right-1.5 grid min-w-4 place-items-center rounded-full bg-bud px-1 text-[10px] font-semibold text-bud-foreground">
+                      {unread}
+                    </span>
+                  ) : null}
+                </Link>
+              </div>
             </div>
-          </div>
-          <div className="mx-auto max-w-3xl border-t border-border/30">
-            <BudWave />
-          </div>
-        </header>
-      )}
-
-      <div
-        className={cn(
-          "mx-auto min-h-dvh max-w-3xl",
-          hideTabs || squareView === "peek"
-            ? ""
-            : showPrimary
-              ? "pt-[calc(3rem+3.25rem+env(safe-area-inset-top))] pb-[calc(4.5rem+env(safe-area-inset-bottom))]"
-              : "pt-[calc(3rem+3.25rem+env(safe-area-inset-top))]",
+          </header>
         )}
-      >
-        <Outlet />
-      </div>
 
-      {showPrimary ? (
         <div
           className={cn(
-            "fixed inset-x-0 bottom-0 z-30 border-t border-border/60 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm transition-transform duration-200",
-            hidden ? "translate-y-full" : "translate-y-0",
+            "mx-auto min-h-dvh max-w-3xl",
+            hideTabs || squareView === "peek"
+              ? ""
+              : "pt-[calc(3rem+env(safe-area-inset-top))] pb-[calc(4.75rem+env(safe-area-inset-bottom))]",
           )}
         >
-          <div className="mx-auto max-w-3xl px-2 pt-1">
-            <div className="flex items-center gap-2">
-              <div className="min-w-0 flex-1">
-                <PrimaryNav />
-              </div>
-              <SparkGate className="shrink-0 pr-1" />
+          <Outlet />
+        </div>
+
+        {showPrimary ? (
+          <div
+            className={cn(
+              "fixed inset-x-0 bottom-0 z-30 border-t border-border/60 bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm transition-transform duration-200",
+              hidden ? "translate-y-full" : "translate-y-0",
+            )}
+          >
+            <div className="mx-auto max-w-3xl">
+              <PrimaryNav />
             </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
 
-      {!showPrimary ? (
-        <AskBudFab menuOpen={drawer.open || hidden || composeOpen || dropOpen} />
-      ) : null}
+        {spark ? null : <AskBudFab menuOpen={drawer.open || hidden || composeOpen || dropOpen} lift={showPrimary && !hidden} />}
+      </div>
+
       {dropOpen ? <DropSheet onClose={() => setDropOpen(false)} /> : null}
       <StudioRoot />
 

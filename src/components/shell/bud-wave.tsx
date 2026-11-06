@@ -16,25 +16,18 @@ export type BudWaveState =
 export function BudWave({
   state = "idle",
   className,
+  interactive = true,
 }: {
   state?: BudWaveState;
   className?: string;
+  /** False when the wave is already inside Bud. It must not act as navigation. */
+  interactive?: boolean;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const onBud = pathname.startsWith("/bud");
   const live = state !== "idle" && state !== "unavailable" && state !== "error";
-
-  return (
-    <Link
-      to="/bud"
-      aria-label="Open Bud"
-      title="Bud"
-      className={cn(
-        "bud-wave-band group relative flex h-[3.25rem] w-full items-center justify-center overflow-hidden",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-bud)]/40 focus-visible:ring-inset",
-        className,
-      )}
-    >
+  const body = (
+    <>
       <span
         className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[color:var(--color-bud)]/[0.07] via-transparent to-transparent"
         aria-hidden
@@ -150,6 +143,26 @@ export function BudWave({
           ))}
         </g>
       </svg>
+    </>
+  );
+
+  const classNameAll = cn(
+    "bud-wave-band group relative flex h-[3.25rem] w-full items-center justify-center overflow-hidden",
+    interactive && "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-bud)]/40 focus-visible:ring-inset",
+    className,
+  );
+
+  if (!interactive) {
+    return (
+      <div className={classNameAll} aria-hidden>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <Link to="/bud" aria-label="Open Bud" title="Bud" className={classNameAll}>
+      {body}
     </Link>
   );
 }

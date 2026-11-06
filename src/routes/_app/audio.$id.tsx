@@ -30,45 +30,45 @@ function AudioPage() {
     );
   }
 
-  const item = audio;
-  const person = personByHandle(item.creatorHandle ?? "");
-  const uses = localPosts.filter((p) => p.audioId === item.audioId || item.usedBy.includes(p.id));
-  const on = saved.includes(item.audioId);
+  const person = personByHandle(audio.creatorHandle ?? "");
+  const uses = localPosts.filter((p) => p.audioId === audio.audioId || audio.usedBy.includes(p.id));
+  const on = saved.includes(audio.audioId);
 
   function useIt() {
-    if (item.status === "removed" || item.status === "restricted") {
+    if (!audio) return;
+    if (audio.status === "removed" || audio.status === "restricted") {
       toast.message("This audio isn’t available.");
       return;
     }
     const studio = useStudioStore.getState();
     studio.snapshot();
     studio.addMix({
-      id: `oa-${item.audioId}`,
+      id: `oa-${audio.audioId}`,
       kind: "catalogue",
-      name: item.title,
-      src: item.src,
+      name: audio.title,
+      src: audio.src,
       volume: 0.85,
       mute: false,
       fadeIn: 0,
       fadeOut: 0,
-      artistName: person?.name ?? item.creatorHandle,
-      trackId: item.audioId,
+      artistName: person?.name ?? audio.creatorHandle,
+      trackId: audio.audioId,
     });
     studio.setMusicRef({
       providerId: "unibud-original",
-      trackId: item.audioId,
-      audioId: item.audioId,
-      title: item.title,
-      artistName: person?.name ?? item.creatorHandle,
+      trackId: audio.audioId,
+      audioId: audio.audioId,
+      title: audio.title,
+      artistName: person?.name ?? audio.creatorHandle,
       startMs: 0,
-      durationMs: item.durationMs,
+      durationMs: audio.durationMs,
       entitlement: "free",
       sourceType: "ORIGINAL_AUDIO",
-      creatorHandle: item.creatorHandle,
+      creatorHandle: audio.creatorHandle,
     });
     studio.setView("camera");
     setComposeOpen(true);
-    toast.message(`Using “${item.title}” — still ${person?.name ?? item.creatorHandle}’s original.`);
+    toast.message(`Using “${audio.title}” — still ${person?.name ?? audio.creatorHandle}’s original.`);
   }
 
   return (

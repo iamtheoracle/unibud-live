@@ -1,297 +1,285 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { Search, SlidersHorizontal, Plus, Users, BriefcaseBusiness, Utensils, Truck, Heart, Compass, ChevronRight, UserRound, Sparkles } from "lucide-react";
-import { Avatar, PersonMeta } from "@/components/unibud/person";
-import { RelationActions } from "@/components/unibud/relation-actions";
-import { ListingCard } from "@/components/unibud/listing-card";
-import { CATEGORIES } from "@/lib/unibud/catalog";
-import type { ListingCategory } from "@/lib/unibud/types";
-import { Button } from "@/components/ui/button";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Compass, MessageCircle, Search } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Avatar } from "@/components/unibud/person";
+import { EmptyState } from "@/components/unibud/empty";
+import { MessageLink } from "@/components/unibud/message-link";
 import { Input } from "@/components/ui/input";
-import { uniById } from "@/lib/unibud/catalog";
-import { useCatalog } from "@/lib/unibud/queries";
-import { getMyProfile } from "@/lib/unibud/server";
-import { useAuthReady } from "@/components/unibud/sign-in-gate";
-import { useCampusStore } from "@/lib/unibud/campus-store";
-import { academicLine, proximityScore, sharedContext } from "@/lib/unibud/identity";
+import {
+  getMyConnectProfile,
+  listConnectRelations,
+  respondConnection,
+  saveConnectProfile,
+  searchConnect,
+  type ConnectProfile,
+} from "@/lib/connect/server";
+import { relativeTime } from "@/lib/unibud/format";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/connect")({ component: Connect });
 
-type MainView = "people" | "opportunities";
-type PeopleTab = "discover" | "requests" | "sent" | "connections" | "following" | "followers";
+type Tab = "explore" | "requests" | "sent" | "connections";
+type Filter = "all" | "campus" | "photo" | "open";
 
-const peopleTabs: { id: PeopleTab; label: string }[] = [
-  { id: "discover", label: "Discover" },
-  { id: "requests", label: "Requests" },
-  { id: "sent", label: "Sent" },
-  { id: "connections", label: "Connections" },
-  { id: "following", label: "Following" },
-  { id: "followers", label: "Followers" },
-];
-
-const opportunityTypes = [
-  { label: "Work & opportunities", detail: "Campus opportunities, scholarships and announcements", icon: BriefcaseBusiness, to: "/news" as const },
-  { label: "Services", detail: "Offer skills, tutoring and local services", icon: Users, to: "/creator" as const },
-  { label: "Food & goods", detail: "Browse meals, campus sellers and everyday items", icon: Utensils, to: "/market" as const, search: { cat: "food" as const } },
-  { label: "Delivery & transport", detail: "Find transport-related listings and offers", icon: Truck, to: "/market" as const, search: { cat: "transport" as const } },
-  { label: "Community requests", detail: "Ask your campus community for help", icon: Sparkles, to: "/communities" as const },
-];
+const EMPTY_PROFILE: Omit<ConnectProfile, "userId" | "verified"> = {
+  displayName: "",
+  handle: "",
+  bio: "",
+  institution: "",
+  course: "",
+  roleTitle: "",
+  location: "",
+  interests: "",
+  skills: "",
+  showInstitution: true,
+  showCourse: true,
+  showLocation: false,
+  showInterests: true,
+  discoverable: false,
+  followerApproval: false,
+  allowRequests: true,
+  allowMessages: true,
+  notifyRequests: true,
+  notifyFollows: true,
+};
 
 function Connect() {
-  const { user } = useAuthReady();
-  const catalog = useCatalog();
-  const profile = useQuery({ queryKey: ["profile"], queryFn: () => getMyProfile(), enabled: Boolean(user) });
-  const people = catalog.data?.people ?? [];
-  const listings = catalog.data?.listings ?? [];
-  const visibleListings = useMemo(() => listings.filter((listing) => opportunityCategory === "all" || listing.category === opportunityCategory), [listings, opportunityCategory]);
-  const [view, setView] = useState<MainView>("people");
-  const [tab, setTab] = useState<PeopleTab>("discover");
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [tab, setTab] = useState<Tab>("explore");
+  const [filter, setFilter] = useState<Filter>("all");
+  const [editing, setEditing] = useState(false);
   const [q, setQ] = useState("");
-  const [opportunityCategory, setOpportunityCategory] = useState<ListingCategory | "all">("all");
-  const incoming = useCampusStore((s) => s.incoming);
-  const outgoing = useCampusStore((s) => s.outgoing);
-  const connections = useCampusStore((s) => s.connections);
-  const following = useCampusStore((s) => s.following);
-  const followers = useCampusStore((s) => s.followers);
-  const accept = useCampusStore((s) => s.accept);
-  const decline = useCampusStore((s) => s.decline);
-  const cancelRequest = useCampusStore((s) => s.cancelRequest);
-  const homeCampusId = useCampusStore((s) => s.homeCampusId);
-  const faculty = useCampusStore((s) => s.faculty);
-  const department = useCampusStore((s) => s.department);
-  const lens = {
-    universityId: homeCampusId || "unilag",
-    program: profile.data?.program || "",
-    year: profile.data?.year || "",
-    faculty,
-    department,
-  };
-
-  const filtered = useMemo(
-    () =>
-      people.filter((p) => {
-        const hay = `${p.name} ${p.handle} ${p.program} ${p.year} ${p.universityId} ${p.faculty ?? ""} ${p.department ?? ""}`.toLowerCase();
-        return !q.trim() || hay.includes(q.toLowerCase());
-      }),
-    [people, q],
-  );
-
-  const list =
-    tab === "requests"
-      ? people.filter((p) => incoming.includes(p.handle))
-      : tab === "sent"
-        ? people.filter((p) => outgoing.includes(p.handle))
-        : tab === "connections"
-          ? people.filter((p) => connections.includes(p.handle))
-          : tab === "following"
-            ? people.filter((p) => following.includes(p.handle))
-            : tab === "followers"
-              ? people.filter((p) => followers.includes(p.handle))
-              : filtered;
-
-  const shown =
-    tab === "discover"
-      ? [...filtered].sort((a, b) => proximityScore(b, connections, lens) - proximityScore(a, connections, lens))
-      : list;
+  const [debounced, setDebounced] = useState("");
+  const relations = useQuery({ queryKey: ["connect-relations"], queryFn: () => listConnectRelations() });
+  const incoming = relations.data?.incoming.length ?? 0;
+  if (pathname !== "/connect" && pathname !== "/connect/") return <Outlet />;
 
   return (
-    <main className="safe-bottom mx-auto w-full max-w-3xl px-4 pb-24 pt-5 sm:px-6">
-      <header className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">UNIBUD</p>
-          <h1 className="mt-1 font-display text-3xl tracking-tight">Connect</h1>
-          <p className="mt-1 max-w-md text-sm text-muted-foreground">
-            People, opportunities and everyday help — all in one place.
-          </p>
+    <main className="safe-bottom bg-paper px-4 pt-4 text-ink">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold tracking-wide text-blush">Explore</p>
+          <h1 className="font-sans text-4xl font-semibold tracking-tight">Connect</h1>
         </div>
-        <Link to="/sell" className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:opacity-90">
-          <Plus className="size-4" />
-          Post
-        </Link>
-      </header>
-
-      <div className="mt-5 grid grid-cols-2 rounded-2xl bg-muted/70 p-1">
-        <button
-          type="button"
-          onClick={() => setView("people")}
-          className={cn("flex h-10 items-center justify-center gap-2 rounded-xl text-sm font-medium transition", view === "people" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground")}
-        >
-          <Users className="size-4" /> People
-        </button>
-        <button
-          type="button"
-          onClick={() => setView("opportunities")}
-          className={cn("flex h-10 items-center justify-center gap-2 rounded-xl text-sm font-medium transition", view === "opportunities" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground")}
-        >
-          <Compass className="size-4" /> Opportunities
-        </button>
+        <button type="button" className="h-10 rounded-full bg-secondary px-4 text-sm font-semibold" onClick={() => setEditing((value) => !value)}>{editing ? "Close" : "You"}</button>
       </div>
+      <SearchBox q={q} setQ={setQ} setDebounced={setDebounced} />
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Connect">
+        {(
+          [
+            ["explore", "Explore"],
+            ["requests", incoming ? `Requests ${incoming}` : "Requests"],
+            ["sent", "Sent"],
+            ["connections", "Connections"],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => setTab(id)}
+            className={cn("h-9 shrink-0 rounded-full px-4 text-sm font-semibold", tab === id ? "bg-ink text-paper" : "bg-secondary text-muted-foreground")}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {editing ? <ProfileCard /> : null}
+      {tab === "explore" && !editing ? <Discover q={debounced} filter={filter} setFilter={setFilter} /> : null}
+      {tab === "requests" ? <RelationList mode="incoming" /> : null}
+      {tab === "sent" ? <RelationList mode="sent" /> : null}
+      {tab === "connections" ? <RelationList mode="connections" query={debounced} /> : null}
+    </main>
+  );
+}
 
-      {view === "people" ? (
-        <>
-          <div className="mt-4 flex items-center gap-2">
-            <div className="relative min-w-0 flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search people, skills or campus" aria-label="Search people" className="h-11 rounded-2xl pl-9" />
-            </div>
-            <Button variant="outline" size="icon" className="size-11 shrink-0 rounded-2xl" aria-label="Search filters">
-              <SlidersHorizontal className="size-4" />
-            </Button>
-          </div>
+function SearchBox({ q, setQ, setDebounced }: { q: string; setQ: (value: string) => void; setDebounced: (value: string) => void }) {
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(q.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [q, setDebounced]);
+  return (
+    <div className="relative mt-5">
+      <Search className="pointer-events-none absolute top-3.5 left-4 size-4 text-muted-foreground" />
+      <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search people by name or @handle" aria-label="Search people" className="h-12 pl-11" />
+    </div>
+  );
+}
 
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-            {peopleTabs.map(({ id, label }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setTab(id)}
-                className={cn("h-8 shrink-0 rounded-full px-3 text-xs font-medium transition", tab === id ? "bg-foreground text-background" : "bg-muted text-muted-foreground")}
-              >
-                {label}
-                {id === "requests" && incoming.length > 0 ? <span className="ml-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">{incoming.length}</span> : null}
-              </button>
-            ))}
-          </div>
-
-          {tab === "discover" ? (
-            <section className="mt-5 rounded-2xl border bg-card p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Sparkles className="size-4 text-primary" /> Find your people
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Discover people across campuses through shared interests, skills and academic paths.
-              </p>
-            </section>
-          ) : null}
-
-          <div className="mt-5 flex items-center justify-between">
-            <h2 className="text-sm font-semibold">{tab === "discover" ? "People you may like" : peopleTabs.find((item) => item.id === tab)?.label}</h2>
-            <span className="text-xs text-muted-foreground">{shown.length} {shown.length === 1 ? "person" : "people"}</span>
-          </div>
-
-          <ul className="mt-3 divide-y rounded-2xl border bg-card">
-            {shown.map((p) => {
-              const uni = uniById(p.universityId);
-              const ctx = sharedContext(p, lens);
-              return (
-                <li key={p.handle} className="p-3">
-                  <div className="flex items-center gap-3">
-                    <Link to="/u/$handle" params={{ handle: p.handle }} className="shrink-0">
-                      <Avatar name={p.name} className="size-11" />
-                    </Link>
-                    <Link to="/u/$handle" params={{ handle: p.handle }} className="min-w-0 flex-1">
-                      <PersonMeta person={p} compact />
-                      <p className="truncate text-xs text-muted-foreground">{uni?.shortName} · {academicLine(p)}</p>
-                      {ctx.items.length > 0 ? <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{ctx.items.join(" · ")}</p> : null}
-                    </Link>
-                    <div className="shrink-0">
-                      {tab === "requests" ? (
-                        <div className="flex gap-1.5">
-                          <Button size="sm" onClick={() => accept(p.handle)}>Accept</Button>
-                          <Button size="sm" variant="outline" onClick={() => decline(p.handle)}>Decline</Button>
-                        </div>
-                      ) : tab === "sent" ? (
-                        <Button size="sm" variant="outline" onClick={() => cancelRequest(p.handle)}>Cancel</Button>
-                      ) : (
-                        <RelationActions handle={p.handle} />
-                      )}
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-          {shown.length === 0 ? (
-            <div className="rounded-2xl border border-dashed px-5 py-12 text-center">
-              <UserRound className="mx-auto size-7 text-muted-foreground" />
-              <p className="mt-2 text-sm font-medium">Nothing here yet</p>
-              <p className="mt-1 text-xs text-muted-foreground">Your people and requests will appear here.</p>
-            </div>
-          ) : null}
-        </>
-      ) : (
-        <>
-          <section className="mt-5">
-            <h2 className="text-lg font-semibold tracking-tight">What are you looking for?</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Find work, offer a service, order something or ask for help.</p>
-          </section>
-          <div className="mt-4 divide-y rounded-2xl border bg-card">
-            {opportunityTypes.map(({ label, detail, icon: Icon, to, search }) => (
-              <Link key={label} to={to} search={search} className="flex w-full items-center gap-3 p-4 text-left transition hover:bg-muted/50">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted"><Icon className="size-5" /></span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium">{label}</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">{detail}</span>
+function Discover({ q, filter, setFilter }: { q: string; filter: Filter; setFilter: (value: Filter) => void }) {
+  const mine = useQuery({ queryKey: ["connect-me"], queryFn: () => getMyConnectProfile() });
+  const search = useQuery({
+    queryKey: ["connect-search", q, "people"],
+    queryFn: () => searchConnect({ data: { q, kind: "people" } }),
+  });
+  const people = (search.data?.people ?? []).filter((person) => {
+    if (filter === "campus") return Boolean(mine.data?.institution) && person.institution.toLowerCase() === mine.data?.institution.toLowerCase();
+    if (filter === "photo") return Boolean(person.photo);
+    if (filter === "open") return person.allowMessages;
+    return true;
+  });
+  const filters = [
+    ["all", "Everyone"],
+    ["campus", "Your campus"],
+    ["photo", "With a photo"],
+    ["open", "Open to chat"],
+  ] as const;
+  return (
+    <section className="mt-4">
+      {!q ? (
+        <div className="grid grid-cols-2 gap-3">
+          <Link to="/connect/soulync" className="col-span-2 flex h-36 flex-col justify-end rounded-3xl bg-ink p-4 text-paper ring-1 ring-brass/60">
+            <span className="text-[10px] font-semibold tracking-[0.22em] text-brass uppercase">Discreet</span>
+            <span className="soul-word mt-1 text-5xl leading-none text-brass">SouLync</span>
+            <span className="text-sm text-paper/75">Only people who turn it on. A match is both of you.</span>
+          </Link>
+          <Link to="/connect/wayward" className="flex h-28 flex-col justify-end rounded-3xl bg-ink p-4 text-paper">
+            <Compass className="size-5" />
+            <span className="mt-2 font-sans text-lg font-semibold">Wayward</span>
+          </Link>
+          <Link to="/messages" className="flex h-28 flex-col justify-end rounded-3xl bg-bolt p-4 text-spark-foreground">
+            <MessageCircle className="size-5" />
+            <span className="mt-2 font-sans text-lg font-semibold">Chat</span>
+          </Link>
+        </div>
+      ) : null}
+      <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+        {filters.map(([id, label]) => (
+          <button key={id} type="button" onClick={() => setFilter(id)} className={cn("h-9 shrink-0 rounded-full px-4 text-sm font-semibold", filter === id ? "bg-spark text-spark-foreground" : "bg-secondary text-ink")}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <h2 className="mt-5 font-sans text-xl font-semibold tracking-tight">{q ? `Results for “${q}”` : "People"}</h2>
+      {search.isPending ? <div className="mt-3 h-48 animate-pulse rounded-3xl bg-secondary" /> : null}
+      {search.isError ? <EmptyState title="Search is unavailable" body="The directory could not be reached. Nothing was invented in its place." /> : null}
+      {search.data ? (
+        people.length ? (
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {people.map((person) => (
+              <Link key={person.userId} to="/connect/people/$handle" params={{ handle: person.handle }} className="relative aspect-3/4 overflow-hidden rounded-3xl bg-blush-soft">
+                {person.photo ? <img src={person.photo} alt="" className="absolute inset-0 size-full object-cover" /> : (
+                  <span className="grid size-full place-items-center font-sans text-5xl font-semibold text-ink">{(person.displayName || person.handle).slice(0, 1)}</span>
+                )}
+                <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink via-ink/30 to-transparent p-3 text-paper">
+                  <span className="block truncate font-sans text-lg font-semibold">{person.displayName || person.handle}</span>
+                  <span className="block truncate text-xs text-paper/80">@{person.handle}{person.institution ? ` · ${person.institution}` : ""}</span>
                 </span>
-                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
               </Link>
             ))}
           </div>
-          <section className="mt-6">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h3 className="text-base font-semibold">Available around campus</h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">Real listings from the UNIBUD marketplace</p>
-              </div>
-              <Link to="/market" className="text-xs font-medium text-primary">View all</Link>
-            </div>
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-              <button type="button" onClick={() => setOpportunityCategory("all")} className={cn("shrink-0 rounded-full px-3 py-2 text-xs font-medium", opportunityCategory === "all" ? "bg-foreground text-background" : "bg-muted text-muted-foreground")}>All</button>
-              {CATEGORIES.map((category) => (
-                <button key={category.id} type="button" onClick={() => setOpportunityCategory(category.id)} className={cn("shrink-0 rounded-full px-3 py-2 text-xs font-medium", opportunityCategory === category.id ? "bg-foreground text-background" : "bg-muted text-muted-foreground")}>{category.label}</button>
-              ))}
-            </div>
-            {catalog.isPending ? (
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                {[0, 1, 2, 3].map((item) => <div key={item} className="aspect-[4/5] animate-pulse rounded-2xl bg-muted" />)}
-              </div>
-            ) : visibleListings.length ? (
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                {visibleListings.slice(0, 6).map((listing) => <ListingCard key={listing.id} listing={listing} />)}
-              </div>
-            ) : (
-              <div className="mt-4 rounded-2xl border border-dashed px-5 py-9 text-center">
-                <p className="text-sm font-medium">No listings in this category yet</p>
-                <p className="mt-1 text-xs text-muted-foreground">Try another category or publish the first offer.</p>
-                <Link to="/sell" className="mt-3 inline-flex text-sm font-medium text-primary">Create a listing</Link>
-              </div>
-            )}
-          </section>
-          <section className="mt-5 rounded-2xl border border-dashed p-4">
-            <p className="text-sm font-semibold">Your listings and activity</p>
-            <p className="mt-1 text-xs text-muted-foreground">Manage your offers, applications, orders and active deals from one place.</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <span className="rounded-full bg-muted px-3 py-1.5 text-xs text-muted-foreground">My posts</span>
-              <span className="rounded-full bg-muted px-3 py-1.5 text-xs text-muted-foreground">My requests</span>
-              <span className="rounded-full bg-muted px-3 py-1.5 text-xs text-muted-foreground">My deals</span>
-            </div>
-          </section>
-          <p className="mt-4 text-center text-xs text-muted-foreground">Food, goods, local services and remote work belong here too.</p>
-        </>
-      )}
+        ) : (
+          <div className="mt-3">
+            <EmptyState
+              title={q ? "No people found" : filter === "all" ? "No one to discover yet" : "No people in this lane"}
+              body={filter === "campus" && !mine.data?.institution ? "Add your institution on your profile to see the same campus." : q ? "No discoverable profile matched that search." : "Turn on discovery in your profile, or search someone by name or @handle."}
+            />
+          </div>
+        )
+      ) : null}
+    </section>
+  );
+}
 
-      <section className="mt-6 border-t pt-4">
-        <p className="mb-2 text-xs font-medium text-muted-foreground">MORE IN UNIBUD</p>
-        <div className="grid grid-cols-2 gap-2">
-          <Link to="/messages" className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm">
-            <span>Chat</span><ChevronRight className="size-4 text-muted-foreground" />
-          </Link>
-          <Link to="/riff" className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm">
-            <span>Riff</span><ChevronRight className="size-4 text-muted-foreground" />
-          </Link>
-          <div className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm" aria-disabled="true" title="Not connected yet">
-            <span>SoulLync · planned</span><Heart className="size-4 text-muted-foreground" />
-          </div>
-          <div className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm" aria-disabled="true" title="Not connected yet">
-            <span>WAYWARD · planned</span><Compass className="size-4 text-muted-foreground" />
-          </div>
-          <div className="flex items-center justify-between rounded-xl bg-muted/60 p-3 text-sm" aria-disabled="true" title="Not connected yet">
-            <span>Concierge · planned</span><Sparkles className="size-4 text-muted-foreground" />
-          </div>
+function ProfileCard() {
+  const qc = useQueryClient();
+  const mine = useQuery({ queryKey: ["connect-me"], queryFn: () => getMyConnectProfile() });
+  const [open, setOpen] = useState(true);
+  const [form, setForm] = useState(EMPTY_PROFILE);
+  const [note, setNote] = useState("");
+  useEffect(() => {
+    if (!mine.data) return;
+    const { userId: _user, verified: _verified, ...rest } = mine.data;
+    setForm(rest);
+  }, [mine.data]);
+  const save = useMutation({
+    mutationFn: () => saveConnectProfile({ data: form }),
+    onSuccess: async (result) => {
+      setNote(result.ok ? (form.discoverable ? "Saved. People can discover this profile." : "Saved. You stay hidden until discovery is turned on.") : result.error);
+      if (result.ok) await qc.invalidateQueries({ queryKey: ["connect-me"] });
+    },
+  });
+  return (
+    <section className="mt-6 rounded-2xl bg-card p-4 ring-1 ring-border">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium">Your directory profile</p>
+          <p className="mt-1 text-xs text-muted-foreground">{mine.data?.discoverable ? "You can be discovered." : "You are hidden from discovery."}</p>
         </div>
-      </section>
-    </main>
+        <button type="button" className="h-10 rounded-full px-4 text-sm ring-1 ring-border" onClick={() => setOpen((value) => !value)}>{open ? "Close" : "Edit"}</button>
+      </div>
+      {open ? (
+        <form
+          className="mt-4 space-y-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            save.mutate();
+          }}
+        >
+          <input value={form.displayName} onChange={(event) => setForm({ ...form, displayName: event.target.value })} placeholder="Name" aria-label="Name" className="h-11 w-full rounded-xl bg-background px-3 text-sm ring-1 ring-border" />
+          <input value={form.handle} onChange={(event) => setForm({ ...form, handle: event.target.value })} placeholder="Handle" aria-label="Handle" className="h-11 w-full rounded-xl bg-background px-3 text-sm ring-1 ring-border" />
+          <textarea value={form.bio} onChange={(event) => setForm({ ...form, bio: event.target.value })} placeholder="Bio" aria-label="Bio" className="min-h-20 w-full rounded-xl bg-background p-3 text-sm ring-1 ring-border" />
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.discoverable} onChange={(event) => setForm({ ...form, discoverable: event.target.checked })} /> People can find me</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.allowRequests} onChange={(event) => setForm({ ...form, allowRequests: event.target.checked })} /> Allow connection requests</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.allowMessages} onChange={(event) => setForm({ ...form, allowMessages: event.target.checked })} /> Allow messages from connections</label>
+          {note ? <p className="text-sm text-muted-foreground">{note}</p> : null}
+          <button type="submit" className="h-11 rounded-full bg-ink px-4 text-sm font-medium text-paper">Save</button>
+        </form>
+      ) : null}
+    </section>
+  );
+}
+
+function RelationList({ mode, query = "" }: { mode: "incoming" | "sent" | "connections"; query?: string }) {
+  const qc = useQueryClient();
+  const list = useQuery({ queryKey: ["connect-relations"], queryFn: () => listConnectRelations() });
+  const act = useMutation({
+    mutationFn: (input: { id: string; action: "accept" | "decline" | "cancel" | "remove" }) => respondConnection({ data: input }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["connect-relations"] });
+    },
+  });
+  const needle = query.trim().toLowerCase();
+  const rows = (list.data?.[mode] ?? []).filter((row) => !needle || `${row.name} ${row.handle}`.toLowerCase().includes(needle));
+  if (list.isPending) return <div className="mt-5 h-28 animate-pulse rounded-3xl bg-secondary" />;
+  if (!rows.length) {
+    const title = mode === "incoming" ? "No requests" : mode === "sent" ? "Nothing sent" : "No connections";
+    return <div className="mt-5"><EmptyState title={title} body="Only real accounts show up here." /></div>;
+  }
+  return (
+    <ul className="mt-5 space-y-3">
+      {rows.map((row) => (
+        <li key={row.id} className="rounded-2xl bg-card p-4 ring-1 ring-border">
+          <Link to="/connect/people/$handle" params={{ handle: row.handle }} className="flex items-center gap-3">
+            <Avatar name={row.name || row.handle} className="size-12" />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">{(row.name || "Member") + (row.handle ? ` (@${row.handle})` : "")}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {mode === "incoming" ? "Asked to connect" : mode === "sent" ? "You asked to connect" : "Connected"}
+                {" · "}
+                {relativeTime(row.at)}
+              </p>
+            </div>
+          </Link>
+          <div className="mt-3 flex gap-2">
+            {mode === "incoming" ? (
+              <>
+                <button type="button" className="h-10 rounded-full bg-spark px-4 text-sm font-semibold text-spark-foreground" onClick={() => act.mutate({ id: row.id, action: "accept" })}>Accept</button>
+                <button type="button" className="h-10 rounded-full px-4 text-sm ring-1 ring-border" onClick={() => act.mutate({ id: row.id, action: "decline" })}>Decline</button>
+              </>
+            ) : null}
+            {mode === "sent" ? <button type="button" className="h-10 rounded-full px-4 text-sm ring-1 ring-border" onClick={() => act.mutate({ id: row.id, action: "cancel" })}>Cancel</button> : null}
+            {mode === "connections" ? (
+              <>
+                {row.allowMessages ? <MessageLink handle={row.handle} className="h-10 rounded-full bg-ink px-4 text-sm text-paper" /> : <span className="text-xs text-muted-foreground">Not taking messages</span>}
+                <button type="button" className="h-10 rounded-full px-4 text-sm ring-1 ring-border" onClick={() => act.mutate({ id: row.id, action: "remove" })}>Remove</button>
+              </>
+            ) : null}
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }

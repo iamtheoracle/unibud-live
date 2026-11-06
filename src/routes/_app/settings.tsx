@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -8,6 +9,8 @@ import {
   type ProfileVisibility,
 } from "@/lib/unibud/campus-store";
 import { upsertMyProfile } from "@/lib/unibud/server";
+import { revokeConnectService, searchConnect } from "@/lib/connect/server";
+import { UserButton } from "@/lib/auth/gates";
 import { useAuthReady } from "@/components/unibud/sign-in-gate";
 import type { CampusRole } from "@/lib/unibud/roles";
 import { Button } from "@/components/ui/button";
@@ -33,15 +36,16 @@ function Settings() {
     <main className="safe-bottom px-5 pt-6">
       <p className="kicker">Account</p>
       <h1 className="mt-1 font-display text-4xl">Settings</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Privacy, notifications, and Bud placement. Device role preference is not platform authority.
-      </p>
+      <div className="mt-4">
+        <UserButton />
+      </div>
+      <p className="mt-2 text-sm text-muted-foreground">Privacy, notifications, Bud placement, and demo role.</p>
 
       <p className="mt-8 text-xs font-medium tracking-wide text-muted-foreground uppercase">
         Bud shortcut position
       </p>
       <p className="mt-1 text-xs text-muted-foreground">
-        Top sits under the header (where navigation used to be). Bottom is a floating control. Hidden removes the shortcut only — Bud stays in the menu.
+        Placement only. Bud always stays in the menu. Hidden does not disable Bud.
       </p>
       <div className="mt-3 grid grid-cols-3 gap-2">
         {(["top", "bottom", "hidden"] as BudShortcut[]).map((v) => (
@@ -80,10 +84,10 @@ function Settings() {
       </div>
 
       <p className="mt-8 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        Device preference (not platform authority)
+        Role on this device (demo)
       </p>
       <p className="mt-1 text-xs text-muted-foreground">
-        This only changes how this device labels the UI. Lecturer and moderator powers are granted by UNIBUD — they cannot be claimed here.
+        Roles do not inherit. Class Governor is still a student. Tutor Mode is lecturers only.
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         {(["student", "governor", "lecturer", "moderator"] as CampusRole[]).map((v) => (
@@ -92,10 +96,7 @@ function Settings() {
             type="button"
             onClick={() => {
               setRole(v);
-              // Server ignores lecturer/moderator self-elevation.
-              if (user && (v === "student" || v === "governor")) {
-                void upsertMyProfile({ data: { campusRole: v } });
-              }
+              if (user) void upsertMyProfile({ data: { campusRole: v } });
             }}
             className={cn(
               "h-9 rounded-full px-4 text-sm capitalize",
@@ -135,6 +136,8 @@ function Settings() {
         <Toggle label="Read receipts in Chat" value={prefs.reads} onChange={(v) => setPrefs({ reads: v })} />
         <Toggle label="Marketplace activity" value={prefs.market} onChange={(v) => setPrefs({ market: v })} />
       </ul>
+
+      <ServiceAccess />
 
       <p className="mt-8 text-xs font-medium tracking-wide text-muted-foreground uppercase">
         Report
@@ -199,6 +202,46 @@ function Toggle({
         />
       </button>
     </li>
+  );
+}
+
+function ServiceAccess() {
+  const qc = useQueryClient();
+  const services = useQuery({ queryKey: ["connect-search", "", "services", "settings"], queryFn: () => searchConnect({ data: { kind: "services" } }) });
+  const revoke = useMutation({
+    mutationFn: (id: string) => revokeConnectService({ data: { id } }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["connect-search"] });
+      await qc.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+  const connected = (services.data?.services ?? []).filter((service) => service.status === "Connected");
+  return (
+    <section className="mt-8">
+      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Service access</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        A service only receives the scopes you approve. Unavailable services stay not connected.
+      </p>
+      {services.isPending ? <div className="mt-3 h-16 animate-pulse rounded-2xl bg-secondary" /> : null}
+      {services.isError ? <p className="mt-3 text-sm text-muted-foreground">Service access could not be loaded.</p> : null}
+      {!services.isPending && !connected.length ? (
+        <p className="mt-3 text-sm text-muted-foreground">No service has access to your profile.</p>
+      ) : null}
+      <ul className="mt-3 space-y-2">
+        {connected.map((service) => (
+          <li key={service.id} className="flex items-center justify-between gap-3 rounded-2xl bg-card px-4 py-3 ring-1 ring-border">
+            <div>
+              <p className="text-sm">{service.name}</p>
+              <p className="text-xs text-muted-foreground">{service.status}</p>
+            </div>
+            <button type="button" className="h-9 rounded-full px-3 text-sm ring-1 ring-border" onClick={() => revoke.mutate(service.id)}>
+              Revoke
+            </button>
+          </li>
+        ))}
+      </ul>
+      <Link to="/connect" className="mt-3 inline-block text-sm font-medium">Open Connect</Link>
+    </section>
   );
 }
 

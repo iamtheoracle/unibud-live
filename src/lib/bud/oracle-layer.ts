@@ -1,8 +1,10 @@
 /**
  * Oracle is the hidden knowledge layer behind Bud.
  * Never imported from shell/nav. Never named to the student.
+ * Live answers go through the Oracle Arc model. This packet only points at real Connect places.
  */
-import { GLOBAL_FACTS } from "@/lib/unibud/discover-data";
+import { campusSystemBrief } from "@/lib/oracle/campus";
+import { CONNECT_LANES, connectSystemBrief } from "@/lib/connect/system";
 
 export const ORACLE_LAYER = {
   id: "oracle",
@@ -21,19 +23,24 @@ export type OraclePacket = {
   sources: { title: string; url?: string }[];
 };
 
-/** Lightweight verify/research packet. Not a student-facing answer. */
+/** Relationship questions get the real Connect map. Nothing else is treated as verified. */
 export async function queryOracleLayer(req: OracleRequest): Promise<OraclePacket | null> {
   const q = req.query.toLowerCase();
-  const hit = GLOBAL_FACTS.find(
-    (f) =>
-      q.includes(f.topic) ||
-      q.includes(f.kicker.toLowerCase()) ||
-      f.title.toLowerCase().split(" ").some((w) => w.length > 4 && q.includes(w)),
-  );
-  if (!hit) return null;
-  if (!/\b(true|real|happen|news|discover|invent|moon|space|robot|trend|new)\b/.test(q)) return null;
+  if (/\b(flow|wallet|savings|sport|fixture|cinema|movie|film|watch|order|handover|market|listing)\b/.test(q)) {
+    return {
+      summary: campusSystemBrief(),
+      sources: [
+        { title: "Flow", url: "/flow" },
+        { title: "Sport", url: "/sport" },
+        { title: "Cinema", url: "/watch" },
+        { title: "Orders", url: "/orders" },
+        { title: "Market", url: "/market" },
+      ],
+    };
+  }
+  if (!/\b(connect|people|friend|follow|soulync|wayward|message|chat|profile|directory)\b/.test(q)) return null;
   return {
-    summary: `${hit.kicker}: ${hit.title}. ${hit.summary}`,
-    sources: [{ title: hit.kicker }],
+    summary: connectSystemBrief(),
+    sources: CONNECT_LANES.map((lane) => ({ title: lane.label, url: lane.to })),
   };
 }

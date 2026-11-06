@@ -1,150 +1,132 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouter, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Avatar } from "@/components/unibud/person";
 import { EmptyState } from "@/components/unibud/empty";
-import { SignInCard, useAuthReady } from "@/components/unibud/sign-in-gate";
-import { PEOPLE, personByHandle } from "@/lib/unibud/catalog";
+import { useAuthReady } from "@/components/unibud/sign-in-gate";
+import { Input } from "@/components/ui/input";
 import { relativeTime } from "@/lib/unibud/format";
-import { listConversations, openConversation } from "@/lib/social/server";
-import { CAMPUS_ROOMS, type RoomKind } from "@/lib/unibud/chat-rooms";
-import { cn } from "@/lib/utils";
+import { listConversations, openDirect } from "@/lib/social/server";
+import { searchConnect } from "@/lib/connect/server";
 
 export const Route = createFileRoute("/_app/messages")({ component: ChatList });
 
-type Tab = "direct" | RoomKind;
-
 function ChatList() {
+  const router = useRouter();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const { user, isPending } = useAuthReady();
-  const nav = useNavigate();
-  const [tab, setTab] = useState<Tab>("direct");
+  const [q, setQ] = useState("");
+  const [note, setNote] = useState("");
   const convos = useQuery({
     queryKey: ["convos"],
     queryFn: () => listConversations(),
     enabled: Boolean(user),
+    refetchInterval: 4000,
+  });
+  const people = useQuery({
+    queryKey: ["chat-people", q],
+    queryFn: () => searchConnect({ data: { q: q.replace(/^@+/, ""), kind: "people" } }),
+    enabled: Boolean(user) && q.trim().length >= 2,
   });
 
-  if (isPending) return <div className="m-4 h-40 animate-pulse rounded-2xl bg-secondary" />;
-  if (!user) {
-    return (
-      <main className="px-5 py-8">
-        <p className="kicker">Messages</p>
-        <h1 className="mt-1 font-display text-4xl">Chat</h1>
-        <div className="mt-6">
-          <SignInCard title="Sign in to chat" body="Direct, class, study and community conversations stay private." />
-        </div>
-      </main>
-    );
+  async function message(handle: string) {
+    setNote("");
+    const result = await openDirect({ data: { handle } });
+    if (!result.ok) {
+      setNote(result.error);
+      return;
+    }
+    await router.navigate({ to: "/messages/$id", params: { id: result.id } });
   }
 
-  async function start(handle: string) {
-    const c = await openConversation({ data: { handle } });
-    nav({ to: "/messages/$id", params: { id: c.id } });
-  }
-
-  const rooms = CAMPUS_ROOMS.filter((r) => (tab === "direct" ? false : r.kind === tab));
+  if (pathname !== "/messages" && pathname !== "/messages/") return <Outlet />;
 
   return (
     <main className="safe-bottom px-5 pt-6">
       <p className="kicker">Communication layer</p>
       <h1 className="mt-1 font-display text-4xl">Chat</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Direct messages, group, class, study and community conversations. Chat is not Connect, not Communities, not Board.
+        Direct messages, plus rooms and plans you have joined. What you send is stored for the other person.
       </p>
-      <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-        {(
-          [
-            ["direct", "Direct"],
-            ["group", "Groups"],
-            ["class", "Classes"],
-            ["study", "Study"],
-            ["community", "Community"],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={cn(
-              "h-9 shrink-0 rounded-full px-4 text-sm font-medium",
-              tab === id ? "bg-ink text-paper" : "bg-card text-muted-foreground ring-1 ring-border",
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
 
-      {tab === "direct" ? (
-        <>
-          <div className="mt-5 space-y-1">
-            {(convos.data ?? []).map((c) => {
-              const person = personByHandle(c.peerHandle);
-              return (
-                <Link
-                  key={c.id}
-                  to="/messages/$id"
-                  params={{ id: c.id }}
-                  className="flex items-center gap-3 rounded-2xl px-1 py-3 hover:bg-secondary"
-                >
-                  <span className="relative">
-                    <Avatar name={person?.name ?? c.peerHandle} className="size-12" />
-                    <span className="absolute right-0 bottom-0 size-2.5 rounded-full bg-success ring-2 ring-card" />
-                  </span>
+      {isPending ? <div className="mt-5 h-40 animate-pulse rounded-2xl bg-secondary" /> : null}
+
+      {!isPending ? (
+        <div className="mt-5">
+          <Input
+            value={q}
+            onChange={(event) => {
+              setQ(event.target.value);
+              setNote("");
+            }}
+            placeholder="Search a username"
+            aria-label="Search a username"
+          />
+          {note ? <p className="mt-2 text-sm text-muted-foreground">{note}</p> : null}
+          {q.trim().length >= 2 ? (
+            <ul className="mt-3 space-y-2">
+              {(people.data?.people ?? []).map((person) => (
+                <li key={person.userId} className="flex items-center gap-3 rounded-2xl bg-card px-3 py-2 ring-1 ring-border">
+                  <Avatar name={person.displayName || person.handle} className="size-10" />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate text-sm font-semibold">{person?.name ?? `@${c.peerHandle}`}</p>
-                      <span className="text-xs text-muted-foreground">{relativeTime(c.updatedAt)}</span>
-                    </div>
-                    <p className="truncate text-sm text-muted-foreground">{c.lastBody}</p>
+                    <p className="truncate text-sm font-medium">{person.displayName || person.handle}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      @{person.handle}
+                      {person.username && person.username !== person.handle ? ` · @${person.username}` : ""}
+                    </p>
                   </div>
-                </Link>
-              );
-            })}
-          </div>
-          {!convos.data?.length ? (
-            <EmptyState title="No threads yet" body="Message someone from Connect, or start a chat below." />
+                  <button type="button" className="h-9 rounded-full px-3 text-sm ring-1 ring-border" onClick={() => void message(person.handle)}>
+                    Message
+                  </button>
+                </li>
+              ))}
+              {people.data && !people.data.people.length ? (
+                <li className="text-sm text-muted-foreground">No one with that username.</li>
+              ) : null}
+            </ul>
           ) : null}
-          <h2 className="mt-8 text-sm font-medium">Suggested</h2>
-          <ul className="mt-2">
-            {PEOPLE.filter((p) => p.role !== "lecturer").slice(0, 6).map((p) => (
-              <li key={p.handle}>
-                <button
-                  type="button"
-                  onClick={() => void start(p.handle)}
-                  className="flex w-full items-center gap-3 py-3 text-left"
-                >
-                  <Avatar name={p.name} />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">{p.name}</p>
-                    <p className="text-xs text-muted-foreground">@{p.handle}</p>
-                  </div>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : (
-        <ul className="mt-5 space-y-2">
-          {rooms.map((r) => (
-            <li key={r.id}>
-              <Link
-                to="/messages/$id"
-                params={{ id: r.id }}
-                className="block rounded-2xl bg-card p-4 ring-1 ring-border"
-              >
-                <p className="text-[11px] font-semibold tracking-wide text-bud uppercase">{r.kind}</p>
-                <p className="mt-1 text-sm font-semibold">{r.title}</p>
-                <p className="text-xs text-muted-foreground">{r.subtitle}</p>
-                <p className="mt-2 truncate text-sm text-muted-foreground">{r.lastBody}</p>
-              </Link>
-            </li>
+          <div className="mt-3">
+          {(convos.data?.directs ?? []).map((c) => (
+            <Link
+              key={c.id}
+              to="/messages/$id"
+              params={{ id: c.id }}
+              className="flex items-center gap-3 rounded-2xl px-1 py-3 hover:bg-secondary"
+            >
+              <Avatar name={c.peerName || c.peerHandle} className="size-12" />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="truncate text-sm font-semibold">{c.peerName || `@${c.peerHandle}`}</p>
+                  <span className="text-xs text-muted-foreground">{relativeTime(c.updatedAt)}</span>
+                </div>
+                <p className="truncate text-sm text-muted-foreground">{c.lastBody || "No messages yet"}</p>
+              </div>
+            </Link>
           ))}
-          {rooms.length === 0 ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">No {tab} chats yet.</p>
+          </div>
+          {(convos.data?.rooms ?? []).length ? (
+            <div className="mt-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Rooms and plans</p>
+              {(convos.data?.rooms ?? []).map((room) => (
+                <a key={`${room.kind}-${room.id}`} href={room.href} className="flex items-center gap-3 rounded-2xl px-1 py-3 hover:bg-secondary">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{room.title}</p>
+                    <p className="truncate text-sm text-muted-foreground">
+                      {room.lastBody ? `${room.senderName ? `${room.senderName}: ` : ""}${room.lastBody}` : "No messages yet"}
+                    </p>
+                  </div>
+                </a>
+              ))}
+            </div>
           ) : null}
-        </ul>
-      )}
+          {!user || (!(convos.data?.directs.length) && !(convos.data?.rooms.length)) ? (
+            <EmptyState
+              title="No conversations"
+              body="Search a username to message someone you are connected with. Nothing is invented here."
+            />
+          ) : null}
+        </div>
+      ) : null}
     </main>
   );
 }

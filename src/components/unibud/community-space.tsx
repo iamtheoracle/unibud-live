@@ -79,15 +79,9 @@ export function CommunitySpace({ id }: { id: string }) {
         ) : null}
       </div>
 
-      {meta?.chatId ? (
-        <Link
-          to="/messages/$id"
-          params={{ id: meta.chatId }}
-          className="mt-4 inline-flex h-10 items-center rounded-full bg-secondary px-4 text-sm font-medium"
-        >
-          Open {isClass ? "class" : isStudy ? "study" : "community"} chat
-        </Link>
-      ) : null}
+      <Link to="/board" className="mt-4 inline-flex h-10 items-center rounded-full bg-secondary px-4 text-sm font-medium">
+        Open this kind of room on Board
+      </Link>
       {communitySpills.length ? (
         <Link to="/riff" className="mt-3 block text-sm font-medium text-bud">
           {communitySpills.length} Riff{communitySpills.length === 1 ? "" : "s"} from this room
@@ -108,15 +102,9 @@ export function CommunitySpace({ id }: { id: string }) {
             >
               Organise a study group
             </Link>
-            {meta?.chatId ? (
-              <Link
-                to="/messages/$id"
-                params={{ id: meta.chatId }}
-                className="inline-flex h-9 items-center rounded-full bg-secondary px-3 text-sm"
-              >
-                Class chat
-              </Link>
-            ) : null}
+            <Link to="/board" className="inline-flex h-9 items-center rounded-full bg-secondary px-3 text-sm">
+              Open Board
+            </Link>
           </div>
           <Textarea
             className="mt-3"

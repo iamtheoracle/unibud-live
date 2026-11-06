@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
-import { authMiddleware } from "@/lib/auth/middleware";
+import { appAccessMiddleware } from "@/lib/account/guard";
 import { mapRequest, mapTx } from "@/lib/unibud/map";
 import { notify } from "@/lib/unibud/server";
 import type { RequestStatus } from "@/lib/unibud/types";
@@ -46,11 +46,11 @@ async function loadWallet(userId: string) {
 }
 
 export const getWallet = createServerFn({ method: "GET" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .handler(async ({ context }) => loadWallet(context.userId));
 
 export const addDemoFunds = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((kobo: number) => kobo)
   .handler(async ({ context, data: kobo }) => {
     if (!Number.isInteger(kobo) || kobo < 10000 || kobo > 50000000) {
@@ -72,7 +72,7 @@ export const addDemoFunds = createServerFn({ method: "POST" })
   });
 
 export const sendDemoMoney = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((input: { handle: string; kobo: number; note: string }) => input)
   .handler(async ({ context, data }) => {
     if (!Number.isInteger(data.kobo) || data.kobo < 10000) {
@@ -97,7 +97,7 @@ export const sendDemoMoney = createServerFn({ method: "POST" })
   });
 
 export const withdrawDemo = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((input: { kobo: number; destination: string }) => input)
   .handler(async ({ context, data }) => {
     if (!Number.isInteger(data.kobo) || data.kobo < 10000) {
@@ -120,7 +120,7 @@ export const withdrawDemo = createServerFn({ method: "POST" })
   });
 
 export const payListingDemo = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((input: { listingId: string; kobo: number; sellerHandle: string; title: string }) => input)
   .handler(async ({ context, data }) => {
     const sql = await getSql();
@@ -140,7 +140,7 @@ export const payListingDemo = createServerFn({ method: "POST" })
   });
 
 export const createMoneyRequest = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator(
     (input: { handles: string[]; kobo: number; note: string; split?: boolean }) => input,
   )
@@ -169,7 +169,7 @@ export const createMoneyRequest = createServerFn({ method: "POST" })
   });
 
 export const updateMoneyRequest = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((input: { id: string; status: RequestStatus }) => input)
   .handler(async ({ context, data }) => {
     const sql = await getSql();
@@ -191,7 +191,7 @@ export const updateMoneyRequest = createServerFn({ method: "POST" })
   });
 
 export const saveFundingNotes = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((input: { program: string; status: string; notes: string }) => input)
   .handler(async ({ context, data }) => {
     const sql = await getSql();

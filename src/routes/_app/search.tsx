@@ -1,17 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { Clock, Search as SearchIcon, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { EmptyState } from "@/components/unibud/empty";
+import { Avatar } from "@/components/unibud/person";
 import { useCampusStore } from "@/lib/unibud/campus-store";
-import { EDUCATIONAL_NEWS } from "@/lib/unibud/news-data";
-import { BOARD_SESSIONS } from "@/lib/unibud/board-data";
-import { EDU_PODCASTS } from "@/lib/unibud/podcast-data";
-import { COMMUNITIES, PEOPLE, POSTS, SAMPLE_COURSES } from "@/lib/unibud/catalog";
+import { searchConnect } from "@/lib/connect/server";
+import { searchBoard } from "@/lib/board/server";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/search")({ component: SearchPage });
 
-const FILTERS = ["all", "people", "communities", "classes", "posts", "learning", "news", "live", "podcasts"] as const;
+const FILTERS = ["all", "people", "classes", "groups", "study", "communities", "posts", "news"] as const;
 
 function SearchPage() {
   const [q, setQ] = useState("");
@@ -20,57 +21,25 @@ function SearchPage() {
   const addSearch = useCampusStore((s) => s.addSearch);
   const clearSearches = useCampusStore((s) => s.clearSearches);
   const removeSearch = useCampusStore((s) => s.removeSearch);
+  const lookingForPeople = filter === "all" || filter === "people";
+  const lookingOnBoard = filter !== "people";
+  const people = useQuery({
+    queryKey: ["directory-search", q],
+    queryFn: () => searchConnect({ data: { q: q.replace(/^@+/, ""), kind: "people" } }),
+    enabled: lookingForPeople && q.trim().length > 0,
+  });
+  const board = useQuery({
+    queryKey: ["board-search", q, filter],
+    queryFn: () => searchBoard({ data: { q, filter } }),
+    enabled: lookingOnBoard && q.trim().length > 0,
+  });
 
   function commit(term: string) {
     setQ(term);
     addSearch(term);
   }
 
-  const ql = q.trim().toLowerCase();
-  const hits = useMemo(() => {
-    if (!ql) {
-      return {
-        people: [],
-        communities: [],
-        classes: [],
-        posts: [],
-        courses: [],
-        news: [],
-        live: [],
-        podcasts: [],
-      };
-    }
-    return {
-      people: PEOPLE.filter(
-        (p) =>
-          p.name.toLowerCase().includes(ql) ||
-          p.handle.toLowerCase().includes(ql) ||
-          p.program.toLowerCase().includes(ql) ||
-          (p.faculty ?? "").toLowerCase().includes(ql),
-      ),
-      communities: COMMUNITIES.filter(
-        (c) =>
-          c.kind !== "Class" &&
-          (c.name.toLowerCase().includes(ql) || c.description.toLowerCase().includes(ql) || c.kind.toLowerCase().includes(ql)),
-      ),
-      classes: COMMUNITIES.filter(
-        (c) => c.kind === "Class" && (c.name.toLowerCase().includes(ql) || c.description.toLowerCase().includes(ql)),
-      ),
-      posts: POSTS.filter((p) => p.body.toLowerCase().includes(ql)),
-      courses: SAMPLE_COURSES.filter(
-        (c) => c.code.toLowerCase().includes(ql) || c.title.toLowerCase().includes(ql),
-      ),
-      news: EDUCATIONAL_NEWS.filter(
-        (n) => n.title.toLowerCase().includes(ql) || n.body.toLowerCase().includes(ql),
-      ),
-      live: BOARD_SESSIONS.filter(
-        (s) => s.title.toLowerCase().includes(ql) || s.course.toLowerCase().includes(ql) || s.status.includes(ql),
-      ),
-      podcasts: EDU_PODCASTS.filter(
-        (p) => p.title.toLowerCase().includes(ql) || p.course.toLowerCase().includes(ql) || p.topic.toLowerCase().includes(ql),
-      ),
-    };
-  }, [ql]);
+  const matches = people.data?.people ?? [];
 
   return (
     <main className="safe-bottom px-5 pt-8">
@@ -85,7 +54,7 @@ function SearchPage() {
           onKeyDown={(e) => {
             if (e.key === "Enter") commit(q);
           }}
-          placeholder="People, classes, news, live, podcasts"
+          placeholder="Search people, classes, posts, and news"
           autoFocus
         />
       </div>
@@ -130,115 +99,68 @@ function SearchPage() {
           </ul>
         </section>
       ) : (
-        <div className="mt-6 space-y-6">
-          {(filter === "all" || filter === "people") && hits.people.length ? (
-            <Block title="People">
-              {hits.people.map((p) => (
+        <div className="mt-6 space-y-3">
+          {lookingForPeople && people.isError ? (
+            <EmptyState title="People search failed" body={people.error instanceof Error ? people.error.message : "Usernames could not be searched."} />
+          ) : null}
+          {lookingOnBoard && board.isError ? (
+            <EmptyState title="Board search failed" body={board.error instanceof Error ? board.error.message : "Classes, posts, and news could not be searched."} />
+          ) : null}
+          {lookingForPeople && people.isPending ? <div className="h-24 animate-pulse rounded-2xl bg-secondary" /> : null}
+          {lookingOnBoard && (board.data?.rooms.length ?? 0) > 0 ? <p className="pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Board rooms</p> : null}
+          {(board.data?.rooms ?? []).map((room) => (
+            <Link key={room.id} to="/board/room/$id" params={{ id: room.id }} className="block rounded-2xl bg-card p-4 ring-1 ring-border">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{room.kind}</p>
+              <p className="mt-1 font-medium">{room.title}</p>
+              {room.subtitle ? <p className="text-sm text-muted-foreground">{room.subtitle}</p> : null}
+            </Link>
+          ))}
+          {(board.data?.posts ?? []).length ? <p className="pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Posts</p> : null}
+          {(board.data?.posts ?? []).map((post) => (
+            <Link key={post.id} to="/board" className="block rounded-2xl bg-card p-4 ring-1 ring-border">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Post · @{post.handle}</p>
+              <p className="mt-1 text-sm">{post.body}</p>
+            </Link>
+          ))}
+          {(board.data?.news ?? []).length ? <p className="pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">News</p> : null}
+          {(board.data?.news ?? []).map((item) => (
+            <Link key={item.id} to="/news" className="block rounded-2xl bg-card p-4 ring-1 ring-border">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">News · @{item.handle}</p>
+              <p className="mt-1 font-medium">{item.title}</p>
+              <p className="text-sm text-muted-foreground">{item.body}</p>
+            </Link>
+          ))}
+          {lookingForPeople && matches.length ? <p className="pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">People</p> : null}
+          {lookingForPeople
+            ? matches.map((person) => (
                 <Link
-                  key={p.handle}
-                  to="/u/$handle"
-                  params={{ handle: p.handle }}
-                  onClick={() => addSearch(q)}
-                  className="block py-2 text-sm"
+                  key={person.userId}
+                  to="/connect/people/$handle"
+                  params={{ handle: person.handle }}
+                  className="flex items-center gap-3 rounded-2xl bg-card p-4 ring-1 ring-border"
                 >
-                  {p.name} · @{p.handle}
-                  <span className="text-muted-foreground"> · {p.program}</span>
+                  <Avatar name={person.displayName || person.handle} className="size-12" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{person.displayName || person.handle}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      @{person.handle}
+                      {person.username && person.username !== person.handle ? ` · @${person.username}` : ""}
+                    </p>
+                  </div>
                 </Link>
-              ))}
-            </Block>
+              ))
+            : null}
+          {lookingForPeople && people.data && !matches.length && filter === "people" ? (
+            <EmptyState title="No people found" body="No discoverable account matched that username." />
           ) : null}
-          {(filter === "all" || filter === "communities") && hits.communities.length ? (
-            <Block title="Communities">
-              {hits.communities.map((c) => (
-                <Link
-                  key={c.id}
-                  to="/communities/$id"
-                  params={{ id: c.id }}
-                  onClick={() => addSearch(q)}
-                  className="block py-2 text-sm"
-                >
-                  {c.name}
-                  <span className="text-muted-foreground"> · {c.kind}</span>
-                </Link>
-              ))}
-            </Block>
+          {filter === "all" && people.data && board.data && !matches.length && !board.data.rooms.length && !board.data.posts.length && !board.data.news.length ? (
+            <EmptyState title="No matches" body="No person, room, post, or notice matched that search." />
           ) : null}
-          {(filter === "all" || filter === "classes") && hits.classes.length ? (
-            <Block title="Classes">
-              {hits.classes.map((c) => (
-                <Link
-                  key={c.id}
-                  to="/communities/$id"
-                  params={{ id: c.id }}
-                  onClick={() => addSearch(q)}
-                  className="block py-2 text-sm"
-                >
-                  {c.name}
-                </Link>
-              ))}
-            </Block>
-          ) : null}
-          {(filter === "all" || filter === "posts") && hits.posts.length ? (
-            <Block title="Posts">
-              {hits.posts.map((p) => (
-                <Link key={p.id} to="/" onClick={() => addSearch(q)} className="block py-2 text-sm">
-                  {p.body.slice(0, 90)}
-                </Link>
-              ))}
-            </Block>
-          ) : null}
-          {(filter === "all" || filter === "learning") && (hits.courses.length || hits.podcasts.length) ? (
-            <Block title="Learning">
-              {hits.courses.map((c) => (
-                <Link key={c.code} to="/studies" className="block py-2 text-sm">
-                  {c.code} · {c.title}
-                </Link>
-              ))}
-              {hits.podcasts.map((p) => (
-                <Link key={p.id} to="/podcasts" className="block py-2 text-sm">
-                  {p.title}
-                </Link>
-              ))}
-            </Block>
-          ) : null}
-          {(filter === "all" || filter === "news") && hits.news.length ? (
-            <Block title="News">
-              {hits.news.map((n) => (
-                <Link key={n.id} to="/news" className="block py-2 text-sm">
-                  {n.title}
-                </Link>
-              ))}
-            </Block>
-          ) : null}
-          {(filter === "all" || filter === "live") && hits.live.length ? (
-            <Block title="Live · Board">
-              {hits.live.map((s) => (
-                <Link key={s.id} to="/board" className="block py-2 text-sm">
-                  {s.title} · {s.status}
-                </Link>
-              ))}
-            </Block>
-          ) : null}
-          {(filter === "all" || filter === "podcasts") && hits.podcasts.length ? (
-            <Block title="Podcasts">
-              {hits.podcasts.map((p) => (
-                <Link key={p.id} to="/podcasts" className="block py-2 text-sm">
-                  {p.title} · {p.course}
-                </Link>
-              ))}
-            </Block>
+          {lookingOnBoard && board.data && !board.data.rooms.length && !board.data.posts.length && !board.data.news.length && !lookingForPeople ? (
+            <EmptyState title="Nothing on Board" body="Classes, communities, posts, and news only appear after someone starts them on Board." />
           ) : null}
         </div>
       )}
     </main>
-  );
-}
-
-function Block({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section>
-      <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">{title}</p>
-      <div className="mt-1">{children}</div>
-    </section>
   );
 }

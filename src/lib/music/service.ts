@@ -11,7 +11,7 @@ export const UnibudMusic = {
     return musicProvider().reason;
   },
   ready() {
-    return musicProvider().status === "licensed" || musicProvider().status === "preview";
+    return musicProvider().status === "ready";
   },
   search(q: SearchQuery) {
     return musicProvider().search(q);

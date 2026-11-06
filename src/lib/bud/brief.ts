@@ -2,7 +2,6 @@
  * Spark orchestration. Specialists return short notes, not answers.
  * Bud is the only voice the student hears.
  */
-import { GLOBAL_FACTS } from "@/lib/unibud/discover-data";
 import { inferMode } from "./modes";
 import { routeSpecialists, type SpecialistId } from "./spark";
 import type { Milestone } from "./milestones";
@@ -15,14 +14,20 @@ export type AtlasSnap = {
 };
 
 const ROUTES: { test: RegExp; to: string; label: string }[] = [
-  { test: /\b(wallet|money|balance|send naira)\b/i, to: "/money", label: "Wallet" },
+  { test: /\b(concierge|duty desk)\b/i, to: "/guild/concierge", label: "Concierge" },
+  { test: /\b(orders?|handover|collected)\b/i, to: "/orders", label: "Orders" },
+  { test: /\b(sport|fixture|football|full time|league)\b/i, to: "/sport", label: "Sport" },
+  { test: /\b(cinema|movie|film|watch)\b/i, to: "/watch", label: "Cinema" },
+  { test: /\b(flow|wallet|savings|share account|member ledger|balance)\b/i, to: "/flow", label: "Flow" },
   { test: /\b(market|listing|hostel|buy|sell)\b/i, to: "/market", label: "Market" },
   { test: /\b(riff|gist|conversation)\b/i, to: "/riff", label: "Riff" },
-  { test: /\b(connect|people|friends)\b/i, to: "/connect", label: "Connect" },
+  { test: /\b(connect|people|friends|follow)\b/i, to: "/connect", label: "Connect" },
+  { test: /\b(soulync|dating|match)\b/i, to: "/connect/soulync", label: "SouLync" },
+  { test: /\b(wayward|event|culture|trip)\b/i, to: "/connect/wayward", label: "Wayward" },
+  { test: /\b(chat|message|dm)\b/i, to: "/messages", label: "Chat" },
   { test: /\b(communit)/i, to: "/communities", label: "Communities" },
   { test: /\b(board|live class|lecture live|syllabus|what are we covering)\b/i, to: "/board", label: "Board" },
   { test: /\b(studies|semester|courses)\b/i, to: "/studies", label: "Studies" },
-  { test: /\b(watch|reel|clip)\b/i, to: "/watch", label: "Watch" },
   { test: /\b(square|feed|home)\b/i, to: "/", label: "Square" },
   { test: /\b(settings|privacy|report a bug)\b/i, to: "/settings", label: "Settings" },
   { test: /\b(fixer|talk to someone)\b/i, to: "/fixer", label: "The Fixer" },
@@ -79,7 +84,7 @@ function specialistNote(id: SpecialistId, prompt: string): string | null {
     case "vision":
       return "Vision: if a picture would help, describe it in one sentence they can see in their head. Do not generate files unless they asked.";
     case "community":
-      return "Community: point to Communities, Riff, or Chat. Do not invent a group.";
+      return "Community: point to Quad, Riff, or Chat. Do not invent a group or a person.";
     case "guardian":
       return "Safety: stay calm. Do not assist harm. If they are in danger, tell them to get real-world help. The Fixer is for people, Settings is for bugs.";
     case "creator":
@@ -91,7 +96,7 @@ function specialistNote(id: SpecialistId, prompt: string): string | null {
     case "voice":
       return "Voice: keep sentences easy to say out loud.";
     case "navigator":
-      return "Navigator: only real UNIBUD places. Square, Connect, Communities, Chat, Riff, Board, Studies, Watch, Market, Wallet, Profile.";
+      return "Navigator: only real UNIBUD places. Square, Connect, SouLync, Wayward, Quad, Chat, Profile, Riff, Board, Studies, Flow, Sport, Cinema, Orders, Market.";
     default:
       return null;
   }
@@ -100,6 +105,5 @@ function specialistNote(id: SpecialistId, prompt: string): string | null {
 function discoveryNote(prompt: string): string | null {
   const p = prompt.toLowerCase();
   if (!/\b(trending|happening|new|discover|invent|moon|space|robot|what.?s on)\b/.test(p)) return null;
-  const hit = GLOBAL_FACTS.find((f) => p.includes(f.topic) || p.includes(f.kicker.toLowerCase())) ?? GLOBAL_FACTS[0];
-  return `Pulse fact (optional, only if useful): ${hit.kicker} — ${hit.title}. ${hit.summary}`;
+  return "No discovery feed is connected. Do not invent a trend, person, post, or event.";
 }

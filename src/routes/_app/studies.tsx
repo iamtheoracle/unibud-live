@@ -211,16 +211,11 @@ function Studies() {
         <div className="mt-6">
           <EmptyState
             title="No semester yet"
-            body="Start from a Computer Engineering sample, or add your own courses."
+            body="Add the courses you are taking. A sample semester is not loaded."
             action={
-              <div className="flex justify-center gap-2">
-                <Button onClick={() => seed.mutate()} disabled={seed.isPending}>
-                  Use sample semester
-                </Button>
-                <Button variant="outline" onClick={() => setOpen(true)}>
-                  Add a course
-                </Button>
-              </div>
+              <Button variant="outline" onClick={() => setOpen(true)}>
+                Add a course
+              </Button>
             }
           />
         </div>

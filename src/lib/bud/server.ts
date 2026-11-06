@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
-import { authMiddleware } from "@/lib/auth/middleware";
+import { appAccessMiddleware } from "@/lib/account/guard";
 import { mapBud, mapConversation, mapCourse, mapProfile } from "@/lib/unibud/map";
 import { formatStudentContext } from "./context";
 import { queryOracleLayer } from "./oracle-layer";
@@ -8,10 +8,11 @@ import { getAIProvider } from "./provider";
 import { buildBudBrief, type AtlasSnap } from "./brief";
 import { advanceMilestone, parseMilestone } from "./milestones";
 import { communicationInstruction } from "./communication";
-import { inferSparkDomain, sparkSystemNotes } from "./spark";
-import { executeThroughSpark } from "@/lib/spark/runtime";
-import type { AgentRequest } from "@/lib/agents/core/contracts.ts";
-import { assertBudUserFacingText } from "@/lib/agents/response-policy.ts";
+import { routeSpecialists, sparkSystemNotes } from "./spark";
+import { campusFallback, memberSnapshot } from "@/lib/oracle/campus";
+import { createActivitySink } from "@/lib/agents/activity";
+import { executeSpecialists } from "@/lib/agents/runtime";
+import type { AgentInput } from "@/lib/agents/contracts";
 
 const SYSTEM = `You are Bud. You are the student's study buddy and companion inside UNIBUD. You are part of a real internal system, but never expose internal agents, routing, providers, or notes.
 
@@ -25,7 +26,7 @@ CONVERSATION
 Do not sound like a customer-service bot. Do not over-explain simple questions. If the student asks for a time, date, route, or other direct fact, answer directly. If they are frustrated, make the next step easier. Do not pretend to have done something that the system did not actually do.
 
 TRUTH
-Never invent syllabus topics, grades, attendance, exam dates, memories, messages, bookings, purchases, reminders, trends, generated media, or agent activity. A capability is either actually connected and executed, or it is unavailable. Never describe skipped or failed internal work as completed.
+Never invent syllabus topics, grades, attendance, exam dates, memories, messages, bookings, purchases, reminders, trends, generated media, or agent activity. A capability is either actually connected and executed, or it is unavailable. Never describe skipped or failed internal work as completed. Do not recite a live ledger, fixture list, title list, or order list unless they asked for that figure. Never paste Concierge's duty, responsibilities, or action list. Concierge is a separate desk.
 
 ACADEMIC
 Use enrolled syllabus data for course questions. Do not invent topics. Help students learn and reason rather than submitting work dishonestly for them.
@@ -51,7 +52,7 @@ async function backfillLegacy(sql: Awaited<ReturnType<typeof getSql>>, userId: s
   await sql`update bud_messages set conversation_id = ${id} where user_id = ${userId} and conversation_id is null`;
 }
 
-export const listBudConversations = createServerFn({ method: "GET" }).middleware([authMiddleware]).handler(async ({ context }) => {
+export const listBudConversations = createServerFn({ method: "GET" }).middleware([appAccessMiddleware]).handler(async ({ context }) => {
   const sql = await getSql();
   await backfillLegacy(sql, context.userId);
   const rows = await sql<{ id: string; title: string; updated_at: string; preview: string | null }>`
@@ -60,7 +61,7 @@ export const listBudConversations = createServerFn({ method: "GET" }).middleware
   return rows.map(mapConversation);
 });
 
-export const getBudThread = createServerFn({ method: "GET" }).middleware([authMiddleware]).validator((input?: { conversationId?: string }) => input ?? {}).handler(async ({ context, data }) => {
+export const getBudThread = createServerFn({ method: "GET" }).middleware([appAccessMiddleware]).validator((input?: { conversationId?: string }) => input ?? {}).handler(async ({ context, data }) => {
   const sql = await getSql();
   await backfillLegacy(sql, context.userId);
   if (data.conversationId) {
@@ -71,21 +72,21 @@ export const getBudThread = createServerFn({ method: "GET" }).middleware([authMi
   return rows.map((r) => mapBud(r as Parameters<typeof mapBud>[0]));
 });
 
-export const createBudConversation = createServerFn({ method: "POST" }).middleware([authMiddleware]).handler(async ({ context }) => {
+export const createBudConversation = createServerFn({ method: "POST" }).middleware([appAccessMiddleware]).handler(async ({ context }) => {
   const sql = await getSql();
   const id = crypto.randomUUID();
   await sql`insert into bud_conversations (id, user_id, title) values (${id}, ${context.userId}, ${"New conversation"})`;
   return { id, title: "New conversation", updatedAt: new Date().toISOString(), preview: "" };
 });
 
-export const deleteBudConversation = createServerFn({ method: "POST" }).middleware([authMiddleware]).validator((input: { id: string }) => input).handler(async ({ context, data }) => {
+export const deleteBudConversation = createServerFn({ method: "POST" }).middleware([appAccessMiddleware]).validator((input: { id: string }) => input).handler(async ({ context, data }) => {
   const sql = await getSql();
   await sql`delete from bud_messages where user_id = ${context.userId} and conversation_id = ${data.id}`;
   await sql`delete from bud_conversations where user_id = ${context.userId} and id = ${data.id}`;
   return { ok: true as const };
 });
 
-export const retryBud = createServerFn({ method: "POST" }).middleware([authMiddleware]).validator((input: { conversationId: string }) => input).handler(async ({ context, data }) => {
+export const retryBud = createServerFn({ method: "POST" }).middleware([appAccessMiddleware]).validator((input: { conversationId: string }) => input).handler(async ({ context, data }) => {
   const sql = await getSql();
   const last = await sql<{ content: string }>`select content from bud_messages where user_id = ${context.userId} and conversation_id = ${data.conversationId} and role = 'user' order by created_at desc limit 1`;
   const prompt = last[0]?.content;
@@ -93,7 +94,7 @@ export const retryBud = createServerFn({ method: "POST" }).middleware([authMiddl
   return runAsk(sql, context.userId, prompt, data.conversationId);
 });
 
-export const askBud = createServerFn({ method: "POST" }).middleware([authMiddleware]).validator((input: {
+export const askBud = createServerFn({ method: "POST" }).middleware([appAccessMiddleware]).validator((input: {
   prompt: string;
   conversationId?: string;
   attachment?: { name: string; kind: string; excerpt?: string };
@@ -137,6 +138,18 @@ async function runAsk(
   else await sql`update bud_conversations set updated_at = now() where id = ${conversationId} and user_id = ${userId}`;
 
   const requestId = crypto.randomUUID();
+  const sink = createActivitySink(sql);
+  const specialistIds = routeSpecialists(prompt);
+  const agentInput: AgentInput = {
+    requestId,
+    userId,
+    prompt,
+    context: { fromPath: extra?.fromPath, media: extra?.media, atlas: extra?.atlas },
+  };
+  const executions = await executeSpecialists(specialistIds, agentInput, sink);
+  const executionNotes = executions
+    .filter((execution) => execution.status === "completed" && execution.output?.summary)
+    .map((execution) => `${execution.agentId}: ${execution.output?.summary}`);
 
   const history = (await sql`select role, content from bud_messages where user_id = ${userId} and conversation_id = ${conversationId} order by created_at desc limit 12`).reverse().map((r) => ({ role: r.role as "user" | "assistant", content: String(r.content) }));
   const profileRows = await sql`select * from student_profiles where user_id = ${userId} limit 1`;
@@ -149,23 +162,6 @@ async function runAsk(
   } catch { enrolledCodes = []; }
   const profile = profileRows[0] ? mapProfile(profileRows[0] as Parameters<typeof mapProfile>[0]) : null;
   const contextLine = formatStudentContext(profile, courses, enrolledCodes, prompt);
-  const sparkRequest: AgentRequest = {
-    id: requestId,
-    source: "user",
-    target: "spark",
-    intent: prompt,
-    input: prompt,
-    context: { fromPath: extra?.fromPath, media: extra?.media, atlas: extra?.atlas },
-    traceId: requestId,
-  };
-  const sparkExecution = executeThroughSpark({
-    request: sparkRequest,
-    route: { intent: prompt, domain: inferSparkDomain(prompt) },
-    authorizedContext: { userId },
-    availableCapabilities: [],
-    authorization: "unknown",
-  });
-  const executionLine = `Spark orchestration result: ${sparkExecution.budMessage}`;
 
   let milestoneJson: string | null = null;
   try {
@@ -176,10 +172,17 @@ async function runAsk(
   try { await sql`update bud_conversations set milestone_json = ${JSON.stringify(milestone)} where id = ${conversationId} and user_id = ${userId}`; } catch { /* optional migration */ }
 
   const brief = buildBudBrief({ prompt, milestone, atlas: extra?.atlas, fromPath: extra?.fromPath });
+  let facts = "LIVE RECORD — figures could not be read. Do not invent a balance, score, title, or order.";
+  try {
+    facts = await memberSnapshot(sql, userId);
+  } catch {
+    /* Keep the empty instruction. */
+  }
   const oracle = await queryOracleLayer({ query: prompt, studentId: userId });
   const oracleLine = oracle ? `Verified internal context: ${oracle.summary}` : null;
   const sparkNotes = sparkSystemNotes(prompt).join("\n");
   const communication = communicationInstruction(prompt);
+  const executionLine = executionNotes.length ? `Real completed internal work:\n${executionNotes.join("\n")}` : "No specialist capability completed work for this request.";
 
   const provider = getAIProvider();
   const controller = new AbortController();
@@ -188,6 +191,7 @@ async function runAsk(
     { role: "system", content: SYSTEM },
     { role: "system", content: contextLine },
     { role: "system", content: brief },
+    { role: "system", content: facts },
     { role: "system", content: sparkNotes },
     { role: "system", content: communication },
     { role: "system", content: executionLine },
@@ -195,49 +199,12 @@ async function runAsk(
     ...history,
   ], { maxTokens: 500, signal: controller.signal });
   clearTimeout(timer);
-
-  let reply = result.ok ? result.text : result.error;
-  if (result.ok) {
-    try {
-      assertBudUserFacingText(reply);
-    } catch {
-      reply = "I couldn’t safely prepare that reply. Try again and I’ll keep it clear.";
-      result = { ok: false, error: reply, providerId: result.providerId };
-    }
-  }
+  const reply = result.ok ? result.text : campusFallback(prompt, facts);
   try {
     await sql`insert into bud_messages (id, user_id, role, content, conversation_id) values (${crypto.randomUUID()}, ${userId}, ${"assistant"}, ${reply}, ${conversationId})`;
   } catch {
     await sql`insert into bud_messages (id, user_id, role, content, conversation_id) values (${crypto.randomUUID()}, ${userId}, ${"assistant"}, ${reply}, ${conversationId})`;
   }
-  if (!result.ok) return { ok: false, error: result.error, conversationId };
+  if (!reply) return { ok: false, error: "Bud couldn’t reply just now. Try again.", conversationId };
   return { ok: true, text: reply, conversationId };
 }
-
-/** Guest path: no auth, no persistence. Conversations are not saved. */
-export const askBudGuest = createServerFn({ method: "POST" })
-  .validator((input: { prompt: string }) => input)
-  .handler(async ({ data }) => {
-    const prompt = (data.prompt || "").trim();
-    if (!prompt) return { ok: false as const, error: "Say something first." };
-    if (prompt.length > 2000) return { ok: false as const, error: "Keep it shorter for guest mode." };
-
-    const provider = getAIProvider();
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 20_000);
-    try {
-      const result = await provider.complete(
-        [
-          { role: "system", content: SYSTEM },
-          { role: "user", content: prompt },
-        ],
-        { maxTokens: 400, signal: controller.signal },
-      );
-      clearTimeout(timer);
-      if (!result.ok) return { ok: false as const, error: result.error };
-      return { ok: true as const, text: result.text };
-    } catch {
-      clearTimeout(timer);
-      return { ok: false as const, error: "Bud is unavailable right now. Try again in a moment." };
-    }
-  });

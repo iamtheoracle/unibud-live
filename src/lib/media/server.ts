@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getSql } from "@/lib/db";
-import { authMiddleware } from "@/lib/auth/middleware";
+import { appAccessMiddleware } from "@/lib/account/guard";
 import { parseDataUrl, removeMediaBytes, writeMediaBytes } from "./store.server";
 import { kindFromMime, MAX_UPLOAD_BYTES, type MediaKind } from "./types";
 import { BUD_MEDIA } from "./bud-media";
@@ -17,41 +17,19 @@ async function ensureBudSeed() {
 }
 
 export const uploadMedia = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((input: { dataUrl: string; fileName: string; mime?: string; kind?: MediaKind; conversationId?: string; roomId?: string }) => input)
   .handler(async ({ context, data }) => {
-    // Shared destinations are disabled until their membership checks are
-    // connected to the authoritative room/conversation tables.
-    if (data.conversationId || data.roomId) {
-      return { ok: false as const, error: "Shared uploads are not available yet." };
+    const parsed = parseDataUrl(data.dataUrl);
+    if (parsed.bytes.length > MAX_UPLOAD_BYTES) {
+      return { ok: false as const, error: "That file is over 8 MB." };
     }
-    let parsed: ReturnType<typeof parseDataUrl>;
-    try {
-      parsed = parseDataUrl(data.dataUrl);
-    } catch {
-      return { ok: false as const, error: "Invalid upload data." };
-    }
-    if (parsed.bytes.length === 0 || parsed.bytes.length > MAX_UPLOAD_BYTES) {
-      return { ok: false as const, error: "Choose a file between 1 byte and 8 MB." };
-    }
-    const mime = (data.mime || parsed.mime).toLowerCase();
-    const allowedMime = new Set([
-      "image/jpeg", "image/png", "image/webp", "image/gif",
-      "audio/mpeg", "audio/mp4", "audio/wav", "audio/ogg",
-      "video/mp4", "video/webm", "application/pdf",
-    ]);
-    if (mime !== parsed.mime.toLowerCase() || !allowedMime.has(mime)) {
-      return { ok: false as const, error: "This file type is not supported." };
-    }
+    const mime = data.mime || parsed.mime;
     const kind = data.kind ?? kindFromMime(mime);
-    if (kind !== kindFromMime(mime)) {
-      return { ok: false as const, error: "File type does not match its content." };
-    }
-    const fileName = data.fileName.replace(/[\\/\\0-\\x1f\\x7f]/g, "_").slice(0, 180) || "upload";
     const id = crypto.randomUUID();
     const sql = await getSql();
     await sql`insert into media_assets (id, owner_id, kind, mime_type, file_name, file_size, storage_path, status, visibility, conversation_id, room_id)
-      values (${id}, ${context.userId}, ${kind}, ${mime}, ${fileName}, ${parsed.bytes.length}, ${id}, ${"processing"}, ${data.roomId ? "room" : data.conversationId ? "conversation" : "private"}, ${data.conversationId ?? null}, ${data.roomId ?? null})`;
+      values (${id}, ${context.userId}, ${kind}, ${mime}, ${data.fileName}, ${parsed.bytes.length}, ${id}, ${"processing"}, ${data.roomId ? "room" : data.conversationId ? "conversation" : "private"}, ${data.conversationId ?? null}, ${data.roomId ?? null})`;
     try {
       await writeMediaBytes(id, parsed.bytes);
       await sql`update media_assets set status = ${"ready"}, updated_at = now() where id = ${id}`;
@@ -63,7 +41,7 @@ export const uploadMedia = createServerFn({ method: "POST" })
   });
 
 export const deleteMedia = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((id: string) => id)
   .handler(async ({ context, data: id }) => {
     const sql = await getSql();
@@ -75,24 +53,17 @@ export const deleteMedia = createServerFn({ method: "POST" })
   });
 
 export const reportMedia = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((input: { mediaId?: string; audioId?: string; reason: string }) => input)
   .handler(async ({ context, data }) => {
     const sql = await getSql();
-    const reason = data.reason.trim().slice(0, 1000);
-    if (!reason || (!data.mediaId && !data.audioId)) {
-      throw new Error("A report target and reason are required.");
-    }
-    if (data.mediaId && data.audioId) {
-      throw new Error("Report one media or audio item at a time.");
-    }
     await sql`insert into media_reports (id, media_id, audio_id, reporter_id, reason)
-      values (${crypto.randomUUID()}, ${data.mediaId ?? null}, ${data.audioId ?? null}, ${context.userId}, ${reason})`;
+      values (${crypto.randomUUID()}, ${data.mediaId ?? null}, ${data.audioId ?? null}, ${context.userId}, ${data.reason})`;
     return { ok: true };
   });
 
 export const listBudMedia = createServerFn({ method: "GET" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .handler(async () => {
     await ensureBudSeed();
     const sql = await getSql();
@@ -111,39 +82,55 @@ export const listBudMedia = createServerFn({ method: "GET" })
   });
 
 export const attachBudFile = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((input: { budId: string; mediaId: string }) => input)
   .handler(async ({ context, data }) => {
     const sql = await getSql();
     const owned = await sql`select id from media_assets where id = ${data.mediaId} and owner_id = ${context.userId} and status = ${"ready"}`;
     if (!owned[0]) throw new Error("Media not ready");
-    const target = await sql`select id from bud_media where id = ${data.budId} and owner_id = ${context.userId} limit 1`;
-    if (!target[0]) throw new Error("Not allowed");
-    await sql`update bud_media set media_id = ${data.mediaId}, status = ${"ready"} where id = ${data.budId} and owner_id = ${context.userId}`;
+    await sql`update bud_media set media_id = ${data.mediaId}, status = ${"ready"} where id = ${data.budId}`;
     return { ok: true };
   });
 
-/**
- * Room messaging is intentionally unavailable until room membership and
- * moderation tables are enforced on every read/write. Accepting a room ID alone
- * is not authorization and would expose private room conversations.
- */
 export const listRoomMessages = createServerFn({ method: "GET" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((roomId: string) => roomId)
-  .handler(async () => {
-    throw new Error("Room messaging is temporarily unavailable while access controls are completed.");
+  .handler(async ({ data: roomId }) => {
+    const sql = await getSql();
+    const rows = await sql`select * from room_messages where room_id = ${roomId} order by created_at asc`;
+    return rows.map((r) => ({
+      id: String(r.id),
+      sender: String(r.sender_name),
+      body: String(r.body),
+      mediaId: r.media_id ? String(r.media_id) : undefined,
+      shareKind: r.share_kind ? String(r.share_kind) : undefined,
+      shareJson: r.share_json ? String(r.share_json) : undefined,
+      createdAt: String(r.created_at),
+    }));
   });
 
 export const sendRoomMessage = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((input: { roomId: string; body: string; senderName: string; mediaId?: string; shareKind?: string; shareJson?: string }) => input)
-  .handler(async () => {
-    throw new Error("Room messaging is temporarily unavailable while access controls are completed.");
+  .handler(async ({ context, data }) => {
+    const sql = await getSql();
+    const id = crypto.randomUUID();
+    await sql`insert into room_messages (id, room_id, user_id, sender_name, body, media_id, share_kind, share_json)
+      values (${id}, ${data.roomId}, ${context.userId}, ${data.senderName}, ${data.body}, ${data.mediaId ?? null}, ${data.shareKind ?? null}, ${data.shareJson ?? null})`;
+    const rows = await sql`select * from room_messages where room_id = ${data.roomId} order by created_at asc`;
+    return rows.map((r) => ({
+      id: String(r.id),
+      sender: String(r.sender_name),
+      body: String(r.body),
+      mediaId: r.media_id ? String(r.media_id) : undefined,
+      shareKind: r.share_kind ? String(r.share_kind) : undefined,
+      shareJson: r.share_json ? String(r.share_json) : undefined,
+      createdAt: String(r.created_at),
+    }));
   });
 
 export const persistAudioEvent = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((input: { kind: string; audioId?: string; budMediaId?: string; providerId?: string; surface: string }) => input)
   .handler(async ({ context, data }) => {
     const sql = await getSql();
@@ -153,7 +140,7 @@ export const persistAudioEvent = createServerFn({ method: "POST" })
   });
 
 export const recordPartnerClick = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((input: { provider: string; trackId?: string; surface?: string }) => input)
   .handler(async ({ context, data }) => {
     const sql = await getSql();

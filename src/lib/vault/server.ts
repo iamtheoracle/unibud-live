@@ -1,6 +1,6 @@
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { createServerFn } from "@tanstack/react-start";
-import { authMiddleware } from "@/lib/auth/middleware";
+import { appAccessMiddleware } from "@/lib/account/guard";
 import { getSql } from "@/lib/db";
 
 const PIN_RE = /^\d{4}$/;
@@ -32,7 +32,7 @@ function guardAttempts(userId: string) {
 }
 
 export const vaultStatus = createServerFn({ method: "GET" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .handler(async ({ context }) => {
     const sql = await ensureTable();
     const rows = await sql<{ pin_hash: string | null; passkey_id: string | null }>`
@@ -45,7 +45,7 @@ export const vaultStatus = createServerFn({ method: "GET" })
   });
 
 export const setVaultPin = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((d: { pin: string }) => d)
   .handler(async ({ context, data }) => {
     if (!PIN_RE.test(data.pin)) throw new Error("Use a 4-digit passcode.");
@@ -60,7 +60,7 @@ export const setVaultPin = createServerFn({ method: "POST" })
   });
 
 export const verifyVaultPin = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((d: { pin: string }) => d)
   .handler(async ({ context, data }) => {
     guardAttempts(context.userId);
@@ -86,13 +86,13 @@ export const verifyVaultPin = createServerFn({ method: "POST" })
   });
 
 export const vaultPasskeyChallenge = createServerFn({ method: "GET" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .handler(async () => {
     return { challenge: randomBytes(32).toString("base64url") };
   });
 
 export const saveVaultPasskey = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((d: { credentialId: string }) => d)
   .handler(async ({ context, data }) => {
     if (!data.credentialId.trim()) throw new Error("Passkey was empty.");
@@ -105,7 +105,7 @@ export const saveVaultPasskey = createServerFn({ method: "POST" })
   });
 
 export const verifyVaultPasskey = createServerFn({ method: "POST" })
-  .middleware([authMiddleware])
+  .middleware([appAccessMiddleware])
   .validator((d: { credentialId: string }) => d)
   .handler(async ({ context, data }) => {
     const sql = await ensureTable();

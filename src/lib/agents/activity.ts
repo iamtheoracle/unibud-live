@@ -1,5 +1,5 @@
-import type { Sql } from "@/lib/db";
 import type { AgentActivityEvent, AgentActivityState, AgentId } from "./contracts";
+import type { Sql } from "@/lib/db";
 
 export type ActivitySink = (event: AgentActivityEvent) => Promise<void>;
 

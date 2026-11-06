@@ -67,7 +67,6 @@ export function useRightDrawer() {
   useEffect(() => {
     function down(e: PointerEvent) {
       if (openRef.current) return;
-      if (e.pointerType === "mouse") return;
       if (e.button !== 0) return;
       if (window.innerWidth - e.clientX > EDGE) return;
       if (scrollerX(e.target)) return;
@@ -152,7 +151,6 @@ export function useRightDrawer() {
       vx: 0,
       pointerId: e.pointerId,
     };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }, []);
 
   const onPointerMove = useCallback(
@@ -175,6 +173,7 @@ export function useRightDrawer() {
         }
         s.locked = "h";
         setDragging(true);
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       }
       if (s.locked !== "h") return;
       setP(1 - dx / DRAWER);
