@@ -56,10 +56,37 @@ test("non-.sql entries are dropped (readdir also yields the auth/ directory)", (
   assert.deepEqual(pendingMigrations(["auth", "README.md"], []), []);
 });
 
+
+test("renamed migration respects the legacy applied name", () => {
+  assert.deepEqual(
+    pendingMigrations(["migrations/0019_quad_groups.sql"], ["0013_quad_groups.sql"]),
+    [],
+  );
+  assert.deepEqual(
+    pendingMigrations(["migrations/0019_quad_groups.sql"], []),
+    [{ name: "0019_quad_groups.sql", path: "migrations/0019_quad_groups.sql" }],
+  );
+});
+
+test("duplicate numeric migration prefixes fail clearly", () => {
+  assert.throws(
+    () => pendingMigrations(["0013_feedback.sql", "0013_quad_groups.sql"], []),
+    /Duplicate migration prefix 0013/,
+  );
+});
+
 test("the auth schema ships outside the globbed directory", () => {
   const migrationsDir = join(projectRoot(), "migrations");
-  assert.deepEqual(pendingMigrations(readdirSync(migrationsDir), []), []);
-  assert.ok(readdirSync(join(migrationsDir, "auth")).includes("0001_auth.sql"));
+  const rootMigrations = pendingMigrations(readdirSync(migrationsDir), []);
+  // The application has its own migrations at the root; only the opt-in auth
+  // schema must remain outside the non-recursive migrator's discovery path.
+  assert.ok(rootMigrations.length > 0, "application migrations should be discoverable");
+  assert.equal(
+    rootMigrations.some(({ name }) => name === AUTH_MIGRATION),
+    false,
+    "the auth schema must not be discovered while sign-in is off",
+  );
+  assert.ok(readdirSync(join(migrationsDir, "auth")).includes(AUTH_MIGRATION));
 });
 
 test("this workspace's auth schema copy is byte-identical to its source", () => {

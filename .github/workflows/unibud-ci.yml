@@ -26,7 +26,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps --no-audit --no-fund
 
       - name: Typecheck
         run: npm run typecheck
@@ -40,4 +40,8 @@ jobs:
       - name: Agent and Spark tests (pre-UI gate)
         run: npm run test:agents
 
-      # Full UI/template tests and production build remain deferred until UI implementation begins.
+      - name: Repository script tests
+        run: npm test
+
+      - name: Production application build
+        run: npm run build:netlify
