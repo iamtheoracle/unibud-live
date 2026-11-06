@@ -13,18 +13,18 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  NPM_VERSION = "10.8.2"
   NPM_FLAGS = "--legacy-peer-deps"
   NPM_CONFIG_LEGACY_PEER_DEPS = "true"
   NODE_OPTIONS = "--max-old-space-size=4096"
   NETLIFY_COREPACK_ENABLED = "false"
-  # Client auth flag: must be true for public sign-in UI. Secrets still required server-side.
+  # Project has the Next.js runtime plugin attached from the Netlify UI; this is a TanStack Start app
+  NETLIFY_NEXT_PLUGIN_SKIP = "true"
   VITE_AUTH_ENABLED = "true"
 
 [context.production.environment]
   VITE_AUTH_ENABLED = "true"
-
 [context.deploy-preview.environment]
   VITE_AUTH_ENABLED = "true"
-
 [context.branch-deploy.environment]
   VITE_AUTH_ENABLED = "true"
